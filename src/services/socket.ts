@@ -1,15 +1,14 @@
 import { io, Socket } from "socket.io-client";
 import type { Room, RoomJoinedPayload } from "../types/game";
 
-const SOCKET_URL = `http://${window.location.hostname}:3000`;
-const test_URL = "http://localhost:3000";
+const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
 
 class SocketService {
   socket: Socket;
   private initialized = false;
 
   constructor() {
-    this.socket = io(test_URL, {
+    this.socket = io(SOCKET_URL, {
       autoConnect: false,
       transports: ["websocket"],
       reconnection: true,
