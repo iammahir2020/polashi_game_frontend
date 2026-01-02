@@ -120,8 +120,9 @@ export default function GameDashboard() {
 
   useEffect(() => {
     const backendUrl = `http://${window.location.hostname}:3000`;
+    const testBackendUrl = `"http://localhost:3000"`;
 
-    fetch(backendUrl)
+    fetch(testBackendUrl)
       .then((res) => {
         if (res.ok) setHealth("ok");
         else throw new Error();
