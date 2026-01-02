@@ -15,8 +15,6 @@ export default function GameDashboard() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState<"code" | "link" | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(!!localStorage.getItem("roomCode"));
-  const [isFlipping, setIsFlipping] = useState(false);
-  const [showGeneralPopup, setShowGeneralPopup] = useState(false);
   const [currentGeneral, setCurrentGeneral] = useState<Player | null>(null);
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
 
@@ -144,27 +142,12 @@ export default function GameDashboard() {
 
     if (!general) {
       setCurrentGeneral(null);
-      setShowGeneralPopup(false);
       return;
     }
 
     if (general && general.id !== currentGeneral?.id) {
       setCurrentGeneral(general);
 
-      // Start the sequence
-      setShowGeneralPopup(true);
-      setIsFlipping(true);
-
-      const flipTimer = setTimeout(() => {
-        setIsFlipping(false);
-      }, 2000);
-
-      const closeTimer = setTimeout(() => setShowGeneralPopup(false), 12000);
-
-      return () => {
-        clearTimeout(flipTimer);
-        clearTimeout(closeTimer);
-      };
     }
   }, [room?.players]);
 
