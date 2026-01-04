@@ -345,8 +345,8 @@ export default function GameDashboard() {
           borderRadius: "20px",
           border: "1px solid #333"
         }}>
-          <span>Server: {health === "ok" ? "🟢" : "🔴"}</span>
-          <span>Network: {online ? "🟢" : "🔴"}</span>
+          <span>Server Connection: {health === "ok" ? "🟢" : "🔴"}</span>
+          <span>Network Connection: {online ? "🟢" : "🔴"}</span>
         </div>
       </header>
 
