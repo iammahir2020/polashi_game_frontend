@@ -6,6 +6,7 @@ export type Player = {
   isGameMaster?: boolean;
   character?: CharacterType | null;
   isGeneral?: boolean;
+  lastCharacterId?: number | null;
 };
 
 export type VotingState = {

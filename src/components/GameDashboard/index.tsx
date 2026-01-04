@@ -17,6 +17,7 @@ export default function GameDashboard() {
   const [isReconnecting, setIsReconnecting] = useState(!!localStorage.getItem("roomCode"));
   const [currentGeneral, setCurrentGeneral] = useState<Player | null>(null);
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -285,7 +286,7 @@ export default function GameDashboard() {
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "12px 16px",
-    marginBottom: "12px",
+    // marginBottom: "12px",
     borderRadius: "8px",
     border: "1px solid #444",
     backgroundColor: "#2d2d2d",
@@ -343,7 +344,6 @@ export default function GameDashboard() {
 
       <header style={{
         textAlign: "center",
-        marginBottom: "30px",
         padding: "20px",
         background: "linear-gradient(to bottom, #1a1a1a, transparent)",
         borderRadius: "0 0 20px 20px"
@@ -362,8 +362,8 @@ export default function GameDashboard() {
           borderRadius: "20px",
           border: "1px solid #333"
         }}>
-          <span>Server Connection: {health === "ok" ? "🟢" : "🔴"}</span>
-          <span>Network Connection: {online ? "🟢" : "🔴"}</span>
+          <span>Server: {health === "ok" ? "🟢" : "🔴"}</span>
+          <span>Network: {online ? "🟢" : "🔴"}</span>
         </div>
       </header>
 
@@ -406,180 +406,273 @@ export default function GameDashboard() {
 
       {/* LOGIN VIEW */}
       {!room && !wasKicked && (
-        <div style={{ ...cardStyle, border: "2px solid #c5a059", position: 'relative' }}>
+        <div style={{ 
+          ...cardStyle, 
+          border: "2px solid #c5a059", 
+          position: 'relative', 
+          padding: '30px',
+          marginTop: '10px',
+          animation: 'slideUpFade 0.8s ease-out forwards' 
+        }}>
           {/* Decorative Label */}
           <div style={{
             position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
-            backgroundColor: '#0f0f0f', padding: '0 10px', color: '#c5a059',
-            fontSize: '12px', letterSpacing: '2px', fontWeight: 'bold'
+            backgroundColor: '#0f0f0f', padding: '0 15px', color: '#c5a059',
+            fontSize: '12px', letterSpacing: '3px', fontWeight: 'bold'
           }}>
             ENLISTMENT
           </div>
-
-          <h3 style={{ marginTop: 0, color: "#fff", textAlign: 'center', fontSize: '20px' }}>Identify Yourself</h3>
-          <input
-            placeholder="Enter Alias..."
-            style={inputStyle}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' }}>
-            <button
-              style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", marginBottom: 0 }}
-              onClick={createRoom}
-              disabled={!name || !!roomCode}
-            >
-              Establish HQ
-            </button>
-            <button
-              style={{ ...primaryBtn, backgroundColor: "transparent", border: "1px solid #c5a059", color: "#c5a059", marginBottom: 0 }}
-              onClick={joinRoom}
-              disabled={!name || !roomCode}
-            >
-              Infiltrate
-            </button>
-          </div>
-
-          <div style={{ marginTop: '20px' }}>
+        
+          {/* STEP 1: IDENTITY */}
+          <div style={{ marginBottom: '35px', textAlign: 'center' }}>
+            <h3 style={{ marginTop: 0, color: "#fff", fontSize: '22px', marginBottom: '15px', fontFamily: "'Cinzel', serif" }}>
+              Step 1: Identify Yourself
+            </h3>
             <input
-              placeholder="Input Game Code..."
-              style={{ ...inputStyle, textAlign: 'center', letterSpacing: '4px', textTransform: 'uppercase' }}
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              placeholder="Enter Alias..."
+              style={{ 
+                ...inputStyle, 
+                width: '100%', 
+                boxSizing: 'border-box',
+                border: name ? '1px solid #c5a059' : '1px solid #333',
+                animation: !name ? 'goldPulse 2s infinite' : 'none'
+              }}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
+        
+          {/* VISUAL DIVIDER */}
+          <div style={{ 
+            height: '1px', 
+            background: 'linear-gradient(to right, transparent, #c5a059, transparent)', 
+            margin: '20px auto',
+            width: '80%'
+          }} />
+        
+          {/* STEP 2: CHOOSE PATH */}
+          <div style={{ opacity: name ? 1 : 0.5, transition: 'opacity 0.5s ease' }}>
+            <h3 style={{ color: "#fff", textAlign: 'center', fontSize: '18px', marginBottom: '20px', fontFamily: "'Cinzel', serif" }}>
+              Step 2: Choose Mission
+            </h3>
+        
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              
+              {/* PATH A: CREATE */}
+              <div style={{ textAlign: 'center' }}>
+                <button
+                  style={{ 
+                    ...primaryBtn, 
+                    backgroundColor: name && !roomCode ? "#c5a059" : "#222", 
+                    color: name && !roomCode ? "#000" : "#555", 
+                    width: '100%',
+                    cursor: name && !roomCode ? 'pointer' : 'not-allowed'
+                  }}
+                  onClick={createRoom}
+                  disabled={!name}
+                >
+                  Establish New HQ
+                </button>
+              </div>
+        
+               <div style={{ position: 'relative', textAlign: 'center' }}>
+      <span style={{ backgroundColor: '#0f0f0f', padding: '0 10px', color: 'white', fontSize: '16px', position: 'relative', zIndex: 1 }}>OR JOIN</span>
+       <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'white', zIndex: 0 }} />
+     </div>
+        
+              {/* PATH B: JOIN */}
+              <div style={{ 
+                backgroundColor: 'rgba(197, 160, 89, 0.03)', 
+                padding: '20px', 
+                borderRadius: '8px', 
+                border: '1px solid rgba(197, 160, 89, 0.1)' 
+              }}>
+                <input
+                  placeholder="INPUT CODE"
+                  style={{ 
+                    ...inputStyle, 
+                    textAlign: 'center', 
+                    letterSpacing: '4px', 
+                    textTransform: 'uppercase',
+                    marginBottom: '15px',
+                    backgroundColor: '#000',
+                    border: roomCode ? '1px solid #c5a059' : '1px solid #222'
+                  }}
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                />
+                <button
+                  style={{ 
+                    ...primaryBtn, 
+                    backgroundColor: "transparent", 
+                    border: `1px solid ${ (name && roomCode) ? "#c5a059" : "#333" }`, 
+                    color: (name && roomCode) ? "#c5a059" : "#444", 
+                    width: '100%',
+                    cursor: (name && roomCode) ? 'pointer' : 'not-allowed'
+                  }}
+                  onClick={joinRoom}
+                  disabled={!name || !roomCode}
+                >
+                  Infiltrate Existing HQ
+                </button>
+              </div>
+            </div>
+          </div>
+          <style>
+                  
+{
+  `
+  @keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes goldPulse {
+  0% { box-shadow: 0 0 0px rgba(197, 160, 89, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(197, 160, 89, 0.4); }
+  100% { box-shadow: 0 0 0px rgba(197, 160, 89, 0.2); }
+}
+
+@keyframes borderDraw {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+  `
+}
+          </style>
         </div>
       )}
 
       {/* GAME VIEW */}
       {room && (
         <>
-          <div style={{
-            marginBottom: '25px',
-            paddingBottom: '15px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-          }}>
-            <p style={{
-              margin: '0 0 10px 0',
-              fontSize: '14px',
-              color: '#999',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-              fontFamily: "'Cinzel', serif",
-              textAlign: 'left'
-            }}>
-              Command Interface {room.locked && <span style={{ color: '#ff922b', marginLeft: '5px' }}>• LOCKED</span>}
-            </p>
+<div style={{
+  marginBottom: '20px',
+  border: '1px solid rgba(197, 160, 89, 0.3)',
+  borderRadius: '8px',
+  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  overflow: 'hidden',
+  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+  fontFamily: "'Cinzel', serif"
+}}>
+  {/* CLICKABLE HEADER */}
+  <div 
+    onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+    style={{
+      padding: '12px 20px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      cursor: 'pointer',
+      background: 'linear-gradient(90deg, rgba(197, 160, 89, 0.1) 0%, rgba(0,0,0,0) 100%)',
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <div style={{
+        width: '10px',
+        height: '10px',
+        borderRadius: '50%',
+        backgroundColor: '#40c057',
+        boxShadow: '0 0 10px #40c057',
+      }} />
+      <div>
+        <span style={{ fontSize: '10px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>OPERATIVE</span>
+        <span style={{ fontSize: '16px', color: '#fff', letterSpacing: '1px', textTransform: 'uppercase' }}>
+            {room.players.find(p => p.id === playerId)?.name || "Unknown"}
+        </span>
+      </div>
+    </div>
+    
+    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        {/* Shimmering Badge indicating status */}
+        <span style={{ fontSize: '10px', color: room.locked ? '#ff922b' : '#00b894' }}>
+            {room.locked ? "🔒 LOCKED" : "🔓 OPEN"}
+        </span>
+        <span style={{ 
+            color: '#c5a059', 
+            transform: isDrawerOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.4s'
+        }}>
+            ▼
+        </span>
+    </div>
+  </div>
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              gap: '8px',
-              width: '100%'
-            }}>
-
-              {/* ROOM CODE MODULE */}
-              <button
-                onClick={() => handleCopy("code")}
-                style={{
-                  height: '36px',
-                  padding: '0 12px',
-                  backgroundColor: '#151515',
-                  border: `1px solid ${copiedStatus === "code" ? '#00b894' : '#333'}`,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  fontFamily: "'Cinzel', serif",
-                  color: copiedStatus === "code" ? '#00b894' : '#c5a059',
-                  letterSpacing: '2px',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}>
-                  {roomCode}
-                </span>
-                <span style={{ fontSize: '12px', opacity: 0.7 }}>
-                  {copiedStatus === "code" ? "✅" : "📋"}
-                </span>
-              </button>
-
-              {/* SHARE MODULE */}
-              <button
+  {/* EXPANDABLE CONTENT */}
+  <div style={{
+    maxHeight: isDrawerOpen ? '300px' : '0px',
+    opacity: isDrawerOpen ? 1 : 0,
+    transition: 'all 0.4s ease-in-out',
+    padding: isDrawerOpen ? '20px' : '0 20px',
+    borderTop: isDrawerOpen ? '1px solid rgba(197, 160, 89, 0.2)' : 'none',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)'
+  }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        
+        {/* ACCESS MODULE */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '9px', color: '#666', letterSpacing: '1px' }}>SESSION CIPHER</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ color: '#c5a059', fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px' }}>
+                        {roomCode}
+                    </span>
+                    <button 
+                        onClick={() => handleCopy("code")}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#fff' }}
+                        title="Copy Cipher"
+                    >
+                        {copiedStatus === "code" ? "✅" : "📋"}
+                    </button>
+                </div>
+            </div>
+            
+            <button
                 onClick={() => handleCopy("link")}
                 style={{
-                  height: '36px',
-                  padding: '0 12px',
-                  backgroundColor: '#151515',
-                  border: `1px solid ${copiedStatus === "link" ? '#00b894' : '#c5a059'}`,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  color: copiedStatus === "link" ? '#00b894' : '#c5a059',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  transition: 'all 0.2s ease'
+                    backgroundColor: copiedStatus === "link" ? '#c5a059' : 'transparent',
+                    border: '1px solid #c5a059',
+                    color: copiedStatus === "link" ? '#000' : '#c5a059',
+                    padding: '10px 15px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
                 }}
-              >
-                {copiedStatus === "link" ? "Copied" : "Share URL"}
-              </button>
+            >
+                {copiedStatus === "link" ? "LINK COPIED" : "INVITE ALLIES"}
+            </button>
+        </div>
 
-              {/* SPACER TO PUSH ABORT TO THE RIGHT */}
-              <div style={{ flex: 1 }} />
-
-              {/* ABORT MODULE (Distinct Style) */}
-              <button
+        {/* UTILITY ROW */}
+        <div style={{ 
+            display: 'flex', 
+            justifyContent: 'end', 
+            alignItems: 'center',
+            paddingTop: '15px',
+            borderTop: '1px solid rgba(255,255,255,0.05)'
+        }}>
+            <button
                 onClick={leaveRoom}
                 style={{
-                  height: '36px',
-                  padding: '0 12px',
-                  background: 'transparent',
-                  border: '1px solid #444', // Muted border
-                  color: '#888', // Muted text
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  borderRadius: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  transition: 'all 0.2s ease'
+                    background: 'none',
+                    border: '1px solid #444',
+                    color: '#888',
+                    padding: '5px 10px',
+                    borderRadius: '4px',
+                    fontSize: '9px',
+                    cursor: 'pointer',
+                    textTransform: 'uppercase'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#ff7675';
-                  e.currentTarget.style.color = '#ff7675';
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 118, 117, 0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#444';
-                  e.currentTarget.style.color = '#888';
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                Leave
-              </button>
-            </div>
-
-            {/* FEEDBACK TRACKER */}
-            <div style={{
-              height: '12px',
-              marginTop: '6px',
-              fontSize: '10px',
-              color: '#00b894',
-              opacity: copiedStatus ? 1 : 0,
-              transition: 'opacity 0.3s ease',
-              fontStyle: 'italic'
-            }}>
-              {copiedStatus === "code" ? "Cipher secured..." : "Deployment link copied..."}
-            </div>
-          </div>
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#ff7675'; e.currentTarget.style.borderColor = '#ff7675'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#444'; }}
+            >
+                Abandon Post
+            </button>
+        </div>
+    </div>
+  </div>
+</div>
 
           {/* SECRET IDENTITY CARD */}
           {room.gameStarted && me?.character && (
@@ -848,6 +941,22 @@ export default function GameDashboard() {
 
             </div>
           )}
+
+          {/* PLAYER COUNT  */}
+          {
+            room.players.length > 0 && (
+              <div style={{
+                marginBottom: "15px",
+                fontSize: "16px",
+                color: "#aaa",
+                textAlign: "center",
+                textTransform: "uppercase",
+                letterSpacing: "1.5px"
+              }}>
+                Players Joined: <span style={{color:"white", fontWeight:"bold"}}>{room.players.length}/10</span>
+              </div>
+            )
+          }
 
           {/* PLAYER LIST */}
           {room.players.map((p) => (
