@@ -157,8 +157,14 @@ export default function GameDashboard() {
       localStorage.removeItem("roomCode");
       localStorage.removeItem("playerId");
 
+      setTimeout(() => {
+        // window.location.href = "/"; // Force a hard redirect to the home page
+        window.location.reload();
+
+      }, 500);
+
       // Force page reload or redirect to home
-      window.location.reload();
+      // window.location.reload();
     });
 
     return () => socketService.offRoomDissolved();
@@ -241,6 +247,17 @@ export default function GameDashboard() {
     } catch (err) {
       console.error("Fallback copy failed", err);
       alert(`Could not auto-copy. Please copy manually: ${textToCopy}`);
+    }
+  };
+
+  const handleDissolve = () => {
+    if (window.confirm("Terminate this session for all players?")) {
+      handleCloseRoom();
+      
+      // GM also needs immediate local cleanup
+      localStorage.removeItem("roomCode");
+      localStorage.removeItem("playerId");
+      window.location.href = "/"; 
     }
   };
 
@@ -1112,7 +1129,7 @@ export default function GameDashboard() {
                 )}
 
                 <button
-                  onClick={handleCloseRoom}
+                  onClick={handleDissolve}
                   style={{
                     flex: 1,
                     minWidth: "140px",
@@ -1136,7 +1153,7 @@ export default function GameDashboard() {
                     e.currentTarget.style.color = "#ff4747";
                   }}
                 >
-                  💥 Dissolve HQ
+                  💥 Close HQ
                 </button>
               </div>
             </div>
