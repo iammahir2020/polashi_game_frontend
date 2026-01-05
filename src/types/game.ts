@@ -23,6 +23,7 @@ export type Room = {
   gameStarted?: boolean;
   secretIntel?: string[]; 
   voting?: VotingState | null;
+  proposedTeam?: string[];
 };
 
 export type RoomJoinedPayload = {

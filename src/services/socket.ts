@@ -2,6 +2,7 @@ import { io, Socket } from "socket.io-client";
 import type { Room, RoomJoinedPayload } from "../types/game";
 
 const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
+// const SOCKET_URL = "http://172.16.16.6:3000/";
 
 class SocketService {
   socket: Socket;
@@ -72,6 +73,10 @@ class SocketService {
 
   castVote(roomCode: string, playerId: string, choice: "yes" | "no") {
     this.socket.emit("castVote", { roomCode, playerId, choice });
+  }
+
+  proposeTeam(roomCode: string, playerIds: string[]) {
+    this.socket.emit("proposeTeam", { roomCode, playerIds });
   }
 
   clearVote(roomCode: string, playerId: string) {

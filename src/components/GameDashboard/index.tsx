@@ -197,6 +197,8 @@ export default function GameDashboard() {
   const handleNoVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.castVote(roomCode, playerId, "no"); };
   const handleCloseRoom = () => { if (!room || !playerId || !room.gameStarted) return; socketService.closeRoom(roomCode, playerId); };
 
+  const handleSetTeam = (playerIds: string[]) => { if (!room || !playerId || !room.gameStarted) return; socketService.proposeTeam(roomCode, playerIds); };
+
   const leaveRoom = () => {
     const currentRoomCode = roomCode || localStorage.getItem("roomCode");
     const myId = playerId || localStorage.getItem("playerId");
@@ -259,6 +261,21 @@ export default function GameDashboard() {
       localStorage.removeItem("playerId");
       window.location.href = "/";
     }
+  };
+
+  const handleTogglePlayer = (id:string) => {
+    if (!room || !playerId || !room.gameStarted) return;
+    // 1. Calculate the new team locally
+    const currentTeam = room.proposedTeam || [];
+    const isSelected = currentTeam.includes(id);
+    
+    const newTeam = isSelected 
+      ? currentTeam.filter(pId => pId !== id)
+      : [...currentTeam, id];
+
+      console.log("New Team Proposal:", newTeam);
+  
+    handleSetTeam(newTeam);
   };
 
   // --- Styles ---
@@ -336,6 +353,7 @@ export default function GameDashboard() {
       </div>
     );
   }
+
 
   // --- UI Components ---
   return (
@@ -942,6 +960,55 @@ export default function GameDashboard() {
             </div>
           )}
 
+{/* SELECT PROPOSED TEAM  */}
+{me?.isGeneral && room.gameStarted && !room.voting?.active && (
+  <div style={{
+    margin: "20px 0",
+    padding: "20px",
+    background: "rgba(197, 160, 89, 0.05)",
+    border: "1px solid #c5a059",
+    borderRadius: "12px",
+    fontFamily: "'Cinzel', serif"
+  }}>
+    <h3 style={{ color: "#c5a059", marginTop: 0 }}>Assemble Your Battalion</h3>
+    <p style={{ color: "#888", fontSize: "12px", fontFamily: "'EB Garamond', serif" }}>
+      Select the operatives you trust for this mission.
+    </p>
+    
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+      {room.players.map(p => {
+        const isSelected = (room.proposedTeam || []).includes(p.id);
+        
+        return (
+          <button
+            key={p.id}
+            onClick={() => handleTogglePlayer(p.id)}
+            style={{
+              padding: "10px 14px",
+              backgroundColor: isSelected ? "#c5a059" : "rgba(255,255,255,0.02)",
+              color: isSelected ? "#000" : "#c5a059",
+              border: `1px solid ${isSelected ? "#c5a059" : "rgba(197, 160, 89, 0.4)"}`,
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: isSelected ? "bold" : "normal",
+              transition: "all 0.1s ease-out", // Snappy transition
+              flex: "1 1 calc(33% - 10px)", // Fits 3 in a row on mobile
+              minWidth: "90px"
+            }}
+          >
+            {p.name}
+          </button>
+        );
+      })}
+    </div>
+    
+    <div style={{ fontSize: "11px", color: "#666" }}>
+      {room.proposedTeam?.length || 0} Operatives Selected
+    </div>
+  </div>
+)}
+
           {/* PLAYER COUNT  */}
           {
             room.players.length > 0 && (
@@ -1370,6 +1437,33 @@ export default function GameDashboard() {
                 </h2>
                 <div style={{ width: "100px", height: "1px", background: "linear-gradient(to right, transparent, #c5a059, transparent)", margin: "15px auto" }} />
               </div>
+
+{/* TEAM LIST DISPLAY */}
+              <div style={{ margin: "20px 0" }}>
+  <p style={{ color: "#666", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase" }}>
+    Proposed Battalion:
+  </p>
+  <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+    {room.proposedTeam?.map(tid => {
+      const player = room.players.find(p => p.id === tid);
+      return (
+        <span key={tid} style={{
+          color: "#fff",
+          fontSize: "18px",
+          background: "rgba(197, 160, 89, 0.2)",
+          padding: "4px 12px",
+          borderRadius: "20px",
+          border: "1px solid rgba(197, 160, 89, 0.3)"
+        }}>
+          {player?.name}
+        </span>
+      );
+    })}
+    {(!room.proposedTeam || room.proposedTeam.length === 0) && 
+      <span style={{ color: "#ff7675", fontStyle: "italic" }}>No operatives selected</span>
+    }
+  </div>
+</div>
 
               {room.voting.active ? (
                 <>
