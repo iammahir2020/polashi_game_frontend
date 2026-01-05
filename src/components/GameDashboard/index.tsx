@@ -4,14 +4,14 @@ import type { Player, Room } from "../../types/game";
 import { socketService } from "../../services/socket";
 
 export default function GameDashboard() {
-  const online = useNetworkStatus();
+  const isConnectedToSocket = useNetworkStatus();
   const [room, setRoom] = useState<Room | null>(null);
   const [roomCode, setRoomCode] = useState(localStorage.getItem("roomCode") || "");
   const [name, setName] = useState("");
   const [playerId, setPlayerId] = useState<string | null>(localStorage.getItem("playerId") || null);
   const [wasKicked, setWasKicked] = useState(false);
   const [error, setError] = useState("");
-  const [health, setHealth] = useState<"ok" | "down">("down");
+  const [newConnection, setNetConnection] = useState<"ok" | "down">("down");
   const [isRevealed, setIsRevealed] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState<"code" | "link" | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(!!localStorage.getItem("roomCode"));
@@ -31,19 +31,13 @@ export default function GameDashboard() {
   }, []);
 
   useEffect(() => {
-    // Listen for the coin flip trigger
     socketService.onGeneralAnimation((data) => {
       setGeneralReveal({ name: data.name, active: true, flipping: true });
 
-      // Stop coin spin after 2s
       setTimeout(() => {
         setGeneralReveal(prev => prev ? { ...prev, flipping: false } : null);
       }, 2000);
 
-      // Auto-close after 10s total
-      setTimeout(() => {
-        setGeneralReveal(null);
-      }, 10000);
     });
 
     return () => {
@@ -120,15 +114,20 @@ export default function GameDashboard() {
   }, []); // Empty array ensures this only runs ONCE on load
 
   useEffect(() => {
-    const backendUrl = `https://polashi-game-backend.onrender.com/`;
-
-    fetch(backendUrl)
-      .then((res) => {
-        if (res.ok) setHealth("ok");
-        else throw new Error();
-      })
-      .catch(() => setHealth("down"));
-  }, []);
+    const handleInternetChange = () => {
+      setNetConnection(navigator.onLine ? "ok" : "down");
+    };
+  
+    handleInternetChange();
+  
+    window.addEventListener("online", handleInternetChange);
+    window.addEventListener("offline", handleInternetChange);
+  
+    return () => {
+      window.removeEventListener("online", handleInternetChange);
+      window.removeEventListener("offline", handleInternetChange);
+    };
+  }, [isConnectedToSocket]); 
 
   useEffect(() => {
     if (room && !room.gameStarted) {
@@ -362,8 +361,8 @@ export default function GameDashboard() {
           borderRadius: "20px",
           border: "1px solid #333"
         }}>
-          <span>Server: {health === "ok" ? "🟢" : "🔴"}</span>
-          <span>Network: {online ? "🟢" : "🔴"}</span>
+          <span>Internet: {newConnection === "ok" ? "🟢" : "🔴"}</span>
+          <span>Server: {isConnectedToSocket ? "🟢" : "🔴"}</span>
         </div>
       </header>
 
@@ -918,6 +917,7 @@ export default function GameDashboard() {
             </div>
           )}
 
+          {/* ASSIGN GENERAL BUTTON */}
           {me?.isGameMaster && room?.gameStarted && (
             <div style={{ textAlign: "center", marginBottom: "30px" }}>
 
@@ -1268,84 +1268,6 @@ export default function GameDashboard() {
             </div>
           )}
 
-          {/* GENERAL REVEAL  */}
-          {/* {showGeneralPopup && currentGeneral && (
-            <div
-              onClick={() => setShowGeneralPopup(false)}
-              style={{
-                position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-                backgroundColor: "rgba(0,0,0,0.95)", zIndex: 9999,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              }}>
-
-              {isFlipping ? (
-                <div style={{ textAlign: "center" }}>
-                  <div className="gold-coin">👑</div>
-                  <p style={{
-                    color: "#c5a059",
-                    marginTop: "20px",
-                    fontFamily: "'Cinzel', serif",
-                    letterSpacing: "2px"
-                  }}>
-                    Deciding the Fate of the Army...
-                  </p>
-                </div>
-              ) : (
-                <div style={{ animation: "fadeIn 1s ease forwards", textAlign: "center" }}>
-                  <div style={{ fontSize: "60px", marginBottom: "10px" }}>🎖️</div>
-                  <h2 style={{ fontFamily: "'Cinzel', serif", color: "#c5a059", margin: 0 }}>
-                    GENERAL ASSIGNED
-                  </h2>
-                  <h1 style={{
-                    fontFamily: "'Cinzel', serif", color: "white", fontSize: "42px",
-                    textShadow: "0 0 20px rgba(197, 160, 89, 0.5)"
-                  }}>
-                    {currentGeneral.name}
-                  </h1>
-                  <p style={{ fontFamily: "'EB Garamond', serif", color: "#aaa", fontStyle: "italic" }}>
-                    "The Nawab's forces await your signal."
-                  </p>
-                </div>
-              )}
-
-              <style>{`
-      @keyframes coinFlip {
-        0% { transform: rotateY(0deg); }
-        100% { transform: rotateY(1800deg); }
-      }
-
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .gold-coin {
-        width: 80px;
-        height: 80px;
-        background: radial-gradient(circle, #ffe08a 0%, #c5a059 100%);
-        border: 4px solid #8e6d2a;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 40px;
-        box-shadow: 0 0 20px rgba(197, 160, 89, 0.6);
-        animation: coinFlip 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
-        position: relative;
-        margin: 0 auto;
-      }
-
-      .gold-coin::after {
-        content: "";
-        position: absolute;
-        width: 70px;
-        height: 70px;
-        border: 1px dashed rgba(0,0,0,0.2);
-        border-radius: 50%;
-      }
-    `}</style>
-            </div>
-          )} */}
           {/* GENERAL REVEAL OVERLAY */}
           {generalReveal?.active && (
             <div
@@ -1358,7 +1280,7 @@ export default function GameDashboard() {
               }}
             >
               {generalReveal.flipping ? (
-                <div style={{ textAlign: "center" }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign: "center" }}>
                   <div className="gold-mohur">👑</div>
                   <p style={{
                     color: "#c5a059", marginTop: "30px",
@@ -1580,22 +1502,86 @@ export default function GameDashboard() {
                 /* RESULT PHASE */
                 <div style={{ animation: "revealVerdict 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards" }}>
                   {/* Large Result Seal Display */}
-                  <div style={{ position: 'relative', display: 'inline-block', marginBottom: '20px' }}>
-                    <img
-                      src={room.voting.result === "Yes" ? "/green_seal.png" : "/red_seal.png"}
-                      style={{ width: '120px', height: '120px', opacity: 0.2, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
-                    />
-                    <div style={{
-                      fontSize: "80px",
-                      fontWeight: "bold",
-                      fontFamily: "'Cinzel', serif",
-                      position: 'relative',
-                      color: room.voting.result === "Yes" ? "#40c057" : "#ff7675",
-                      textShadow: room.voting.result === "Yes" ? "0 0 30px rgba(64,192,87,0.4)" : "0 0 30px rgba(255,118,117,0.4)",
-                    }}>
-                      {room.voting.result?.toUpperCase()}
-                    </div>
-                  </div>
+                  <div style={{ position: 'relative', display: 'inline-block', marginBottom: '40px', perspective: '1000px' }}>
+    
+    <div style={{
+      width: '140px',
+      height: '140px',
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transformStyle: 'preserve-3d',
+      animation: 'royalFlip 8s infinite linear, levitate 4s infinite ease-in-out',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <img
+        src={room.voting.result === "Yes" ? "/green_seal.png" : "/red_seal.png"}
+        style={{ 
+          width: '130px', 
+          height: '130px', 
+          opacity: 0.4,
+          filter: 'drop-shadow(0 0 20px rgba(197, 160, 89, 0.4))',
+          backfaceVisibility: 'visible' 
+        }}
+      />
+    </div>
+
+    <div style={{
+      fontSize: "80px",
+      fontWeight: "bold",
+      fontFamily: "'Cinzel', serif",
+      position: 'relative',
+      zIndex: 10,
+      color: room.voting.result === "Yes" ? "#40c057" : "#ff7675",
+      textShadow: room.voting.result === "Yes" 
+        ? "0 0 35px rgba(64,192,87,0.7)" 
+        : "0 0 35px rgba(255,118,117,0.7)",
+      pointerEvents: 'none'
+    }}>
+      {room.voting.result?.toUpperCase()}
+    </div>
+
+    <div style={{
+      position: 'absolute',
+      bottom: '-30px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '60px',
+      height: '10px',
+      background: 'radial-gradient(ellipse at center, rgba(197, 160, 89, 0.2) 0%, transparent 70%)',
+      borderRadius: '50%',
+      filter: 'blur(5px)',
+      animation: 'shadowPulse 4s infinite ease-in-out'
+    }} />
+
+<style>{`
+  @keyframes revealVerdict {
+    0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* The 3D Flip */
+  @keyframes royalFlip {
+    0% { transform: translate(-50%, -50%) rotateY(0deg); }
+    100% { transform: translate(-50%, -50%) rotateY(360deg); }
+  }
+
+  /* The Floating Motion */
+  @keyframes levitate {
+    0%, 100% { margin-top: -10px; }
+    50% { margin-top: 10px; }
+  }
+
+  /* The Shadow shrinking/growing as it gets "higher" */
+  @keyframes shadowPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.3; }
+    50% { transform: translateX(-50%) scale(0.7); opacity: 0.1; }
+  }
+`}</style>
+
+  </div>
 
                   {/* The Tally Breakdown */}
                   <div style={{
@@ -1626,13 +1612,13 @@ export default function GameDashboard() {
                     <div style={{ display: "flex", gap: "15px", justifyContent: "center" }}>
                       <button
                         onClick={handleStartVote}
-                        style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", width: "auto", padding: "0 25px" }}
+                        style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", width: "auto", padding: "2px 25px" }}
                       >
-                        New Session
+                        Take Vote Again
                       </button>
                       <button
                         onClick={handleClearVote}
-                        style={{ ...primaryBtn, backgroundColor: "transparent", border: "1px solid #444", color: "#888", width: "auto", padding: "0 25px" }}
+                        style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border:"1px solid #888", width: "auto", padding: "2px 25px" }}
                       >
                         Dismiss
                       </button>
