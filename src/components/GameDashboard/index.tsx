@@ -254,11 +254,11 @@ export default function GameDashboard() {
   const handleDissolve = () => {
     if (window.confirm("Terminate this session for all players?")) {
       handleCloseRoom();
-      
+
       // GM also needs immediate local cleanup
       localStorage.removeItem("roomCode");
       localStorage.removeItem("playerId");
-      window.location.href = "/"; 
+      window.location.href = "/";
     }
   };
 
@@ -406,13 +406,13 @@ export default function GameDashboard() {
 
       {/* LOGIN VIEW */}
       {!room && !wasKicked && (
-        <div style={{ 
-          ...cardStyle, 
-          border: "2px solid #c5a059", 
-          position: 'relative', 
+        <div style={{
+          ...cardStyle,
+          border: "2px solid #c5a059",
+          position: 'relative',
           padding: '30px',
           marginTop: '10px',
-          animation: 'slideUpFade 0.8s ease-out forwards' 
+          animation: 'slideUpFade 0.8s ease-out forwards'
         }}>
           {/* Decorative Label */}
           <div style={{
@@ -422,7 +422,7 @@ export default function GameDashboard() {
           }}>
             ENLISTMENT
           </div>
-        
+
           {/* STEP 1: IDENTITY */}
           <div style={{ marginBottom: '35px', textAlign: 'center' }}>
             <h3 style={{ marginTop: 0, color: "#fff", fontSize: '22px', marginBottom: '15px', fontFamily: "'Cinzel', serif" }}>
@@ -430,9 +430,9 @@ export default function GameDashboard() {
             </h3>
             <input
               placeholder="Enter Alias..."
-              style={{ 
-                ...inputStyle, 
-                width: '100%', 
+              style={{
+                ...inputStyle,
+                width: '100%',
                 boxSizing: 'border-box',
                 border: name ? '1px solid #c5a059' : '1px solid #333',
                 animation: !name ? 'goldPulse 2s infinite' : 'none'
@@ -441,30 +441,30 @@ export default function GameDashboard() {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-        
+
           {/* VISUAL DIVIDER */}
-          <div style={{ 
-            height: '1px', 
-            background: 'linear-gradient(to right, transparent, #c5a059, transparent)', 
+          <div style={{
+            height: '1px',
+            background: 'linear-gradient(to right, transparent, #c5a059, transparent)',
             margin: '20px auto',
             width: '80%'
           }} />
-        
+
           {/* STEP 2: CHOOSE PATH */}
           <div style={{ opacity: name ? 1 : 0.5, transition: 'opacity 0.5s ease' }}>
             <h3 style={{ color: "#fff", textAlign: 'center', fontSize: '18px', marginBottom: '20px', fontFamily: "'Cinzel', serif" }}>
               Step 2: Choose Mission
             </h3>
-        
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-              
+
               {/* PATH A: CREATE */}
               <div style={{ textAlign: 'center' }}>
                 <button
-                  style={{ 
-                    ...primaryBtn, 
-                    backgroundColor: name && !roomCode ? "#c5a059" : "#222", 
-                    color: name && !roomCode ? "#000" : "#555", 
+                  style={{
+                    ...primaryBtn,
+                    backgroundColor: name && !roomCode ? "#c5a059" : "#222",
+                    color: name && !roomCode ? "#000" : "#555",
                     width: '100%',
                     cursor: name && !roomCode ? 'pointer' : 'not-allowed'
                   }}
@@ -474,25 +474,25 @@ export default function GameDashboard() {
                   Establish New HQ
                 </button>
               </div>
-        
-               <div style={{ position: 'relative', textAlign: 'center' }}>
-      <span style={{ backgroundColor: '#0f0f0f', padding: '0 10px', color: 'white', fontSize: '16px', position: 'relative', zIndex: 1 }}>OR JOIN</span>
-       <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'white', zIndex: 0 }} />
-     </div>
-        
+
+              <div style={{ position: 'relative', textAlign: 'center' }}>
+                <span style={{ backgroundColor: '#0f0f0f', padding: '0 10px', color: 'white', fontSize: '16px', position: 'relative', zIndex: 1 }}>OR JOIN</span>
+                <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'white', zIndex: 0 }} />
+              </div>
+
               {/* PATH B: JOIN */}
-              <div style={{ 
-                backgroundColor: 'rgba(197, 160, 89, 0.03)', 
-                padding: '20px', 
-                borderRadius: '8px', 
-                border: '1px solid rgba(197, 160, 89, 0.1)' 
+              <div style={{
+                backgroundColor: 'rgba(197, 160, 89, 0.03)',
+                padding: '20px',
+                borderRadius: '8px',
+                border: '1px solid rgba(197, 160, 89, 0.1)'
               }}>
                 <input
                   placeholder="INPUT CODE"
-                  style={{ 
-                    ...inputStyle, 
-                    textAlign: 'center', 
-                    letterSpacing: '4px', 
+                  style={{
+                    ...inputStyle,
+                    textAlign: 'center',
+                    letterSpacing: '4px',
                     textTransform: 'uppercase',
                     marginBottom: '15px',
                     backgroundColor: '#000',
@@ -502,11 +502,11 @@ export default function GameDashboard() {
                   onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                 />
                 <button
-                  style={{ 
-                    ...primaryBtn, 
-                    backgroundColor: "transparent", 
-                    border: `1px solid ${ (name && roomCode) ? "#c5a059" : "#333" }`, 
-                    color: (name && roomCode) ? "#c5a059" : "#444", 
+                  style={{
+                    ...primaryBtn,
+                    backgroundColor: "transparent",
+                    border: `1px solid ${(name && roomCode) ? "#c5a059" : "#333"}`,
+                    color: (name && roomCode) ? "#c5a059" : "#444",
                     width: '100%',
                     cursor: (name && roomCode) ? 'pointer' : 'not-allowed'
                   }}
@@ -519,9 +519,9 @@ export default function GameDashboard() {
             </div>
           </div>
           <style>
-                  
-{
-  `
+
+            {
+              `
   @keyframes slideUpFade {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -538,7 +538,7 @@ export default function GameDashboard() {
   to { width: 100%; }
 }
   `
-}
+            }
           </style>
         </div>
       )}
@@ -546,133 +546,133 @@ export default function GameDashboard() {
       {/* GAME VIEW */}
       {room && (
         <>
-<div style={{
-  marginBottom: '20px',
-  border: '1px solid rgba(197, 160, 89, 0.3)',
-  borderRadius: '8px',
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  overflow: 'hidden',
-  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-  fontFamily: "'Cinzel', serif"
-}}>
-  {/* CLICKABLE HEADER */}
-  <div 
-    onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-    style={{
-      padding: '12px 20px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      cursor: 'pointer',
-      background: 'linear-gradient(90deg, rgba(197, 160, 89, 0.1) 0%, rgba(0,0,0,0) 100%)',
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-      <div style={{
-        width: '10px',
-        height: '10px',
-        borderRadius: '50%',
-        backgroundColor: '#40c057',
-        boxShadow: '0 0 10px #40c057',
-      }} />
-      <div>
-        <span style={{ fontSize: '10px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>OPERATIVE</span>
-        <span style={{ fontSize: '16px', color: '#fff', letterSpacing: '1px', textTransform: 'uppercase' }}>
-            {room.players.find(p => p.id === playerId)?.name || "Unknown"}
-        </span>
-      </div>
-    </div>
-    
-    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        {/* Shimmering Badge indicating status */}
-        <span style={{ fontSize: '10px', color: room.locked ? '#ff922b' : '#00b894' }}>
-            {room.locked ? "🔒 LOCKED" : "🔓 OPEN"}
-        </span>
-        <span style={{ 
-            color: '#c5a059', 
-            transform: isDrawerOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.4s'
-        }}>
-            ▼
-        </span>
-    </div>
-  </div>
+          <div style={{
+            marginBottom: '20px',
+            border: '1px solid rgba(197, 160, 89, 0.3)',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            overflow: 'hidden',
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            fontFamily: "'Cinzel', serif"
+          }}>
+            {/* CLICKABLE HEADER */}
+            <div
+              onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+              style={{
+                padding: '12px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                background: 'linear-gradient(90deg, rgba(197, 160, 89, 0.1) 0%, rgba(0,0,0,0) 100%)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: '#40c057',
+                  boxShadow: '0 0 10px #40c057',
+                }} />
+                <div>
+                  <span style={{ fontSize: '10px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>OPERATIVE</span>
+                  <span style={{ fontSize: '16px', color: '#fff', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    {room.players.find(p => p.id === playerId)?.name || "Unknown"}
+                  </span>
+                </div>
+              </div>
 
-  {/* EXPANDABLE CONTENT */}
-  <div style={{
-    maxHeight: isDrawerOpen ? '300px' : '0px',
-    opacity: isDrawerOpen ? 1 : 0,
-    transition: 'all 0.4s ease-in-out',
-    padding: isDrawerOpen ? '20px' : '0 20px',
-    borderTop: isDrawerOpen ? '1px solid rgba(197, 160, 89, 0.2)' : 'none',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)'
-  }}>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        
-        {/* ACCESS MODULE */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-                <p style={{ margin: '0 0 5px 0', fontSize: '9px', color: '#666', letterSpacing: '1px' }}>SESSION CIPHER</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ color: '#c5a059', fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                {/* Shimmering Badge indicating status */}
+                <span style={{ fontSize: '10px', color: room.locked ? '#ff922b' : '#00b894' }}>
+                  {room.locked ? "🔒 LOCKED" : "🔓 OPEN"}
+                </span>
+                <span style={{
+                  color: '#c5a059',
+                  transform: isDrawerOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.4s'
+                }}>
+                  ▼
+                </span>
+              </div>
+            </div>
+
+            {/* EXPANDABLE CONTENT */}
+            <div style={{
+              maxHeight: isDrawerOpen ? '300px' : '0px',
+              opacity: isDrawerOpen ? 1 : 0,
+              transition: 'all 0.4s ease-in-out',
+              padding: isDrawerOpen ? '20px' : '0 20px',
+              borderTop: isDrawerOpen ? '1px solid rgba(197, 160, 89, 0.2)' : 'none',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* ACCESS MODULE */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '9px', color: '#666', letterSpacing: '1px' }}>SESSION CIPHER</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ color: '#c5a059', fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px' }}>
                         {roomCode}
-                    </span>
-                    <button 
+                      </span>
+                      <button
                         onClick={() => handleCopy("code")}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#fff' }}
                         title="Copy Cipher"
-                    >
+                      >
                         {copiedStatus === "code" ? "✅" : "📋"}
-                    </button>
-                </div>
-            </div>
-            
-            <button
-                onClick={() => handleCopy("link")}
-                style={{
-                    backgroundColor: copiedStatus === "link" ? '#c5a059' : 'transparent',
-                    border: '1px solid #c5a059',
-                    color: copiedStatus === "link" ? '#000' : '#c5a059',
-                    padding: '10px 15px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                }}
-            >
-                {copiedStatus === "link" ? "LINK COPIED" : "INVITE ALLIES"}
-            </button>
-        </div>
+                      </button>
+                    </div>
+                  </div>
 
-        {/* UTILITY ROW */}
-        <div style={{ 
-            display: 'flex', 
-            justifyContent: 'end', 
-            alignItems: 'center',
-            paddingTop: '15px',
-            borderTop: '1px solid rgba(255,255,255,0.05)'
-        }}>
-            <button
-                onClick={leaveRoom}
-                style={{
-                    background: 'none',
-                    border: '1px solid #444',
-                    color: '#888',
-                    padding: '5px 10px',
-                    borderRadius: '4px',
-                    fontSize: '9px',
-                    cursor: 'pointer',
-                    textTransform: 'uppercase'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#ff7675'; e.currentTarget.style.borderColor = '#ff7675'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#444'; }}
-            >
-                Abandon Post
-            </button>
-        </div>
-    </div>
-  </div>
-</div>
+                  <button
+                    onClick={() => handleCopy("link")}
+                    style={{
+                      backgroundColor: copiedStatus === "link" ? '#c5a059' : 'transparent',
+                      border: '1px solid #c5a059',
+                      color: copiedStatus === "link" ? '#000' : '#c5a059',
+                      padding: '10px 15px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {copiedStatus === "link" ? "LINK COPIED" : "INVITE ALLIES"}
+                  </button>
+                </div>
+
+                {/* UTILITY ROW */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'end',
+                  alignItems: 'center',
+                  paddingTop: '15px',
+                  borderTop: '1px solid rgba(255,255,255,0.05)'
+                }}>
+                  <button
+                    onClick={leaveRoom}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #444',
+                      color: '#888',
+                      padding: '5px 10px',
+                      borderRadius: '4px',
+                      fontSize: '9px',
+                      cursor: 'pointer',
+                      textTransform: 'uppercase'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#ff7675'; e.currentTarget.style.borderColor = '#ff7675'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#444'; }}
+                  >
+                    Abandon Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* SECRET IDENTITY CARD */}
           {room.gameStarted && me?.character && (
@@ -953,7 +953,7 @@ export default function GameDashboard() {
                 textTransform: "uppercase",
                 letterSpacing: "1.5px"
               }}>
-                Players Joined: <span style={{color:"white", fontWeight:"bold"}}>{room.players.length}/10</span>
+                Players Joined: <span style={{ color: "white", fontWeight: "bold" }}>{room.players.length}/10</span>
               </div>
             )
           }
@@ -1463,52 +1463,88 @@ export default function GameDashboard() {
                     border: "1px solid rgba(197, 160, 89, 0.2)",
                     color: "#c5a059",
                     fontSize: "14px",
-                    marginBottom: "40px"
+                    marginBottom: "40px",
+                    display: 'inline-block'
                   }}>
                     Response Tracker: <span style={{ color: "#fff", fontWeight: "bold" }}>{Object.keys(room.voting.votes).length}</span> / {room.players.length}
                   </div>
 
                   {playerId && !room.voting.votes[playerId] ? (
-                    <div style={{ display: "flex", gap: "25px" }}>
-                      <button
-                        onClick={handleYesVote}
-                        style={{
-                          ...primaryBtn,
-                          backgroundColor: "#1b4332",
-                          color: "#40c057",
-                          border: "1px solid #40c057",
-                          width: "140px",
-                          height: "60px",
-                          fontSize: "18px"
-                        }}
-                      >
-                        ✅ YES
-                      </button>
-                      <button
-                        onClick={handleNoVote}
-                        style={{
-                          ...primaryBtn,
-                          backgroundColor: "#4c1d1d",
-                          color: "#ff7675",
-                          border: "1px solid #ff7675",
-                          width: "140px",
-                          height: "60px",
-                          fontSize: "18px"
-                        }}
-                      >
-                        ❌ NO
-                      </button>
+                    <div style={{
+                      display: "flex",
+                      gap: "40px",
+                      justifyContent: "center",
+                      alignItems: "center"
+                    }}>
+                      {/* YES BUTTON (GREEN SEAL) */}
+                      <div style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={handleYesVote}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            padding: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.filter = 'drop-shadow(0 0 15px rgba(64, 192, 87, 0.5))';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.filter = 'none';
+                          }}
+                        >
+                          <img src="/green_seal.png" alt="Yes" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+                        </button>
+                        <p style={{ fontFamily: "'Cinzel', serif", color: "#40c057", marginTop: '10px', fontSize: '14px', letterSpacing: '2px' }}>VOTE YES</p>
+                      </div>
+
+                      {/* NO BUTTON (RED SEAL) */}
+                      <div style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={handleNoVote}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            padding: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.filter = 'drop-shadow(0 0 15px rgba(255, 118, 117, 0.5))';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.filter = 'none';
+                          }}
+                        >
+                          <img src="/red_seal.png" alt="No" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+                        </button>
+                        <p style={{ fontFamily: "'Cinzel', serif", color: "#ff7675", marginTop: '10px', fontSize: '14px', letterSpacing: '2px' }}>VOTE NO</p>
+                      </div>
                     </div>
                   ) : (
+                    /* POST-VOTE FEEDBACK */
                     <div style={{ animation: "pulseOpacity 2s infinite" }}>
-                      <p style={{ color: "#c5a059", fontSize: "20px", fontFamily: "'Cinzel', serif" }}>
+                      {
+                        playerId &&
+                        <img
+                          src={room.voting.votes[playerId] === "yes" ? "/green_seal.png" : "/red_seal.png"}
+                          alt="Your Seal"
+                          style={{ width: '60px', height: '60px', marginBottom: '15px', opacity: 0.8 }}
+                        />
+                      }
+                      <p style={{ color: "#c5a059", fontSize: "20px", fontFamily: "'Cinzel', serif", margin: 0 }}>
                         Your Seal Has Been Placed
                       </p>
                       <p style={{ color: "#666", fontSize: "14px" }}>Awaiting remaining council members...</p>
                     </div>
                   )}
 
-                  {/* NEW: MASTER CANCEL BUTTON */}
+                  {/* MASTER CANCEL BUTTON */}
                   {isGameMaster && (
                     <div style={{ marginTop: "40px" }}>
                       <button
@@ -1539,23 +1575,29 @@ export default function GameDashboard() {
                       </button>
                     </div>
                   )}
-
                 </>
               ) : (
                 /* RESULT PHASE */
                 <div style={{ animation: "revealVerdict 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards" }}>
-                  <div style={{
-                    fontSize: "80px",
-                    fontWeight: "bold",
-                    fontFamily: "'Cinzel', serif",
-                    color: room.voting.result === "Yes" ? "#40c057" : "#ff7675",
-                    textShadow: room.voting.result === "Yes" ? "0 0 30px rgba(64,192,87,0.4)" : "0 0 30px rgba(255,118,117,0.4)",
-                    marginBottom: "10px"
-                  }}>
-                    {room.voting.result?.toUpperCase()}
+                  {/* Large Result Seal Display */}
+                  <div style={{ position: 'relative', display: 'inline-block', marginBottom: '20px' }}>
+                    <img
+                      src={room.voting.result === "Yes" ? "/green_seal.png" : "/red_seal.png"}
+                      style={{ width: '120px', height: '120px', opacity: 0.2, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                    />
+                    <div style={{
+                      fontSize: "80px",
+                      fontWeight: "bold",
+                      fontFamily: "'Cinzel', serif",
+                      position: 'relative',
+                      color: room.voting.result === "Yes" ? "#40c057" : "#ff7675",
+                      textShadow: room.voting.result === "Yes" ? "0 0 30px rgba(64,192,87,0.4)" : "0 0 30px rgba(255,118,117,0.4)",
+                    }}>
+                      {room.voting.result?.toUpperCase()}
+                    </div>
                   </div>
 
-                  {/* NEW: The Tally Breakdown */}
+                  {/* The Tally Breakdown */}
                   <div style={{
                     display: "flex",
                     justifyContent: "center",
@@ -1564,21 +1606,23 @@ export default function GameDashboard() {
                     fontFamily: "'Cinzel', serif",
                     fontSize: "18px"
                   }}>
-                    <div style={{ color: "#40c057" }}>
-                      <span style={{ fontSize: "14px", color: "#666", marginRight: "5px" }}>YES:</span>
+                    <div style={{ color: "#40c057", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img src="/green_seal.png" style={{ width: '20px' }} />
                       {Object.values(room.voting.votes).filter(v => v === "yes").length}
                     </div>
                     <div style={{ width: "1px", backgroundColor: "#333" }} />
-                    <div style={{ color: "#ff7675" }}>
-                      <span style={{ fontSize: "14px", color: "#666", marginRight: "5px" }}>NO:</span>
+                    <div style={{ color: "#ff7675", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img src="/red_seal.png" style={{ width: '20px' }} />
                       {Object.values(room.voting.votes).filter(v => v === "no").length}
                     </div>
                   </div>
+
+                  {/* Footer */}
                   <div style={{ color: "#aaa", fontSize: "16px", letterSpacing: "1px", marginBottom: "40px" }}>
                     The Council has spoken.
                   </div>
 
-                  {me?.isGameMaster && playerId && (
+                  {isGameMaster && (
                     <div style={{ display: "flex", gap: "15px", justifyContent: "center" }}>
                       <button
                         onClick={handleStartVote}
