@@ -13,6 +13,7 @@ export type VotingState = {
   active: boolean;
   votes: Record<string, "yes" | "no">; // Key is playerId, value is "yes" or "no"
   result: "Yes" | "No" | null;
+  type: "teamApproval" | "missionOutcome";
 };
 
 export type Room = {

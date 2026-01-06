@@ -71,6 +71,10 @@ class SocketService {
     this.socket.emit("startVote", { roomCode, requesterId: playerId });
   }
 
+  startSecretVote(roomCode: string, playerId: string) {
+    this.socket.emit("startSecretVote", { roomCode, requesterId: playerId });
+  }
+
   castVote(roomCode: string, playerId: string, choice: "yes" | "no") {
     this.socket.emit("castVote", { roomCode, playerId, choice });
   }
