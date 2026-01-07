@@ -1,0 +1,9 @@
+/* In App.css */
+.fade-in-view {
+    animation: fadeInEffect 1.5s ease-out forwards;
+  }
+  
+  @keyframes fadeInEffect {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }

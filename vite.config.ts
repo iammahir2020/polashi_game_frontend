@@ -22,17 +22,17 @@ export default defineConfig({
         start_url: '.',
         icons: [
           {
-            src: '/EIC.png',
+            src: '/polashi_fav_high_res.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/EIC.png',
+            src: '/polashi_fav_high_res.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/EIC.png',
+            src: '/polashi_fav_high_res.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',

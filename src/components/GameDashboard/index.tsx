@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import type { Player, Room } from "../../types/game";
 import { socketService } from "../../services/socket";
+import GameLoader from "../Loader";
 
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
@@ -134,6 +135,16 @@ export default function GameDashboard() {
       setIsRevealed(false);
     }
   }, [room?.gameStarted]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (isRevealed) {
+      timer = setTimeout(() => {
+        setIsRevealed(false);
+      }, 8000); // 5 seconds
+    }
+    return () => clearTimeout(timer); // Cleanup if user clicks again or unmounts
+  }, [isRevealed]);
 
   useEffect(() => {
     if (!room || !playerId) return;
@@ -324,34 +335,10 @@ export default function GameDashboard() {
     cursor: "pointer",
     marginBottom: "10px"
   };
-
+  
   if (isReconnecting) {
     return (
-      <div style={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#0a0a0a",
-        color: "#c5a059",
-        fontFamily: "'Cinzel', serif"
-      }}>
-        <div className="shimmer-effect" style={{ fontSize: "24px", marginBottom: "20px" }}>
-          Re-establishing Intelligence Links...
-        </div>
-        <div style={{
-          width: "40px",
-          height: "40px",
-          border: "3px solid rgba(197, 160, 89, 0.1)",
-          borderTop: "3px solid #c5a059",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite"
-        }} />
-        <style>{`
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        `}</style>
-      </div>
+      <GameLoader message={"Re-establishing Intelligence Links..."} />
     );
   }
 
@@ -366,8 +353,11 @@ export default function GameDashboard() {
         background: "linear-gradient(to bottom, #1a1a1a, transparent)",
         borderRadius: "0 0 20px 20px"
       }}>
+        <h1 style={{ margin: 0, fontSize: "16px", color: "#c5a059", letterSpacing: "2px", textTransform: 'uppercase' }}>
+        The Battle of
+        </h1>
         <h1 style={{ margin: 0, fontSize: "32px", color: "#c5a059", letterSpacing: "2px", textTransform: 'uppercase' }}>
-          Polashi (পলাশী)
+        Polashi (পলাশী)
         </h1>
         <div style={{
           display: 'inline-flex',
@@ -910,12 +900,37 @@ export default function GameDashboard() {
                       </div>
                     </div>
                   )}
+
+
+{/* --- AUTO-HIDE TIMER BAR --- */}
+{isRevealed && (
+          <div style={{
+            position: "absolute",
+            bottom: "0",
+            left: "0",
+            height: "6px",
+            backgroundColor: "rgba(0,0,0,0.3)",
+            width: "100%"
+          }}>
+            <div style={{
+              height: "100%",
+              backgroundColor: me.character.team === "Nawabs" ? "#1b4332" : "#7b1113",
+              animation: "burnTimer 8s linear forwards"
+            }} />
+          </div>
+        )}
+
                 </div>
 
               </div>
 
               {/* CSS ANIMATIONS */}
               <style>{`
+
+              @keyframes burnTimer {
+        from { width: 100%; }
+        to { width: 0%; }
+      }
       @keyframes pulseBorder {
         0% { transform: scale(1); opacity: 0.2; }
         50% { transform: scale(1.05); opacity: 0.5; }
