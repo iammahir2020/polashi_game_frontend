@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import type { Player, Room } from "../../types/game";
 import { socketService } from "../../services/socket";
