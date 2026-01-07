@@ -19,6 +19,7 @@ export default function GameDashboard() {
   const [currentGeneral, setCurrentGeneral] = useState<Player | null>(null);
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -58,6 +59,7 @@ export default function GameDashboard() {
       setIsReconnecting(false);
       setWasKicked(false);
       setError("");
+      setLoadingAction(null);
 
       // Persist for refresh
       localStorage.setItem("roomCode", data.roomCode);
@@ -81,10 +83,12 @@ export default function GameDashboard() {
     socketService.onError((msg) => {
       setError(msg);
       setIsReconnecting(false);
+      setLoadingAction(null);
       // If error is "Room not found", clear storage
       if (msg.toLowerCase().includes("not found")) {
         localStorage.removeItem("roomCode");
         localStorage.removeItem("playerId");
+        alert(msg || "An error occurred.");
       }
     });
 
@@ -118,17 +122,17 @@ export default function GameDashboard() {
     const handleInternetChange = () => {
       setNetConnection(navigator.onLine ? "ok" : "down");
     };
-  
+
     handleInternetChange();
-  
+
     window.addEventListener("online", handleInternetChange);
     window.addEventListener("offline", handleInternetChange);
-  
+
     return () => {
       window.removeEventListener("online", handleInternetChange);
       window.removeEventListener("offline", handleInternetChange);
     };
-  }, [isConnectedToSocket]); 
+  }, [isConnectedToSocket]);
 
   useEffect(() => {
     if (room && !room.gameStarted) {
@@ -194,8 +198,19 @@ export default function GameDashboard() {
     localStorage.removeItem("playerId");
   };
 
-  const createRoom = () => { setWasKicked(false); socketService.createRoom(name); };
-  const joinRoom = () => { setWasKicked(false); socketService.joinRoom(roomCode, name); };
+  const createRoom = () => {
+    setLoadingAction("create");
+    setWasKicked(false);
+    socketService.createRoom(name);
+    setTimeout(() => setLoadingAction(null), 5000);
+  };
+  const joinRoom = () => {
+    setLoadingAction("join");
+    setWasKicked(false);
+    socketService.joinRoom(roomCode, name);
+    setTimeout(() => setLoadingAction(null), 5000);
+  };
+
   const kickPlayer = (targetId: string) => { socketService.kickPlayer(roomCode, targetId, playerId!); };
   const toggleLock = () => { if (!room || !playerId || room.gameStarted) return; socketService.lockRoom(roomCode, !room?.locked, playerId); };
   const handleStartGame = () => { if (!room || !playerId) return; setIsRevealed(false); socketService.startGame(roomCode, playerId); };
@@ -209,7 +224,7 @@ export default function GameDashboard() {
   const handleCloseRoom = () => { if (!room || !playerId || !room.gameStarted) return; socketService.closeRoom(roomCode, playerId); };
 
   const handleSetTeam = (playerIds: string[]) => { if (!room || !playerId || !room.gameStarted) return; socketService.proposeTeam(roomCode, playerIds); };
-  const handleStartSecretVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.startSecretVote(roomCode, playerId);};
+  const handleStartSecretVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.startSecretVote(roomCode, playerId); };
 
   const leaveRoom = () => {
     const currentRoomCode = roomCode || localStorage.getItem("roomCode");
@@ -275,18 +290,16 @@ export default function GameDashboard() {
     }
   };
 
-  const handleTogglePlayer = (id:string) => {
+  const handleTogglePlayer = (id: string) => {
     if (!room || !playerId || !room.gameStarted) return;
     // 1. Calculate the new team locally
     const currentTeam = room.proposedTeam || [];
     const isSelected = currentTeam.includes(id);
-    
-    const newTeam = isSelected 
+
+    const newTeam = isSelected
       ? currentTeam.filter(pId => pId !== id)
       : [...currentTeam, id];
 
-      console.log("New Team Proposal:", newTeam);
-  
     handleSetTeam(newTeam);
   };
 
@@ -335,7 +348,7 @@ export default function GameDashboard() {
     cursor: "pointer",
     marginBottom: "10px"
   };
-  
+
   if (isReconnecting) {
     return (
       <GameLoader message={"Re-establishing Intelligence Links..."} />
@@ -354,10 +367,10 @@ export default function GameDashboard() {
         borderRadius: "0 0 20px 20px"
       }}>
         <h1 style={{ margin: 0, fontSize: "16px", color: "#c5a059", letterSpacing: "2px", textTransform: 'uppercase' }}>
-        The Battle of
+          The Battle of
         </h1>
         <h1 style={{ margin: 0, fontSize: "32px", color: "#c5a059", letterSpacing: "2px", textTransform: 'uppercase' }}>
-        Polashi (পলাশী)
+          Polashi (পলাশী)
         </h1>
         <div style={{
           display: 'inline-flex',
@@ -471,15 +484,20 @@ export default function GameDashboard() {
                 <button
                   style={{
                     ...primaryBtn,
-                    backgroundColor: name && !roomCode ? "#c5a059" : "#222",
-                    color: name && !roomCode ? "#000" : "#555",
+                    backgroundColor: name && !roomCode && loadingAction !== "create" ? "#c5a059" : "#222",
+                    color: name && !roomCode && loadingAction !== "create" ? "#000" : "#555",
                     width: '100%',
-                    cursor: name && !roomCode ? 'pointer' : 'not-allowed'
+                    cursor: (name && !roomCode && !loadingAction) ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
                   }}
                   onClick={createRoom}
-                  disabled={!name}
+                  disabled={!name || !!loadingAction || !!roomCode}
                 >
                   Establish New HQ
+                  {loadingAction === "create" && <div className="btn-spinner" />}
                 </button>
               </div>
 
@@ -496,7 +514,8 @@ export default function GameDashboard() {
                 border: '1px solid rgba(197, 160, 89, 0.1)'
               }}>
                 <input
-                  placeholder="INPUT CODE"
+                  placeholder="Enter HQ Code"
+                  disabled={!!loadingAction}
                   style={{
                     ...inputStyle,
                     textAlign: 'center',
@@ -504,7 +523,8 @@ export default function GameDashboard() {
                     textTransform: 'uppercase',
                     marginBottom: '15px',
                     backgroundColor: '#000',
-                    border: roomCode ? '1px solid #c5a059' : '1px solid #222'
+                    border: roomCode ? '1px solid #c5a059' : '1px solid #222',
+                    opacity: loadingAction ? 0.5 : 1
                   }}
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
@@ -513,15 +533,20 @@ export default function GameDashboard() {
                   style={{
                     ...primaryBtn,
                     backgroundColor: "transparent",
-                    border: `1px solid ${(name && roomCode) ? "#c5a059" : "#333"}`,
-                    color: (name && roomCode) ? "#c5a059" : "#444",
+                    border: `1px solid ${(name && roomCode && !loadingAction) ? "#c5a059" : "#333"}`,
+                    color: (name && roomCode && loadingAction !== "join") ? "#c5a059" : "#444",
                     width: '100%',
-                    cursor: (name && roomCode) ? 'pointer' : 'not-allowed'
+                    cursor: (name && roomCode && !loadingAction) ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
                   }}
                   onClick={joinRoom}
-                  disabled={!name || !roomCode}
+                  disabled={!name || !roomCode || !!loadingAction}
                 >
                   Infiltrate Existing HQ
+                  {loadingAction === "join" && <div className="btn-spinner" />}
                 </button>
               </div>
             </div>
@@ -545,6 +570,19 @@ export default function GameDashboard() {
   from { width: 0%; }
   to { width: 100%; }
 }
+
+.btn-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(197, 160, 89, 0.3);
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: btn-spin 0.8s linear infinite;
+    }
+    @keyframes btn-spin {
+      to { transform: rotate(360deg); }
+    }
+
   `
             }
           </style>
@@ -902,23 +940,23 @@ export default function GameDashboard() {
                   )}
 
 
-{/* --- AUTO-HIDE TIMER BAR --- */}
-{isRevealed && (
-          <div style={{
-            position: "absolute",
-            bottom: "0",
-            left: "0",
-            height: "6px",
-            backgroundColor: "rgba(0,0,0,0.3)",
-            width: "100%"
-          }}>
-            <div style={{
-              height: "100%",
-              backgroundColor: me.character.team === "Nawabs" ? "#1b4332" : "#7b1113",
-              animation: "burnTimer 8s linear forwards"
-            }} />
-          </div>
-        )}
+                  {/* --- AUTO-HIDE TIMER BAR --- */}
+                  {isRevealed && (
+                    <div style={{
+                      position: "absolute",
+                      bottom: "0",
+                      left: "0",
+                      height: "6px",
+                      backgroundColor: "rgba(0,0,0,0.3)",
+                      width: "100%"
+                    }}>
+                      <div style={{
+                        height: "100%",
+                        backgroundColor: me.character.team === "Nawabs" ? "#1b4332" : "#7b1113",
+                        animation: "burnTimer 8s linear forwards"
+                      }} />
+                    </div>
+                  )}
 
                 </div>
 
@@ -976,54 +1014,54 @@ export default function GameDashboard() {
             </div>
           )}
 
-{/* SELECT PROPOSED TEAM  */}
-{me?.isGeneral && room.gameStarted && !room.voting?.active && (
-  <div style={{
-    margin: "20px 0",
-    padding: "20px",
-    background: "rgba(197, 160, 89, 0.05)",
-    border: "1px solid #c5a059",
-    borderRadius: "12px",
-    fontFamily: "'Cinzel', serif"
-  }}>
-    <h3 style={{ color: "#c5a059", marginTop: 0 }}>Assemble Your Battalion</h3>
-    <p style={{ color: "#888", fontSize: "12px", fontFamily: "'EB Garamond', serif" }}>
-      Select the operatives you trust for this mission.
-    </p>
-    
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
-      {room.players.map(p => {
-        const isSelected = (room.proposedTeam || []).includes(p.id);
-        
-        return (
-          <button
-            key={p.id}
-            onClick={() => handleTogglePlayer(p.id)}
-            style={{
-              padding: "10px 14px",
-              backgroundColor: isSelected ? "#c5a059" : "rgba(255,255,255,0.02)",
-              color: isSelected ? "#000" : "#c5a059",
-              border: `1px solid ${isSelected ? "#c5a059" : "rgba(197, 160, 89, 0.4)"}`,
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "12px",
-              fontWeight: isSelected ? "bold" : "normal",
-              transition: "all 0.1s ease-out", // Snappy transition
-              flex: "1 1 calc(33% - 10px)", // Fits 3 in a row on mobile
-              minWidth: "90px"
-            }}
-          >
-            {p.name}
-          </button>
-        );
-      })}
-    </div>
-    
-    <div style={{ fontSize: "11px", color: "#666" }}>
-      {room.proposedTeam?.length || 0} Operatives Selected
-    </div>
-  </div>
-)}
+          {/* SELECT PROPOSED TEAM  */}
+          {me?.isGeneral && room.gameStarted && !room.voting?.active && (
+            <div style={{
+              margin: "20px 0",
+              padding: "20px",
+              background: "rgba(197, 160, 89, 0.05)",
+              border: "1px solid #c5a059",
+              borderRadius: "12px",
+              fontFamily: "'Cinzel', serif"
+            }}>
+              <h3 style={{ color: "#c5a059", marginTop: 0 }}>Assemble Your Battalion</h3>
+              <p style={{ color: "#888", fontSize: "12px", fontFamily: "'EB Garamond', serif" }}>
+                Select the operatives you trust for this mission.
+              </p>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+                {room.players.map(p => {
+                  const isSelected = (room.proposedTeam || []).includes(p.id);
+
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => handleTogglePlayer(p.id)}
+                      style={{
+                        padding: "10px 14px",
+                        backgroundColor: isSelected ? "#c5a059" : "rgba(255,255,255,0.02)",
+                        color: isSelected ? "#000" : "#c5a059",
+                        border: `1px solid ${isSelected ? "#c5a059" : "rgba(197, 160, 89, 0.4)"}`,
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        fontWeight: isSelected ? "bold" : "normal",
+                        transition: "all 0.1s ease-out", // Snappy transition
+                        flex: "1 1 calc(33% - 10px)", // Fits 3 in a row on mobile
+                        minWidth: "90px"
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: "11px", color: "#666" }}>
+                {room.proposedTeam?.length || 0} Operatives Selected
+              </div>
+            </div>
+          )}
 
           {/* PLAYER COUNT  */}
           {
@@ -1114,137 +1152,6 @@ export default function GameDashboard() {
 
           {/* ADMIN PANEL */}
           {isGameMaster && (
-            // <div style={{
-            //   marginTop: 40,
-            //   padding: "24px",
-            //   backgroundColor: room.locked ? "#1a1610" : "#111814",
-            //   borderRadius: "16px",
-            //   border: `1px solid ${room.locked ? "#5f411e" : "#2d4a34"}`,
-            //   boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-            //   position: "relative",
-            //   overflow: "hidden"
-            // }}>
-            //   {/* Subtle status indicator glow in the corner */}
-            //   <div style={{
-            //     position: "absolute",
-            //     top: 0,
-            //     right: 0,
-            //     width: "100px",
-            //     height: "4px",
-            //     backgroundColor: room.locked ? "#ff922b" : "#40c057",
-            //     boxShadow: `0 0 15px ${room.locked ? "#ff922b" : "#40c057"}`
-            //   }} />
-
-            //   <h4 style={{
-            //     margin: "0 0 20px 0",
-            //     color: "#c5a059", // Gold/Brass
-            //     fontSize: "0.9rem",
-            //     textTransform: "uppercase",
-            //     letterSpacing: "2px",
-            //     display: "flex",
-            //     alignItems: "center",
-            //     gap: "10px"
-            //   }}>
-            //     <span style={{ fontSize: "18px" }}>🛡️</span> Command Console
-            //   </h4>
-
-            //   <div style={{
-            //     display: "flex",
-            //     gap: "12px",
-            //     flexWrap: "wrap"
-            //   }}>
-            //     <button
-            //       onClick={toggleLock}
-            //       style={{
-            //         flex: 1,
-            //         minWidth: "140px",
-            //         padding: "14px",
-            //         backgroundColor: room.locked ? "rgba(255, 146, 43, 0.1)" : "rgba(64, 192, 87, 0.1)",
-            //         color: room.locked ? "#ff922b" : "#40c057",
-            //         border: `1px solid ${room.locked ? "#ff922b" : "#40c057"}`,
-            //         borderRadius: "8px",
-            //         fontWeight: "bold",
-            //         fontSize: "13px",
-            //         letterSpacing: "1px",
-            //         cursor: "pointer",
-            //         transition: "all 0.2s ease",
-            //         textTransform: "uppercase"
-            //       }}
-            //       onMouseEnter={(e) => {
-            //         e.currentTarget.style.backgroundColor = room.locked ? "#ff922b" : "#40c057";
-            //         e.currentTarget.style.color = "#000";
-            //       }}
-            //       onMouseLeave={(e) => {
-            //         e.currentTarget.style.backgroundColor = room.locked ? "rgba(255, 146, 43, 0.1)" : "rgba(64, 192, 87, 0.1)";
-            //         e.currentTarget.style.color = room.locked ? "#ff922b" : "#40c057";
-            //       }}
-            //     >
-            //       {room.locked ? "🔓 Unlock Entry" : "🔒 Secure Room"}
-            //     </button>
-
-            //     {room.gameStarted && (
-            //       <button
-            //         onClick={handleResetGame}
-            //         style={{
-            //           flex: 1,
-            //           minWidth: "140px",
-            //           padding: "14px",
-            //           backgroundColor: "transparent",
-            //           color: "#888",
-            //           border: "1px solid #444",
-            //           borderRadius: "8px",
-            //           fontWeight: "bold",
-            //           fontSize: "13px",
-            //           letterSpacing: "1px",
-            //           cursor: "pointer",
-            //           transition: "all 0.2s ease",
-            //           textTransform: "uppercase"
-            //         }}
-            //         onMouseEnter={(e) => {
-            //           e.currentTarget.style.borderColor = "#ff7675";
-            //           e.currentTarget.style.color = "#ff7675";
-            //           e.currentTarget.style.backgroundColor = "rgba(255, 118, 117, 0.05)";
-            //         }}
-            //         onMouseLeave={(e) => {
-            //           e.currentTarget.style.borderColor = "#444";
-            //           e.currentTarget.style.color = "#888";
-            //           e.currentTarget.style.backgroundColor = "transparent";
-            //         }}
-            //       >
-            //         🔄 Reset Campaign
-            //       </button>
-            //     )}
-            //   </div>
-
-            //   <div style={{
-            //     marginTop: "20px",
-            //     padding: "12px",
-            //     backgroundColor: "rgba(0,0,0,0.3)",
-            //     borderRadius: "8px",
-            //     display: "flex",
-            //     alignItems: "center",
-            //     gap: "10px",
-            //     border: "1px solid #222"
-            //   }}>
-            //     <div style={{
-            //       width: "6px",
-            //       height: "6px",
-            //       borderRadius: "50%",
-            //       backgroundColor: room.locked ? "#ff922b" : "#40c057",
-            //       boxShadow: `0 0 8px ${room.locked ? "#ff922b" : "#40c057"}`
-            //     }} />
-            //     <p style={{
-            //       fontSize: "0.75rem",
-            //       color: "#aaa",
-            //       margin: 0,
-            //       lineHeight: "1.4"
-            //     }}>
-            //       {room.locked
-            //         ? "ENFORCED: No additional players may infiltrate this session."
-            //         : "OPEN: Deploy room code to recruits for session entry."}
-            //     </p>
-            //   </div>
-            // </div>
             <div style={{
               marginTop: 40,
               padding: "24px",
@@ -1363,7 +1270,7 @@ export default function GameDashboard() {
               }}
             >
               {generalReveal.flipping ? (
-                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
                   <div className="gold-mohur">👑</div>
                   <p style={{
                     color: "#c5a059", marginTop: "30px",
@@ -1420,167 +1327,167 @@ export default function GameDashboard() {
           )}
 
           {/* --- VOTING SYSTEM MODAL --- */}
-{room?.voting && (
-  <div style={{
-    position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.92)", backdropFilter: "blur(8px)",
-    zIndex: 20001, display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center"
-  }}>
-    {/* Decorative Header */}
-    <div style={{ marginBottom: "30px" }}>
-      <div style={{ color: "#c5a059", fontSize: "12px", letterSpacing: "4px", textTransform: "uppercase", marginBottom: "8px" }}>
-        {room.voting.type === "teamApproval" ? "Royal Court" : "Battlefield"}
-      </div>
-      <h2 style={{
-        color: "#fff", fontFamily: "'Cinzel', serif", fontSize: "32px", margin: 0,
-        textShadow: "0 0 15px rgba(197, 160, 89, 0.3)"
-      }}>
-        {room.voting.active 
-          ? room.voting.type === "teamApproval" ? "Council Deliberation" : "Cast Secret Vote" 
-          : "The Final Verdict"}
-      </h2>
-      <div style={{ width: "100px", height: "1px", background: "linear-gradient(to right, transparent, #c5a059, transparent)", margin: "15px auto" }} />
-    </div>
-
-    {/* TEAM LIST DISPLAY */}
-    <div style={{ margin: "20px 0" }}>
-      <p style={{ color: "#666", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase" }}>
-        Proposed Battalion:
-      </p>
-      <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-        {room.proposedTeam?.map(tid => {
-          const player = room.players.find(p => p.id === tid);
-          return (
-            <span key={tid} style={{
-              color: "#fff", fontSize: "18px", background: "rgba(197, 160, 89, 0.2)",
-              padding: "4px 12px", borderRadius: "20px", border: "1px solid rgba(197, 160, 89, 0.3)"
-            }}>
-              {player?.name}
-            </span>
-          );
-        })}
-      </div>
-    </div>
-
-    {playerId && room.voting.active ? (
-      <>
-        {/* ACTIVE VOTING PHASE */}
-        {/* Logic: If it's team approval, everyone votes. If secret vote, only proposed team votes. */}
-        {(room.voting.type === "teamApproval" || room.proposedTeam?.includes(playerId)) ? (
-          <>
-            <p style={{ color: "#888", fontFamily: "'EB Garamond', serif", fontSize: "18px", fontStyle: "italic", marginBottom: "30px" }}>
-              {room.voting.type === "teamApproval" 
-                ? "The assembly awaits your decision. Choose wisely."
-                : "The fate of the mission rests in your hands. Act in secret."}
-            </p>
-
+          {room?.voting && (
             <div style={{
-              backgroundColor: "rgba(255,255,255,0.03)", padding: "15px 30px", borderRadius: "50px",
-              border: "1px solid rgba(197, 160, 89, 0.2)", color: "#c5a059", fontSize: "14px",
-              marginBottom: "40px", display: 'inline-block'
+              position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+              backgroundColor: "rgba(0, 0, 0, 0.92)", backdropFilter: "blur(8px)",
+              zIndex: 20001, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center"
             }}>
-              Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{Object.keys(room.voting.votes).length}</span> / {room.voting.type === "teamApproval" ? room.players.length : room?.proposedTeam?.length}
-            </div>
-
-            {playerId && !room.voting.votes[playerId] ? (
-              <div style={{ display: "flex", gap: "40px", justifyContent: "center" }}>
-                {/* YES / SUCCESS OPTION */}
-                <div style={{ textAlign: 'center' }}>
-                  <button onClick={handleYesVote} className="vote-btn">
-                    <img src={room.voting.type === "teamApproval" ? "/green_seal.png" : "/green_card.png"} 
-                         alt="Yes" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
-                  </button>
-                  <p style={{ fontFamily: "Cinzel", color: "#40c057", marginTop: '10px', fontSize: '14px' }}>
-                    {room.voting.type === "teamApproval" ? "APPROVE" : "SUCCESS"}
-                  </p>
+              {/* Decorative Header */}
+              <div style={{ marginBottom: "30px" }}>
+                <div style={{ color: "#c5a059", fontSize: "12px", letterSpacing: "4px", textTransform: "uppercase", marginBottom: "8px" }}>
+                  {room.voting.type === "teamApproval" ? "Royal Court" : "Battlefield"}
                 </div>
+                <h2 style={{
+                  color: "#fff", fontFamily: "'Cinzel', serif", fontSize: "32px", margin: 0,
+                  textShadow: "0 0 15px rgba(197, 160, 89, 0.3)"
+                }}>
+                  {room.voting.active
+                    ? room.voting.type === "teamApproval" ? "Council Deliberation" : "Cast Secret Vote"
+                    : "The Final Verdict"}
+                </h2>
+                <div style={{ width: "100px", height: "1px", background: "linear-gradient(to right, transparent, #c5a059, transparent)", margin: "15px auto" }} />
+              </div>
 
-                {/* NO / SABOTAGE OPTION */}
-                <div style={{ textAlign: 'center' }}>
-                  <button onClick={handleNoVote} className="vote-btn">
-                    <img src={room.voting.type === "teamApproval" ? "/red_seal.png" : "/red_card.png"} 
-                         alt="No" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
-                  </button>
-                  <p style={{ fontFamily: "Cinzel", color: "#ff7675", marginTop: '10px', fontSize: '14px' }}>
-                    {room.voting.type === "teamApproval" ? "REJECT" : "SABOTAGE"}
-                  </p>
+              {/* TEAM LIST DISPLAY */}
+              <div style={{ margin: "20px 0" }}>
+                <p style={{ color: "#666", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase" }}>
+                  Proposed Battalion:
+                </p>
+                <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  {room.proposedTeam?.map(tid => {
+                    const player = room.players.find(p => p.id === tid);
+                    return (
+                      <span key={tid} style={{
+                        color: "#fff", fontSize: "18px", background: "rgba(197, 160, 89, 0.2)",
+                        padding: "4px 12px", borderRadius: "20px", border: "1px solid rgba(197, 160, 89, 0.3)"
+                      }}>
+                        {player?.name}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
-            ) : (
-              <div style={{ animation: "pulseOpacity 2s infinite" }}>
-                <p style={{ color: "#c5a059", fontSize: "20px", fontFamily: "Cinzel" }}>Decision Recorded</p>
-                <p style={{ color: "#666", fontSize: "14px" }}>Awaiting remaining members...</p>
-              </div>
-            )}
-          </>
-        ) : (
-          /* SPECTATOR VIEW FOR THOSE NOT IN THE BATTALION */
-          <div style={{ padding: "40px", animation: "pulseOpacity 3s infinite" }}>
-            <p style={{ color: "#c5a059", fontSize: "22px", fontFamily: "Cinzel", letterSpacing: "2px" }}>
-              Mission in Progress...
-            </p>
-            <p style={{ color: "#666", fontSize: "16px", fontStyle: "italic" }}>
-              The battalion is operating behind enemy lines. Await the outcome.
-            </p>
-          </div>
-        )}
 
-        {isGameMaster && (
-          <div style={{ marginTop: "40px" }}>
-            <button onClick={handleClearVote} className="cancel-btn">🚫 Cancel Voting Session</button>
-          </div>
-        )}
-      </>
-    ) : (
-      /* RESULT PHASE */
-      <div style={{ animation: "revealVerdict 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards" }}>
-        <div style={{ position: 'relative', display: 'inline-block', marginBottom: '40px', perspective: '1000px' }}>
-          <div className="flipping-container">
-            <img
-              src={room.voting.result === "Yes" 
-                ? (room.voting.type === "teamApproval" ? "/green_seal.png" : "/green_card.png")
-                : (room.voting.type === "teamApproval" ? "/red_seal.png" : "/red_card.png")}
-              className="result-image-3d"
-              style={room.voting.type === "teamApproval" ? {height:`height: 130px;`} : {width:`160px`}}
-            />
-          </div>
+              {playerId && room.voting.active ? (
+                <>
+                  {/* ACTIVE VOTING PHASE */}
+                  {/* Logic: If it's team approval, everyone votes. If secret vote, only proposed team votes. */}
+                  {(room.voting.type === "teamApproval" || room.proposedTeam?.includes(playerId)) ? (
+                    <>
+                      <p style={{ color: "#888", fontFamily: "'EB Garamond', serif", fontSize: "18px", fontStyle: "italic", marginBottom: "30px" }}>
+                        {room.voting.type === "teamApproval"
+                          ? "The assembly awaits your decision. Choose wisely."
+                          : "The fate of the mission rests in your hands. Act in secret."}
+                      </p>
 
-          <div className="verdict-text" style={{ color: room.voting.result === "Yes" ? "#40c057" : "#ff7675" }}>
-            {room.voting.type === "teamApproval" 
-               ? (room.voting.result === "Yes" ? "APPROVED" : "REJECTED")
-               : (room.voting.result === "Yes" ? "MISSION SUCCESS" : "MISSION FAILED")}
-          </div>
-          <div className="shadow-fx" />
-        </div>
+                      <div style={{
+                        backgroundColor: "rgba(255,255,255,0.03)", padding: "15px 30px", borderRadius: "50px",
+                        border: "1px solid rgba(197, 160, 89, 0.2)", color: "#c5a059", fontSize: "14px",
+                        marginBottom: "40px", display: 'inline-block'
+                      }}>
+                        Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{Object.keys(room.voting.votes).length}</span> / {room.voting.type === "teamApproval" ? room.players.length : room?.proposedTeam?.length}
+                      </div>
 
-        {/* Tally Breakdown */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "30px", fontFamily: "Cinzel", fontSize: "18px" }}>
-          <div style={{ color: "#40c057", display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src={room.voting.type === "teamApproval" ? "/green_seal.png" : "/green_card.png"} style={{ width: '25px' }} />
-            {Object.values(room.voting.votes).filter(v => v === "yes").length}
-          </div>
-          <div style={{ width: "1px", backgroundColor: "#333" }} />
-          <div style={{ color: "#ff7675", display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src={room.voting.type === "teamApproval" ? "/red_seal.png" : "/red_card.png"} style={{ width: '25px' }} />
-            {Object.values(room.voting.votes).filter(v => v === "no").length}
-          </div>
-        </div>
+                      {playerId && !room.voting.votes[playerId] ? (
+                        <div style={{ display: "flex", gap: "40px", justifyContent: "center" }}>
+                          {/* YES / SUCCESS OPTION */}
+                          <div style={{ textAlign: 'center' }}>
+                            <button onClick={handleYesVote} className="vote-btn">
+                              <img src={room.voting.type === "teamApproval" ? "/green_seal.png" : "/green_card.png"}
+                                alt="Yes" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+                            </button>
+                            <p style={{ fontFamily: "Cinzel", color: "#40c057", marginTop: '10px', fontSize: '14px' }}>
+                              {room.voting.type === "teamApproval" ? "APPROVE" : "SUCCESS"}
+                            </p>
+                          </div>
 
-        {isGameMaster && (
-          <div style={{ display: "flex", gap: "15px", justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={handleStartVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>Take Vote Again</button>
-            <button onClick={handleClearVote} style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border:"1px solid #888", padding: "8px 25px" }}>Dismiss</button>
-            {room.voting.result === "Yes" && room.voting.type === "teamApproval" && (
-              <button onClick={handleStartSecretVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>Take Secret Vote</button>
-            )}
-          </div>
-        )}
-      </div>
-    )}
+                          {/* NO / SABOTAGE OPTION */}
+                          <div style={{ textAlign: 'center' }}>
+                            <button onClick={handleNoVote} className="vote-btn">
+                              <img src={room.voting.type === "teamApproval" ? "/red_seal.png" : "/red_card.png"}
+                                alt="No" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+                            </button>
+                            <p style={{ fontFamily: "Cinzel", color: "#ff7675", marginTop: '10px', fontSize: '14px' }}>
+                              {room.voting.type === "teamApproval" ? "REJECT" : "SABOTAGE"}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ animation: "pulseOpacity 2s infinite" }}>
+                          <p style={{ color: "#c5a059", fontSize: "20px", fontFamily: "Cinzel" }}>Decision Recorded</p>
+                          <p style={{ color: "#666", fontSize: "14px" }}>Awaiting remaining members...</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* SPECTATOR VIEW FOR THOSE NOT IN THE BATTALION */
+                    <div style={{ padding: "40px", animation: "pulseOpacity 3s infinite" }}>
+                      <p style={{ color: "#c5a059", fontSize: "22px", fontFamily: "Cinzel", letterSpacing: "2px" }}>
+                        Mission in Progress...
+                      </p>
+                      <p style={{ color: "#666", fontSize: "16px", fontStyle: "italic" }}>
+                        The battalion is operating behind enemy lines. Await the outcome.
+                      </p>
+                    </div>
+                  )}
 
-    {/* Styles for new and existing animations */}
-    <style>{`
+                  {isGameMaster && (
+                    <div style={{ marginTop: "40px" }}>
+                      <button onClick={handleClearVote} className="cancel-btn">🚫 Cancel Voting Session</button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* RESULT PHASE */
+                <div style={{ animation: "revealVerdict 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards" }}>
+                  <div style={{ position: 'relative', display: 'inline-block', marginBottom: '40px', perspective: '1000px' }}>
+                    <div className="flipping-container">
+                      <img
+                        src={room.voting.result === "Yes"
+                          ? (room.voting.type === "teamApproval" ? "/green_seal.png" : "/green_card.png")
+                          : (room.voting.type === "teamApproval" ? "/red_seal.png" : "/red_card.png")}
+                        className="result-image-3d"
+                        style={room.voting.type === "teamApproval" ? { height: `height: 130px;` } : { width: `160px` }}
+                      />
+                    </div>
+
+                    <div className="verdict-text" style={{ color: room.voting.result === "Yes" ? "#40c057" : "#ff7675" }}>
+                      {room.voting.type === "teamApproval"
+                        ? (room.voting.result === "Yes" ? "APPROVED" : "REJECTED")
+                        : (room.voting.result === "Yes" ? "MISSION SUCCESS" : "MISSION FAILED")}
+                    </div>
+                    <div className="shadow-fx" />
+                  </div>
+
+                  {/* Tally Breakdown */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "30px", fontFamily: "Cinzel", fontSize: "18px" }}>
+                    <div style={{ color: "#40c057", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img src={room.voting.type === "teamApproval" ? "/green_seal.png" : "/green_card.png"} style={{ width: '25px' }} />
+                      {Object.values(room.voting.votes).filter(v => v === "yes").length}
+                    </div>
+                    <div style={{ width: "1px", backgroundColor: "#333" }} />
+                    <div style={{ color: "#ff7675", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img src={room.voting.type === "teamApproval" ? "/red_seal.png" : "/red_card.png"} style={{ width: '25px' }} />
+                      {Object.values(room.voting.votes).filter(v => v === "no").length}
+                    </div>
+                  </div>
+
+                  {isGameMaster && (
+                    <div style={{ display: "flex", gap: "15px", justifyContent: "center", flexWrap: "wrap" }}>
+                      <button onClick={handleStartVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>Take Vote Again</button>
+                      <button onClick={handleClearVote} style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #888", padding: "8px 25px" }}>Dismiss</button>
+                      {room.voting.result === "Yes" && room.voting.type === "teamApproval" && (
+                        <button onClick={handleStartSecretVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>Take Secret Vote</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Styles for new and existing animations */}
+              <style>{`
       .vote-btn { background: none; border: none; cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 0; }
       .vote-btn:hover { transform: scale(1.1); filter: drop-shadow(0 0 15px rgba(197, 160, 89, 0.4)); }
       .cancel-btn { background: rgba(255, 118, 117, 0.05); color: #ff7675; border: 1px solid rgba(255, 118, 117, 0.3); padding: 10px 24px; border-radius: 8px; font-size: 12px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
@@ -1596,8 +1503,8 @@ export default function GameDashboard() {
       @keyframes shadowPulse { 0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.3; } 50% { transform: translateX(-50%) scale(0.7); opacity: 0.1; } }
       @keyframes pulseOpacity { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     `}</style>
-  </div>
-)}
+            </div>
+          )}
         </>
       )}
     </div>
