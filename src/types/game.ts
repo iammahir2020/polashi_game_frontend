@@ -9,6 +9,11 @@ export type Player = {
   lastCharacterId?: number | null;
 };
 
+export type MissionRequirement = {
+  players: number;
+  failsRequired: number;
+}
+
 export type VotingState = {
   active: boolean;
   votes: Record<string, "yes" | "no">; // Key is playerId, value is "yes" or "no"
@@ -25,6 +30,13 @@ export type Room = {
   secretIntel?: string[]; 
   voting?: VotingState | null;
   proposedTeam?: string[];
+
+  currentRound: number;      
+  scoreGreen: number;        
+  scoreRed: number;          
+  roundHistory: ("Green" | "Red")[]; 
+  gameStatus: "ACTIVE" | "OVER" | "WAITING";
+  winner?: string;
 };
 
 export type RoomJoinedPayload = {
