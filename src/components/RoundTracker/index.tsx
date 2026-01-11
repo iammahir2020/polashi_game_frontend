@@ -2,6 +2,7 @@ import { MISSION_REQUIREMENTS } from "../../constants";
 import type { Room } from "../../types/game";
 
 const RoundTracker = ({ room }: { room: Room }) => {
+  if (!room || !room.gameStarted) return null;
     return (
       <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', margin: '20px 0' }}>
         {MISSION_REQUIREMENTS.map((_, index) => {
