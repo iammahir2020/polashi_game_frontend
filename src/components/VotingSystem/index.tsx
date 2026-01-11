@@ -27,7 +27,6 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   if (!room?.voting) return null;
 
   const isTeamApproval = room.voting.type === "teamApproval";
-  const isSecretMission = room.voting.type === "missionOutcome";
   const hasVoted = playerId && room.voting.votes[playerId];
   const isOnMission = playerId && room.proposedTeam?.includes(playerId);
   const totalRequiredVotes = isTeamApproval ? room.players.length : (room.proposedTeam?.length || 0);
