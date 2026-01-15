@@ -33,6 +33,11 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   const isOnMission = playerId && room.proposedTeam?.includes(playerId);
   const totalRequiredVotes = isTeamApproval ? room.players.length : (room.proposedTeam?.length || 0);
 
+  const me = room.players.find(p => p.id === playerId);
+  const isNawab = me?.character?.team === "Nawabs";
+  
+  const hideRedOption = !isTeamApproval && isNawab;
+
   return (
     <div style={{
       position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
@@ -103,12 +108,16 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
                     img={isTeamApproval ? "/green_seal.png" : "/green_card.png"}
                     onClick={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
                   />
-                  <VoteOption
-                    label={isTeamApproval ? "REJECT" : "SABOTAGE"}
-                    color="#ff7675"
-                    img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
-                    onClick={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
-                  />
+                  {
+                    !hideRedOption && (
+                      <VoteOption
+                        label={isTeamApproval ? "REJECT" : "SABOTAGE"}
+                        color="#ff7675"
+                        img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
+                        onClick={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
+                      />
+                    )
+                  }
                 </div>
               ) : (
                 <div style={{ animation: "pulseOpacity 2s infinite" }}>
