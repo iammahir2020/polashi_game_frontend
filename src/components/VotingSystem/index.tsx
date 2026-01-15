@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Room } from '../../types/game';
 
 interface VotingSystemProps {
@@ -25,6 +25,8 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   primaryBtn
 }) => {
   if (!room?.voting) return null;
+
+  const [pendingVote, setPendingVote] = useState<'yes' | 'no' | null>(null);
 
   const isTeamApproval = room.voting.type === "teamApproval";
   const hasVoted = playerId && room.voting.votes[playerId];
@@ -95,17 +97,17 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
 
               {!hasVoted ? (
                 <div style={{ display: "flex", gap: "40px", justifyContent: "center" }}>
-                  <VoteOption 
-                    label={isTeamApproval ? "APPROVE" : "SUCCESS"} 
-                    color="#40c057" 
-                    img={isTeamApproval ? "/green_seal.png" : "/green_card.png"} 
-                    onClick={handleYesVote} 
+                  <VoteOption
+                    label={isTeamApproval ? "APPROVE" : "SUCCESS"}
+                    color="#40c057"
+                    img={isTeamApproval ? "/green_seal.png" : "/green_card.png"}
+                    onClick={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
                   />
-                  <VoteOption 
-                    label={isTeamApproval ? "REJECT" : "SABOTAGE"} 
-                    color="#ff7675" 
-                    img={isTeamApproval ? "/red_seal.png" : "/red_card.png"} 
-                    onClick={handleNoVote} 
+                  <VoteOption
+                    label={isTeamApproval ? "REJECT" : "SABOTAGE"}
+                    color="#ff7675"
+                    img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
+                    onClick={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
                   />
                 </div>
               ) : (
@@ -169,6 +171,52 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
       {isGameMaster && room.voting.active && (
         <div style={{ marginTop: "40px" }}>
           <button onClick={handleClearVote} className="cancel-btn">🚫 Cancel Voting Session</button>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {pendingVote && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.96)", zIndex: 30000,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
+        }}>
+          <h2 style={{ color: "#fff", fontFamily: "Cinzel", marginBottom: "30px", letterSpacing: "2px" }}>
+            Confirm Your Choice
+          </h2>
+
+          <div style={{ marginBottom: "40px", textAlign: "center" }}>
+            <img
+              src={pendingVote === 'yes' ? "/green_card.png" : "/red_card.png"}
+              style={{ width: "200px", filter: "drop-shadow(0 0 30px rgba(197, 160, 89, 0.4))" }}
+              alt="Selected Card"
+            />
+            <p style={{
+              color: pendingVote === 'yes' ? "#40c057" : "#ff7675",
+              fontSize: "24px", fontWeight: "bold", marginTop: "20px"
+            }}>
+              {pendingVote === 'yes' ? "SUCCESS" : "SABOTAGE"}
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: "20px" }}>
+            <button
+              onClick={() => {
+                if (pendingVote === 'yes') handleYesVote();
+                else handleNoVote();
+                setPendingVote(null);
+              }}
+              style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "12px 40px" }}
+            >
+              CONFIRM
+            </button>
+            <button
+              onClick={() => setPendingVote(null)}
+              style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #444", padding: "12px 40px" }}
+            >
+              GO BACK
+            </button>
+          </div>
         </div>
       )}
 
