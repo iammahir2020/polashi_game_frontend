@@ -163,6 +163,10 @@ class SocketService {
     this.socket.on("kicked", cb);
   }
 
+  onNotification(callback: (data: { message: string, type: string }) => void) {
+    this.socket.on("notification", callback);
+  }
+  
   offAll() {
     this.socket.removeAllListeners();
   }

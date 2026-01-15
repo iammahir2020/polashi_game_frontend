@@ -197,6 +197,10 @@ export default function GameDashboard() {
       alert(`📜 গোপন প্রতিবেদন (Secret Report):\n\nTarget: ${data.targetName}\nIdentity: ${allianceLabel}`);
     });
 
+    socketService.onNotification((data) => {
+      alert(data.message); 
+    });
+
     return () => {
       socketService.offGuptochorResult();
       socketService.offNotification();
