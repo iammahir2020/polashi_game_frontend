@@ -4,29 +4,7 @@ import { AuthProvider } from './components/login/AuthContext'
 import GameDashboard from './components/GameDashboard'
 import GameLoader from './components/Loader';
 import { useEffect, useState } from 'react';
-
-// function App() {
-//   return (
-//     <>
-//     <AuthProvider>
-//       <BrowserRouter>
-//         <Routes>
-//           {/* <Route path="/" element={<LoginForm />} /> */}
-          
-//           <Route 
-//             path="/" 
-//             element={
-//               // <ProtectedRoute>
-//                 <GameDashboard />
-//               // </ProtectedRoute>
-//             } 
-//           />
-//         </Routes>
-//       </BrowserRouter>
-//     </AuthProvider>
-//     </>
-//   )
-// }
+import { Analytics } from '@vercel/analytics/react';
 
 function App() {
   // Check if this is the first load of this session
@@ -70,6 +48,7 @@ function App() {
         <Routes>
           <Route path="/" element={<GameDashboard />} />
         </Routes>
+        <Analytics />
       </BrowserRouter>
     </AuthProvider>
   );
