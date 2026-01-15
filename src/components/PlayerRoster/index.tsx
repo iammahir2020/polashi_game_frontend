@@ -7,6 +7,9 @@ interface PlayerRosterProps {
   isGameMaster: boolean;
   gameStarted?: boolean;
   kickPlayer: (id: string) => void;
+  guptochorId?: string | null;
+  guptochorUsed?: boolean;
+  onInvestigate?: (targetId: string) => void;
 }
 
 const PlayerRoster: React.FC<PlayerRosterProps> = ({
@@ -14,7 +17,10 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
   playerId,
   isGameMaster,
   gameStarted,
-  kickPlayer
+  kickPlayer,
+  guptochorId,
+  guptochorUsed,
+  onInvestigate
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -73,6 +79,12 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: "2px" }}>
           {players.map((p) => {
             const isMe = p.id === playerId;
+
+            const showGuptochorAction = 
+              guptochorId === playerId && 
+              !guptochorUsed && 
+              !isMe && 
+              gameStarted;
             
             return (
               <div key={p.id} style={{
@@ -117,21 +129,48 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                   )}
                 </div>
 
-                {isGameMaster && !gameStarted && !isMe && (
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent dropdown from closing when kicking
-                      kickPlayer(p.id);
-                    }} 
-                    className="kick-btn"
-                    style={{ 
-                      border: "none", background: "none", color: "#ff7675", 
-                      cursor: "pointer", fontSize: "11px", fontWeight: 'bold'
-                    }}
-                  >
-                    Dismiss
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {showGuptochorAction && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onInvestigate?.(p.id);
+                      }}
+                      className="spy-btn"
+                      style={{
+                        border: "1px solid #c5a059",
+                        background: "rgba(197, 160, 89, 0.1)",
+                        color: "#c5a059",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                      title="Send Guptochor"
+                    >
+                      🕵️‍♂️ <span style={{ fontSize: '10px' }}>SPY</span>
+                    </button>
+                  )}
+
+                  {isGameMaster && !gameStarted && !isMe && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        kickPlayer(p.id);
+                      }} 
+                      className="kick-btn"
+                      style={{ 
+                        border: "none", background: "none", color: "#ff7675", 
+                        cursor: "pointer", fontSize: "11px", fontWeight: 'bold'
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}

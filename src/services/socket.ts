@@ -123,6 +123,18 @@ class SocketService {
     this.socket.emit("resetGame", { roomCode, requesterId: playerId });
   }
 
+  investigate(roomCode: string, targetId: string, playerId: string) {
+    this.socket.emit("investigatePlayer", {
+      roomCode,
+      targetPlayerId: targetId,
+      requesterId: playerId
+    });
+  }
+
+  onGuptochorResult(cb: (data: { targetName: string, alliance: string }) => void) {
+    this.socket.on("guptochorResult", cb);
+  }
+
   onRoomJoined(cb: (data: RoomJoinedPayload) => void) {
     this.socket.on("roomJoined", cb);
   }
@@ -161,9 +173,9 @@ class SocketService {
   offGeneralAnimation() { this.socket.off("triggerGeneralAnimation"); }
   offError() { this.socket.off("errorMessage"); }
   offKicked() { this.socket.off("kicked"); }
-  offRoomDissolved() { 
-    this.socket.off("roomDissolved"); 
-  }
+  offRoomDissolved() { this.socket.off("roomDissolved"); }
+  offGuptochorResult() { this.socket.off("guptochorResult"); }
+  offNotification() { this.socket.off("notification"); }
 }
 
 export const socketService = new SocketService();

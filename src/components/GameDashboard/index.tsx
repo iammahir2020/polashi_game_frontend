@@ -187,6 +187,22 @@ export default function GameDashboard() {
     return () => socketService.offRoomDissolved();
   }, []);
 
+  useEffect(() => {
+    socketService.onGuptochorResult((data) => {
+      const allianceLabel = data.alliance.includes("Nawabs") 
+        ? "নবাবের অনুগত (Nawab Loyalist) 🟢" 
+        : "কোম্পানির চর (EIC Traitor) 🔴";
+      
+      // You can replace this alert with a custom Modal for a better look
+      alert(`📜 গোপন প্রতিবেদন (Secret Report):\n\nTarget: ${data.targetName}\nIdentity: ${allianceLabel}`);
+    });
+
+    return () => {
+      socketService.offGuptochorResult();
+      socketService.offNotification();
+    };
+  }, []);
+
   const me = room?.players.find(p => p.id === playerId);
   const isGameMaster = me?.isGameMaster === true;
 
@@ -306,6 +322,16 @@ export default function GameDashboard() {
         const newTeam = [...currentTeam, id];
         handleSetTeam(newTeam);
       }
+    }
+  };
+
+  const handleInvestigate = (targetId: string) => {
+    if (!room || !playerId) return;
+    
+    // Safety check before emitting
+    const target = room.players.find(p => p.id === targetId);
+    if (window.confirm(`Deploy your informant to investigate ${target?.name}?`)) {
+      socketService.investigate(roomCode, targetId, playerId);
     }
   };
 
@@ -436,6 +462,9 @@ export default function GameDashboard() {
             isGameMaster={isGameMaster}
             gameStarted={room.gameStarted}
             kickPlayer={kickPlayer}
+            guptochorId={room.guptochorId}
+            guptochorUsed={room.guptochorUsed}
+            onInvestigate={handleInvestigate}
           />
 
           <GameLauncher

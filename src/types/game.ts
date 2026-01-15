@@ -37,6 +37,10 @@ export type Room = {
   roundHistory: ("Green" | "Red")[]; 
   gameStatus: "ACTIVE" | "OVER" | "WAITING";
   winner?: string;
+
+  guptochorId: string | null;      
+  nextGuptochorId: string | null;  
+  guptochorUsed: boolean;     
 };
 
 export type RoomJoinedPayload = {
