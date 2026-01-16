@@ -18,6 +18,7 @@ import GameLauncher from "../GameLauncher";
 import PlayerRoster from "../PlayerRoster";
 import BattalionSelector from "../BattalionSelector";
 import GameHeader from "../GameHeader";
+import IntelPopup from "../IntepPopup";
 
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
@@ -35,6 +36,7 @@ export default function GameDashboard() {
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
+  const [intelPopup, setIntelPopup] = useState<{ message: string; type: 'private' | 'public' } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -189,23 +191,41 @@ export default function GameDashboard() {
 
   useEffect(() => {
     socketService.onGuptochorResult((data) => {
-      const allianceLabel = data.alliance.includes("Nawabs") 
-        ? "নবাবের অনুগত (Nawab Loyalist) 🟢" 
+      const allianceLabel = data.alliance.includes("Nawabs")
+        ? "নবাবের অনুগত (Nawab Loyalist) 🟢"
         : "কোম্পানির চর (EIC Traitor) 🔴";
-      
-      // You can replace this alert with a custom Modal for a better look
-      alert(`📜 গোপন প্রতিবেদন (Secret Report):\n\nTarget: ${data.targetName}\nIdentity: ${allianceLabel}`);
+
+      setIntelPopup({
+        message: `📜 গোপন প্রতিবেদন (Secret Report):\nTarget: ${data.targetName}\nIdentity: ${allianceLabel}`,
+        type: 'private'
+      });
+
+      // setTimeout(() => setIntelPopup(null), 8000); // Private info stays longer
     });
 
-    socketService.onNotification((data) => {
-      alert(data.message); 
+    socketService.onNotification((data: any) => {
+      if (data.requesterId === playerId) return;
+
+      let displayMessage = data.message;
+
+      if (data.targetId === playerId) {
+        const requesterName = room?.players.find(p => p.id === data.requesterId)?.name || "Someone";
+        displayMessage = `⚠️ সতর্কবার্তা (Warning): ${requesterName} has deployed a Guptochor to investigate YOU!`;
+      }
+
+      setIntelPopup({
+        message: displayMessage,
+        type: 'public'
+      });
+
+      // setTimeout(() => setIntelPopup(null), 5000);
     });
 
     return () => {
       socketService.offGuptochorResult();
       socketService.offNotification();
     };
-  }, []);
+  }, [playerId, room?.players]);
 
   const me = room?.players.find(p => p.id === playerId);
   const isGameMaster = me?.isGameMaster === true;
@@ -331,7 +351,7 @@ export default function GameDashboard() {
 
   const handleInvestigate = (targetId: string) => {
     if (!room || !playerId) return;
-    
+
     // Safety check before emitting
     const target = room.players.find(p => p.id === targetId);
     if (window.confirm(`Deploy your informant to investigate ${target?.name}?`)) {
@@ -514,6 +534,11 @@ export default function GameDashboard() {
           />
 
           <RoundTracker room={room} />
+
+          <IntelPopup
+            intelPopup={intelPopup}
+            onClose={() => setIntelPopup(null)}
+          />
         </>
       )}
     </div>
