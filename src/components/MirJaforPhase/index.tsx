@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Player, Room } from '../../types/game';
+import type { Room } from '../../types/game';
 
 interface MirJaforPhaseProps {
   room: Room;

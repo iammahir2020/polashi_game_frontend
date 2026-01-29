@@ -36,7 +36,6 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   const me = room.players.find(p => p.id === playerId);
   const isNawab = me?.character?.team === "Nawabs";
   
-  const hideRedOption = !isTeamApproval && isNawab;
 
   // Inside your VotingSystem component
 const shuffledOptions = useMemo(() => {
