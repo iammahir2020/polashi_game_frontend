@@ -1,18 +1,21 @@
 import React from 'react';
 import type { Room } from '../../types/game';
+import IdentityCard from '../IdentityCard';
 
 interface GameResultOverlayProps {
   room: Room;
   isGameMaster: boolean;
   handleResetGame: () => void;
   primaryBtn: React.CSSProperties;
+  playerId: string | null;
 }
 
 const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
   room,
   isGameMaster,
   handleResetGame,
-  primaryBtn
+  primaryBtn,
+  playerId
 }) => {
   // Only render if the game status is explicitly OVER
   if (room.gameStatus !== "OVER") return null;
@@ -61,48 +64,32 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
       </h2>
 
       <div style={{
-  marginTop: '20px',
-  marginBottom: '30px',
   width: '100%',
-  maxWidth: '450px',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  borderRadius: '12px',
-  padding: '20px',
-  border: '1px solid #333'
+  maxWidth: '400px',
+  padding: '10px',
+  border: '1px solid rgba(197, 160, 89, 0.2)',
+  borderRadius: '16px',
+  backgroundColor: 'rgba(0,0,0,0.4)'
 }}>
-  <h3 style={{ 
-    fontFamily: 'Cinzel', 
+  <p style={{ 
     color: '#c5a059', 
-    fontSize: '1rem', 
-    marginBottom: '15px',
-    borderBottom: '1px solid #333',
-    paddingBottom: '10px'
+    fontSize: '12px', 
+    fontFamily: 'Cinzel', 
+    letterSpacing: '2px',
+    marginBottom: '15px' 
   }}>
-    Operative Identities Revealed
-  </h3>
-  
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight:'250px', overflow:"auto" }}>
-    {room.players.map((p) => (
-      <div key={p.id} style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 12px',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: '6px',
-        borderLeft: `4px solid ${p.character?.team === "Nawabs" ? "#4caf50" : "#f44336"}`
-      }}>
-        <span style={{ color: '#fff', fontWeight: 'bold' }}>{p.name}</span>
-        <span style={{ 
-          color: p.character?.team === "Nawabs" ? "#81c784" : "#e57373",
-          fontSize: '0.9rem',
-          fontStyle: 'italic'
-        }}>
-          {p.character?.name || "Unknown"}
-        </span>
-      </div>
-    ))}
-  </div>
+    YOUR FINAL IDENTITY
+  </p>
+
+  {/* Reusing IdentityCard for the final reveal */}
+  <IdentityCard
+    isRevealed={true} // Force it to stay open
+    setIsRevealed={() => {}} // Disable the ability to close it
+    gameStarted={true}
+    character={room.players.find(p => p.id === playerId)?.character}
+    secretIntel={[]} // Intel is usually irrelevant at the very end
+    isFinal={true}
+  />
 </div>
       
       {isGameMaster ? (

@@ -7,9 +7,10 @@ interface IdentityCardProps {
     character?: CharacterType | null;
     secretIntel?: string[];
     gameStarted?: boolean;
+    isFinal?: boolean;
 }
 
-const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, gameStarted }) => {
+const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, gameStarted,isFinal }) => {
 
   if (!gameStarted || !character) return null;
 
@@ -22,7 +23,7 @@ const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, 
         perspective: "1000px",
         margin: "25px 0",
         cursor: "pointer",
-        height: "450px", // Increased slightly to ensure Intel fits
+        height: isFinal ? "280px" : "450px", // Increased slightly to ensure Intel fits
       }}
     >
       <div style={{

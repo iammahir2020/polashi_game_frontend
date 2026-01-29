@@ -536,6 +536,7 @@ export default function GameDashboard() {
             isGameMaster={isGameMaster}
             handleResetGame={handleResetGame}
             primaryBtn={primaryBtn}
+            playerId={playerId}
           />
 
           <RoundTracker room={room} />
