@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Room } from '../../types/game';
 
 interface VotingSystemProps {
@@ -37,6 +37,29 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   const isNawab = me?.character?.team === "Nawabs";
   
   const hideRedOption = !isTeamApproval && isNawab;
+
+  // Inside your VotingSystem component
+const shuffledOptions = useMemo(() => {
+  const options = [
+    {
+      id: 'yes',
+      label: isTeamApproval ? "APPROVE" : "SUCCESS",
+      color: "#40c057",
+      img: isTeamApproval ? "/green_seal.png" : "/green_card.png",
+      action: () => isTeamApproval ? handleYesVote() : setPendingVote('yes')
+    },
+    {
+      id: 'no',
+      label: isTeamApproval ? "REJECT" : "SABOTAGE",
+      color: "#ff7675",
+      img: isTeamApproval ? "/red_seal.png" : "/red_card.png",
+      action: () => isTeamApproval ? handleNoVote() : setPendingVote('no')
+    }
+  ];
+
+  // Randomize the order
+  return options.sort(() => Math.random() - 0.5);
+}, [room.voting.active, isTeamApproval]); // Re-shuffles only when a new vote starts
 
   return (
     <div style={{
@@ -102,22 +125,28 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
 
               {!hasVoted ? (
                 <div style={{ display: "flex", gap: "40px", justifyContent: "center" }}>
-                  <VoteOption
+                  {/* <VoteOption
                     label={isTeamApproval ? "APPROVE" : "SUCCESS"}
                     color="#40c057"
                     img={isTeamApproval ? "/green_seal.png" : "/green_card.png"}
                     onClick={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
                   />
-                  {
-                    !hideRedOption && (
-                      <VoteOption
+                  
+                  <VoteOption
                         label={isTeamApproval ? "REJECT" : "SABOTAGE"}
                         color="#ff7675"
                         img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
                         onClick={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
-                      />
-                    )
-                  }
+                      /> */}
+                      {shuffledOptions.map((option) => (
+      <VoteOption
+        key={option.id}
+        label={option.label}
+        color={option.color}
+        img={option.img}
+        onClick={option.action}
+      />
+    ))}
                 </div>
               ) : (
                 <div style={{ animation: "pulseOpacity 2s infinite" }}>
@@ -211,8 +240,18 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
           <div style={{ display: "flex", gap: "20px" }}>
             <button
               onClick={() => {
-                if (pendingVote === 'yes') handleYesVote();
-                else handleNoVote();
+                if (pendingVote === 'yes'){
+                  handleYesVote();
+                } 
+                else {
+                  // If it's a mission (not team approval) and player is Nawab
+                  // Clicking sabotage results in a "Yes" vote anyway.
+                  if (!isTeamApproval && isNawab) {
+                    handleYesVote(); 
+                  } else {
+                    handleNoVote();
+                  }
+                };
                 setPendingVote(null);
               }}
               style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "12px 40px" }}

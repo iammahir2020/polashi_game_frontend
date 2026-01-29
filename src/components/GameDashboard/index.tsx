@@ -19,6 +19,7 @@ import PlayerRoster from "../PlayerRoster";
 import BattalionSelector from "../BattalionSelector";
 import GameHeader from "../GameHeader";
 import IntelPopup from "../IntepPopup";
+import MirJaforPhase from "../MirJaforPhase";
 
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
@@ -352,11 +353,15 @@ export default function GameDashboard() {
   const handleInvestigate = (targetId: string) => {
     if (!room || !playerId) return;
 
-    // Safety check before emitting
     const target = room.players.find(p => p.id === targetId);
     if (window.confirm(`Deploy your informant to investigate ${target?.name}?`)) {
       socketService.investigate(roomCode, targetId, playerId);
     }
+  };
+
+  const handleAssassination = (targetId: string) => {
+    if (!room || !playerId) return;
+    socketService.attemptAssassination(roomCode, targetId, playerId);
   };
 
   const containerStyle: React.CSSProperties = {
@@ -538,6 +543,12 @@ export default function GameDashboard() {
           <IntelPopup
             intelPopup={intelPopup}
             onClose={() => setIntelPopup(null)}
+          />
+
+          <MirJaforPhase
+            room={room}
+            playerId={playerId!}
+            onAttemptAssassination={handleAssassination}
           />
         </>
       )}

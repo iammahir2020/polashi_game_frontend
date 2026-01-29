@@ -131,6 +131,14 @@ class SocketService {
     });
   }
 
+  attemptAssassination(roomCode: string, targetId: string, playerId: string) {
+    this.socket.emit("attemptAssassination", { 
+      roomCode, 
+      targetId, 
+      requesterId: playerId
+    });
+  }
+
   onGuptochorResult(cb: (data: { targetName: string, alliance: string }) => void) {
     this.socket.on("guptochorResult", cb);
   }

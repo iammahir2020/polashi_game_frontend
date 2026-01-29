@@ -35,12 +35,14 @@ export type Room = {
   scoreGreen: number;        
   scoreRed: number;          
   roundHistory: ("Green" | "Red")[]; 
-  gameStatus: "ACTIVE" | "OVER" | "WAITING";
+  gameStatus: "ACTIVE" | "OVER" | "WAITING" | "MIR_JAFOR_TURN";
   winner?: string;
 
   guptochorId: string | null;      
   nextGuptochorId: string | null;  
-  guptochorUsed: boolean;     
+  guptochorUsed: boolean;
+  
+  assassinationTargetId?: string | null;
 };
 
 export type RoomJoinedPayload = {
