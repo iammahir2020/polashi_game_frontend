@@ -7,6 +7,7 @@ export type Player = {
   character?: CharacterType | null;
   isGeneral?: boolean;
   lastCharacterId?: number | null;
+  isObserver?: boolean;
 };
 
 export type MissionRequirement = {
@@ -43,6 +44,7 @@ export type Room = {
   guptochorUsed: boolean;
   
   assassinationTargetId?: string | null;
+  activePlayerIds: string[];
 };
 
 export type RoomJoinedPayload = {

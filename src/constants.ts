@@ -1,9 +1,35 @@
 import type { MissionRequirement } from "./types/game";
+export type MissionConfigs = Record<number, MissionRequirement[]>;
 
-export const MISSION_REQUIREMENTS: MissionRequirement[] = [
-    { players: 3, failsRequired: 1 }, // R1
-    { players: 4, failsRequired: 1 }, // R2
-    { players: 4, failsRequired: 1 }, // R3
-    { players: 5, failsRequired: 2 }, // R4 - The tricky one
-    { players: 5, failsRequired: 1 }, // R5
-  ];
+export const MISSION_CONFIGS: MissionConfigs = {
+  5: [
+    { players: 2, failsRequired: 1 }, { players: 3, failsRequired: 1 },
+    { players: 2, failsRequired: 1 }, { players: 3, failsRequired: 1 },
+    { players: 3, failsRequired: 1 }
+  ],
+  6: [
+    { players: 2, failsRequired: 1 }, { players: 3, failsRequired: 1 },
+    { players: 4, failsRequired: 1 }, { players: 3, failsRequired: 1 },
+    { players: 4, failsRequired: 1 }
+  ],
+  7: [
+    { players: 2, failsRequired: 1 }, { players: 3, failsRequired: 1 },
+    { players: 3, failsRequired: 1 }, { players: 4, failsRequired: 2 }, // Round 4: 2 fails needed
+    { players: 4, failsRequired: 1 }
+  ],
+  8: [
+    { players: 3, failsRequired: 1 }, { players: 4, failsRequired: 1 },
+    { players: 4, failsRequired: 1 }, { players: 5, failsRequired: 2 }, // Round 4: 2 fails needed
+    { players: 5, failsRequired: 1 }
+  ],
+  9: [
+    { players: 3, failsRequired: 1 }, { players: 4, failsRequired: 1 },
+    { players: 4, failsRequired: 1 }, { players: 5, failsRequired: 2 }, // Round 4: 2 fails needed
+    { players: 5, failsRequired: 1 }
+  ],
+  10: [
+    { players: 3, failsRequired: 1 }, { players: 4, failsRequired: 1 },
+    { players: 4, failsRequired: 1 }, { players: 5, failsRequired: 2 }, // Round 4: 2 fails needed
+    { players: 5, failsRequired: 1 }
+  ]
+}

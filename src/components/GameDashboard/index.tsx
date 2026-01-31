@@ -3,7 +3,7 @@ import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import type { Player, Room } from "../../types/game";
 import { socketService } from "../../services/socket";
 import GameLoader from "../Loader";
-import { MISSION_REQUIREMENTS } from "../../constants";
+import { MISSION_CONFIGS } from "../../constants";
 import RoundTracker from "../RoundTracker";
 import RoomLockedAlert from "../RoomLockedAlert";
 import AccessRevoked from "../AccessRevoked";
@@ -20,6 +20,7 @@ import BattalionSelector from "../BattalionSelector";
 import GameHeader from "../GameHeader";
 import IntelPopup from "../IntepPopup";
 import MirJaforPhase from "../MirJaforPhase";
+import ObserverScreen from "../ObserverScreen";
 
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
@@ -38,6 +39,7 @@ export default function GameDashboard() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
   const [intelPopup, setIntelPopup] = useState<{ message: string; type: 'private' | 'public' } | null>(null);
+  const [selectedActiveIds, setSelectedActiveIds] = useState<string[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -228,6 +230,15 @@ export default function GameDashboard() {
     };
   }, [playerId, room?.players]);
 
+  useEffect(() => {
+    if (room && !room.gameStarted) {
+      // Optional: Auto-select everyone if total players <= 10
+      if (room.players.length <= 10) {
+        setSelectedActiveIds(room.players.map(p => p.id));
+      }
+    }
+  }, [room?.players.length, room?.gameStarted]);
+
   const me = room?.players.find(p => p.id === playerId);
   const isGameMaster = me?.isGameMaster === true;
 
@@ -256,7 +267,19 @@ export default function GameDashboard() {
 
   const kickPlayer = (targetId: string) => { socketService.kickPlayer(roomCode, targetId, playerId!); };
   const toggleLock = () => { if (!room || !playerId || room.gameStarted) return; socketService.lockRoom(roomCode, !room?.locked, playerId); };
-  const handleStartGame = () => { if (!room || !playerId) return; setIsRevealed(false); socketService.startGame(roomCode, playerId); };
+  // const handleStartGame = () => { if (!room || !playerId) return; setIsRevealed(false); socketService.startGame(roomCode, playerId); };
+  const handleStartGame = () => { 
+    if (!room || !playerId) return; 
+    
+    if (selectedActiveIds.length < 5 || selectedActiveIds.length > 10) {
+      alert("The battalion must consist of 5 to 10 active players.");
+      return;
+    }
+  
+    setIsRevealed(false); 
+    // Update this call to include the active IDs
+    socketService.startGame(roomCode, playerId, selectedActiveIds); 
+  };
   const handleResetGame = () => { if (!room || !playerId) return; if (window.confirm("Reset the game?")) socketService.resetGame(roomCode, playerId); setIsRevealed(false) };
   const handleAssignGeneral = () => { if (!room || !playerId) return; socketService.assignGeneral(roomCode, playerId); };
 
@@ -329,20 +352,31 @@ export default function GameDashboard() {
   };
 
   const handleTogglePlayer = (id: string) => {
+    // 1. Guard against invalid states
     if (!room || !playerId || !room.gameStarted) return;
 
     const currentTeam = room.proposedTeam || [];
     const isSelected = currentTeam.includes(id);
 
+    // 2. Identify the size of the active battalion (5-10)
+    const activeCount = room.activePlayerIds?.length || 5;
     const roundIndex = (room.currentRound || 1) - 1;
-    const currentReq = MISSION_REQUIREMENTS[roundIndex];
 
-    if (!currentReq) return;
+    // 3. Look up the specific requirement for this game size and round
+    // Correct access: MISSION_CONFIGS[totalActive][roundIndex]
+    const currentReq = MISSION_CONFIGS[activeCount]?.[roundIndex];
 
+    if (!currentReq) {
+      console.error("Mission configuration not found for active count:", activeCount);
+      return;
+    }
+
+    // 4. Handle selection logic
     if (isSelected) {
       const newTeam = currentTeam.filter(pId => pId !== id);
       handleSetTeam(newTeam);
     } else {
+      // Use the dynamic players requirement from our config
       if (currentTeam.length < currentReq.players) {
         const newTeam = [...currentTeam, id];
         handleSetTeam(newTeam);
@@ -362,6 +396,16 @@ export default function GameDashboard() {
   const handleAssassination = (targetId: string) => {
     if (!room || !playerId) return;
     socketService.attemptAssassination(roomCode, targetId, playerId);
+  };
+
+  const toggleActivePlayer = (id: string) => {
+    if (!isGameMaster || room?.gameStarted) return;
+    
+    setSelectedActiveIds(prev => {
+      if (prev.includes(id)) return prev.filter(pId => pId !== id);
+      if (prev.length >= 10) return prev; // Limit to 10
+      return [...prev, id];
+    });
   };
 
   const containerStyle: React.CSSProperties = {
@@ -414,6 +458,13 @@ export default function GameDashboard() {
     );
   }
 
+  const isObserver = room && room.gameStarted && !room.activePlayerIds?.includes(playerId || "");
+
+  if (isObserver) {
+    return <ObserverScreen room={room} />;
+  }
+
+  console.log({room})
 
   return (
     <div style={containerStyle}>
@@ -494,6 +545,9 @@ export default function GameDashboard() {
             guptochorId={room.guptochorId}
             guptochorUsed={room.guptochorUsed}
             onInvestigate={handleInvestigate}
+
+            selectedActiveIds={selectedActiveIds} 
+            onToggleActive={toggleActivePlayer}
           />
 
           <GameLauncher
@@ -502,6 +556,8 @@ export default function GameDashboard() {
             handleStartGame={handleStartGame}
             handleAssignGeneral={handleAssignGeneral}
             primaryBtn={primaryBtn}
+
+            activeCount={selectedActiveIds.length}
           />
 
           <CommandConsole
@@ -519,17 +575,24 @@ export default function GameDashboard() {
             onClose={() => setGeneralReveal(null)}
           />
 
-          <VotingSystem
-            room={room}
-            playerId={playerId}
-            isGameMaster={isGameMaster}
-            handleYesVote={handleYesVote}
-            handleNoVote={handleNoVote}
-            handleClearVote={handleClearVote}
-            handleStartVote={handleStartVote}
-            handleStartSecretVote={handleStartSecretVote}
-            primaryBtn={primaryBtn}
-          />
+          {
+            !isObserver && (
+
+
+              <VotingSystem
+                room={room}
+                playerId={playerId}
+                isGameMaster={isGameMaster}
+                handleYesVote={handleYesVote}
+                handleNoVote={handleNoVote}
+                handleClearVote={handleClearVote}
+                handleStartVote={handleStartVote}
+                handleStartSecretVote={handleStartSecretVote}
+                primaryBtn={primaryBtn}
+              />
+            )
+          }
+
 
           <GameResultOverlay
             room={room}

@@ -3,6 +3,7 @@ import type { Room, RoomJoinedPayload } from "../types/game";
 
 const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
 // const SOCKET_URL = "http://172.16.16.6:3000/";
+// const SOCKET_URL = "http://192.168.0.108:3000/"
 
 class SocketService {
   socket: Socket;
@@ -111,8 +112,12 @@ class SocketService {
     });
   }
 
-  startGame(roomCode: string, playerId: string) {
-    this.socket.emit("startGame", { roomCode, requesterId: playerId });
+  startGame(roomCode: string, playerId: string, activeIds: string[]) {
+    this.socket.emit("startGame", { 
+      roomCode, 
+      requesterId: playerId, 
+      activeIds // Passing the selected battalion to the backend
+    });
   }
 
   assignGeneral(roomCode: string, playerId: string) {

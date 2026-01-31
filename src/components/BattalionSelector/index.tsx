@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Room } from '../../types/game';
-import { MISSION_REQUIREMENTS } from '../../constants';
+import { MISSION_CONFIGS } from '../../constants';
 
 interface BattalionSelectorProps {
   room: Room;
@@ -18,10 +18,16 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
   // Guard Clauses
   const isGeneral = me?.isGeneral;
   const showSelector = isGeneral && room.gameStarted && !room.voting?.active;
+  
   if (!showSelector) return null;
 
+  // NEW: Get dynamic requirements based on the number of active players
+  const activeCount = room.activePlayerIds?.length || 5;
   const currentRoundIndex = (room.currentRound || 1) - 1;
-  const currentReq = MISSION_REQUIREMENTS[currentRoundIndex] || { players: 0 };
+  
+  // Safely fetch config: MISSION_CONFIGS[5..10][0..4]
+  const currentReq = MISSION_CONFIGS[activeCount]?.[currentRoundIndex] || { players: 0, failsRequired: 1 };
+  
   const selectedCount = room.proposedTeam?.length || 0;
   const isSelectionComplete = selectedCount === currentReq.players;
 
@@ -44,47 +50,52 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
           </p>
         </div>
 
-        {/* Visual Badge for Round 4 */}
-        {room.currentRound === 4 && (
+        {/* Dynamic Badge for Rounds requiring 2 Fails (Scales automatically) */}
+        {currentReq.failsRequired > 1 && (
           <div style={{
             fontSize: '10px',
             background: '#c62828',
             color: 'white',
             padding: '2px 8px',
             borderRadius: '4px',
-            animation: 'pulse 2s infinite'
+            animation: 'pulse 2s infinite',
+            textAlign: 'center'
           }}>
-            HEAVY RESISTANCE (2 FAILS REQ)
+            HEAVY RESISTANCE<br/>
+            <span style={{ fontSize: '8px' }}>({currentReq.failsRequired} FAILS REQ)</span>
           </div>
         )}
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center", marginTop: "20px" }}>
-        {room.players.map(p => {
-          const isSelected = (room.proposedTeam || []).includes(p.id);
+        {/* NEW: Filter players to only show those who are ACTIVE in the game */}
+        {room.players
+          .filter(p => room.activePlayerIds?.includes(p.id))
+          .map(p => {
+            const isSelected = (room.proposedTeam || []).includes(p.id);
 
-          return (
-            <button
-              key={p.id}
-              onClick={() => handleTogglePlayer(p.id)}
-              style={{
-                padding: "10px 14px",
-                backgroundColor: isSelected ? "#c5a059" : "rgba(255,255,255,0.02)",
-                color: isSelected ? "#000" : "#c5a059",
-                border: `1px solid ${isSelected ? "#c5a059" : "rgba(197, 160, 89, 0.4)"}`,
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: isSelected ? "bold" : "normal",
-                transition: "all 0.1s ease-out",
-                flex: "1 1 calc(33% - 10px)",
-                minWidth: "90px",
-                opacity: !isSelected && isSelectionComplete ? 0.5 : 1
-              }}
-            >
-              {p.name}
-            </button>
-          );
+            return (
+              <button
+                key={p.id}
+                onClick={() => handleTogglePlayer(p.id)}
+                style={{
+                  padding: "10px 14px",
+                  backgroundColor: isSelected ? "#c5a059" : "rgba(255,255,255,0.02)",
+                  color: isSelected ? "#000" : "#c5a059",
+                  border: `1px solid ${isSelected ? "#c5a059" : "rgba(197, 160, 89, 0.4)"}`,
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: isSelected ? "bold" : "normal",
+                  transition: "all 0.1s ease-out",
+                  flex: "1 1 calc(33% - 10px)",
+                  minWidth: "90px",
+                  opacity: !isSelected && isSelectionComplete ? 0.5 : 1
+                }}
+              >
+                {p.name}
+              </button>
+            );
         })}
       </div>
 

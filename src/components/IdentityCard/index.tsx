@@ -2,106 +2,126 @@ import React from 'react';
 import type { CharacterType } from '../../types/game';
 
 interface IdentityCardProps {
-    isRevealed: boolean;
-    setIsRevealed: (value: boolean) => void;
-    character?: CharacterType | null;
-    secretIntel?: string[];
-    gameStarted?: boolean;
-    isFinal?: boolean;
+  isRevealed: boolean;
+  setIsRevealed: (value: boolean) => void;
+  character?: CharacterType | null;
+  secretIntel?: string[];
+  gameStarted?: boolean;
+  isFinal?: boolean;
 }
 
-const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, gameStarted,isFinal }) => {
+const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, gameStarted, isFinal }) => {
 
-  if (!gameStarted || !character) return null;
+if (!gameStarted) return null;
 
-  const isNawab = character.team === "Nawabs" || character.team.includes("Nawabs");
+// New Change: Detect if player is an observer (game started but no character assigned to them)
+const isObserver = !character;
+const isNawab = character ? (character.team === "Nawabs" || character.team.includes("Nawabs")) : false;
 
-  return (
-    <div
-      onClick={() => setIsRevealed(!isRevealed)}
-      style={{
-        perspective: "1000px",
-        margin: "25px 0",
-        cursor: "pointer",
-        height: isFinal ? "280px" : "450px", // Increased slightly to ensure Intel fits
-      }}
-    >
-      <div style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        transition: "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
-        transformStyle: "preserve-3d",
-        transform: isRevealed ? "rotateY(180deg)" : "rotateY(0deg)",
-      }}>
+return (
+  <div
+    onClick={() => setIsRevealed(!isRevealed)}
+    style={{
+      perspective: "1000px",
+      margin: "25px 0",
+      cursor: "pointer",
+      height: isFinal ? "280px" : "450px",
+    }}
+  >
+    <div style={{
+      position: "relative",
+      width: "100%",
+      height: "100%",
+      transition: "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+      transformStyle: "preserve-3d",
+      transform: isRevealed ? "rotateY(180deg)" : "rotateY(0deg)",
+    }}>
 
-        {/* --- FRONT: CLASSIFIED SIDE --- */}
-        <div style={frontCardStyle}>
-          {/* Corner Ornaments */}
-          <CornerDecoration />
-          
-          <div style={emblemContainerStyle}>
-            <div style={emblemEmojiStyle}>📜</div>
-          </div>
-
-          <div style={{ marginTop: "20px", textAlign: "center", zIndex: 2 }}>
-            <h2 style={classifiedTextStyle}>Classified</h2>
-            <div style={dividerStyle} />
-            <p style={{ color: "#888", fontSize: "12px", fontStyle: "italic", fontFamily: "'EB Garamond', serif" }}>
-              Tap to reveal your destiny
-            </p>
-          </div>
-          <div className="texture-overlay" />
+      {/* --- FRONT: CLASSIFIED SIDE --- */}
+      <div style={frontCardStyle}>
+        <CornerDecoration />
+        
+        <div style={emblemContainerStyle}>
+          {/* New Change: Different icon for observers to set the mood */}
+          <div style={emblemEmojiStyle}>{isObserver ? "👁️" : "📜"}</div>
         </div>
 
-        {/* --- BACK: IDENTITY SIDE --- */}
-        <div style={{
-          ...backCardStyle,
-          border: `3px solid ${isNawab ? "#1b4332" : "#7b1113"}`,
-        }}>
-          <div className="shimmer-effect" />
-
-          {/* Team Icon */}
-          <div style={teamIconWrapperStyle}>
-            <img
-              src={isNawab ? "/Nawab.png" : "/EIC.png"}
-              alt="Team Badge"
-              style={{ width: "90px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
-            />
-          </div>
-
-          <h1 style={characterNameStyle}>{character.name}</h1>
-
-          <div style={teamBadgeStyle}>{character.team.toUpperCase()}</div>
-
-          <p style={descriptionStyle}>"{character.description}"</p>
-
-          {/* SECRET INTELLIGENCE */}
-          {secretIntel && secretIntel.length > 0 && (
-            <div style={intelBoxStyle}>
-              <p style={intelHeaderStyle}>Secret Intelligence</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                {secretIntel.map((intel, idx) => (
-                  <div key={idx} style={intelItemStyle}>{intel}</div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* AUTO-HIDE TIMER BAR */}
-          {isRevealed && (
-            <div style={timerTrackStyle}>
-              <div style={{
-                ...timerBarStyle,
-                backgroundColor: isNawab ? "#1b4332" : "#7b1113",
-              }} />
-            </div>
-          )}
+        <div style={{ marginTop: "20px", textAlign: "center", zIndex: 2 }}>
+          <h2 style={classifiedTextStyle}>{isObserver ? "Observer" : "Classified"}</h2>
+          <div style={dividerStyle} />
+          <p style={{ color: "#888", fontSize: "12px", fontStyle: "italic", fontFamily: "'EB Garamond', serif" }}>
+            {isObserver ? "Witness the conspiracy unfold" : "Tap to reveal your destiny"}
+          </p>
         </div>
+        <div className="texture-overlay" />
       </div>
-      <CardAnimations />
+
+      {/* --- BACK: IDENTITY / SPECTATOR SIDE --- */}
+      <div style={{
+        ...backCardStyle,
+        backgroundColor: isObserver ? "#2d3436" : "rgb(197, 160, 89)", // Darker gray for observers
+        border: isObserver ? "3px solid #444" : `3px solid ${isNawab ? "#1b4332" : "#7b1113"}`,
+      }}>
+        <div className="shimmer-effect" />
+
+        {/* Team Icon / Observer Icon */}
+        <div style={teamIconWrapperStyle}>
+          <img
+            src={isObserver ? "/Observer.png" : (isNawab ? "/Nawab.png" : "/EIC.png")}
+            alt="Badge"
+            style={{ width: "90px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
+            // Fallback for missing observer image
+            onError={(e) => { (e.target as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/702/702455.png' }}
+          />
+        </div>
+
+        <h1 style={{...characterNameStyle, color: isObserver ? "#c5a059" : "black"}}>
+          {isObserver ? "Shadow Witness" : character?.name}
+        </h1>
+
+        <div style={{...teamBadgeStyle, background: isObserver ? "#c5a059" : "rgba(0,0,0,0.8)", color: isObserver ? "black" : "#c5a059"}}>
+          {isObserver ? "SPECTATOR" : character?.team.toUpperCase()}
+        </div>
+
+        <p style={{...descriptionStyle, color: isObserver ? "#aaa" : "rgba(0,0,0,0.8)"}}>
+          {isObserver 
+            ? "\"You stand outside the line of fire, watching the history of Bengal take shape from the shadows.\""
+            : `"${character?.description}"`
+          }
+        </p>
+
+        {/* SECRET INTELLIGENCE / SPECTATOR NOTE */}
+        <div style={intelBoxStyle}>
+          <p style={{...intelHeaderStyle, color: isObserver ? "#c5a059" : "black"}}>
+            {isObserver ? "Field Report" : "Secret Intelligence"}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+            {isObserver ? (
+              <div style={{...intelItemStyle, color: "#eee"}}>
+                You can see all identities. Observe the whispers and find the traitors.
+              </div>
+            ) : (
+              secretIntel?.map((intel, idx) => (
+                <div key={idx} style={intelItemStyle}>{intel}</div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* AUTO-HIDE TIMER BAR (Only for active players) */}
+        {isRevealed && !isObserver && (
+          <div style={timerTrackStyle}>
+            <div style={{
+              ...timerBarStyle,
+              backgroundColor: isNawab ? "#1b4332" : "#7b1113",
+            }} />
+          </div>
+        )}
+      </div>
     </div>
-  );
+    <CardAnimations />
+  </div>
+);
 };
 
 // --- STYLES & SUB-COMPONENTS ---
