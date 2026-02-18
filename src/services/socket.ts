@@ -1,9 +1,10 @@
 import { io, Socket } from "socket.io-client";
-import type { Room, RoomJoinedPayload } from "../types/game";
+import type { CharacterType, Room, RoomJoinedPayload } from "../types/game";
 
 const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
 // const SOCKET_URL = "http://172.16.16.6:3000/";
 // const SOCKET_URL = "http://192.168.0.108:3000/"
+// const SOCKET_URL = "http://192.168.203.220:3000/"
 
 class SocketService {
   socket: Socket;
@@ -50,6 +51,10 @@ class SocketService {
 
   createRoom(name: string) {
     this.socket.emit("createRoom", { name });
+  }
+
+  onCharacterList(callback: (list: CharacterType[]) => void) {
+    this.socket.on("characterListUpdate", callback);
   }
 
   closeRoom(roomCode: string, playerId: string) {
@@ -112,11 +117,12 @@ class SocketService {
     });
   }
 
-  startGame(roomCode: string, playerId: string, activeIds: string[]) {
+  startGame(roomCode: string, playerId: string, activeIds: string[], selectedCharIds:number[]) {
     this.socket.emit("startGame", { 
       roomCode, 
       requesterId: playerId, 
-      activeIds // Passing the selected battalion to the backend
+      activeIds, // Passing the selected battalion to the backend
+      selectedCharIds
     });
   }
 
@@ -178,6 +184,14 @@ class SocketService {
 
   onNotification(callback: (data: { message: string, type: string }) => void) {
     this.socket.on("notification", callback);
+  }
+
+  requestCharacterList() {
+    this.socket.emit("getCharacterList");
+  }
+  
+  offCharacterList() {
+    this.socket.off("characterListUpdate");
   }
   
   offAll() {

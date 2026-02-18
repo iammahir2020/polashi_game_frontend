@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
-import type { Player, Room } from "../../types/game";
+import type { CharacterType, Player, Room } from "../../types/game";
 import { socketService } from "../../services/socket";
 import GameLoader from "../Loader";
 import { MISSION_CONFIGS } from "../../constants";
@@ -40,6 +40,7 @@ export default function GameDashboard() {
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
   const [intelPopup, setIntelPopup] = useState<{ message: string; type: 'private' | 'public' } | null>(null);
   const [selectedActiveIds, setSelectedActiveIds] = useState<string[]>([]);
+  const [characterList, setCharacterList] = useState<CharacterType[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -67,6 +68,16 @@ export default function GameDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    socketService.onCharacterList((list) => {
+      setCharacterList(list);
+    });
+  
+    // Request the list immediately
+    socketService.requestCharacterList();
+  
+    return () => socketService.offCharacterList();
+  }, []);
 
   useEffect(() => {
     socketService.connect();
@@ -178,17 +189,38 @@ export default function GameDashboard() {
     }
   }, [room?.players]);
 
+  // useEffect(() => {
+  //   socketService.onRoomDissolved(() => {
+  //     localStorage.removeItem("roomCode");
+  //     localStorage.removeItem("playerId");
+
+  //     setTimeout(() => {
+  //       window.location.reload();
+
+  //     }, 500);
+  //   });
+
+  //   return () => socketService.offRoomDissolved();
+  // }, []);
+
   useEffect(() => {
     socketService.onRoomDissolved(() => {
+      // 1. Clear Local Storage
       localStorage.removeItem("roomCode");
       localStorage.removeItem("playerId");
-
+  
+      // 2. Clear Local State to force the "Join/Create" UI to show
+      setRoom(null);
+      setRoomCode("");
+      setPlayerId(null);
+      setError("The Game Master has dissolved the HQ.");
+  
+      // 3. Optional: Redirect or Reload
       setTimeout(() => {
-        window.location.reload();
-
-      }, 500);
+        window.location.href = "/"; // Hard redirect to home
+      }, 1500);
     });
-
+  
     return () => socketService.offRoomDissolved();
   }, []);
 
@@ -268,18 +300,19 @@ export default function GameDashboard() {
   const kickPlayer = (targetId: string) => { socketService.kickPlayer(roomCode, targetId, playerId!); };
   const toggleLock = () => { if (!room || !playerId || room.gameStarted) return; socketService.lockRoom(roomCode, !room?.locked, playerId); };
   // const handleStartGame = () => { if (!room || !playerId) return; setIsRevealed(false); socketService.startGame(roomCode, playerId); };
-  const handleStartGame = () => { 
-    if (!room || !playerId) return; 
-    
+  const handleStartGame = (selectedCharIds: number[]) => {
+    if (!room || !playerId) return;
+
     if (selectedActiveIds.length < 5 || selectedActiveIds.length > 10) {
       alert("The battalion must consist of 5 to 10 active players.");
       return;
     }
-  
     setIsRevealed(false); 
+
     // Update this call to include the active IDs
-    socketService.startGame(roomCode, playerId, selectedActiveIds); 
+    socketService.startGame(roomCode, playerId, selectedActiveIds, selectedCharIds); 
   };
+
   const handleResetGame = () => { if (!room || !playerId) return; if (window.confirm("Reset the game?")) socketService.resetGame(roomCode, playerId); setIsRevealed(false) };
   const handleAssignGeneral = () => { if (!room || !playerId) return; socketService.assignGeneral(roomCode, playerId); };
 
@@ -287,7 +320,7 @@ export default function GameDashboard() {
   const handleClearVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.clearVote(roomCode, playerId); };
   const handleYesVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.castVote(roomCode, playerId, "yes"); };
   const handleNoVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.castVote(roomCode, playerId, "no"); };
-  const handleCloseRoom = () => { if (!room || !playerId || !room.gameStarted) return; socketService.closeRoom(roomCode, playerId); };
+  const handleCloseRoom = () => { if (!room || !playerId) return; socketService.closeRoom(roomCode, playerId); };
   const handleStartSecretVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.startSecretVote(roomCode, playerId); };
   const handleSetTeam = (playerIds: string[]) => { if (!room || !playerId || !room.gameStarted) return; socketService.proposeTeam(roomCode, playerIds); };
 
@@ -400,7 +433,7 @@ export default function GameDashboard() {
 
   const toggleActivePlayer = (id: string) => {
     if (!isGameMaster || room?.gameStarted) return;
-    
+
     setSelectedActiveIds(prev => {
       if (prev.includes(id)) return prev.filter(pId => pId !== id);
       if (prev.length >= 10) return prev; // Limit to 10
@@ -464,7 +497,6 @@ export default function GameDashboard() {
     return <ObserverScreen room={room} />;
   }
 
-  console.log({room})
 
   return (
     <div style={containerStyle}>
@@ -546,7 +578,7 @@ export default function GameDashboard() {
             guptochorUsed={room.guptochorUsed}
             onInvestigate={handleInvestigate}
 
-            selectedActiveIds={selectedActiveIds} 
+            selectedActiveIds={selectedActiveIds}
             onToggleActive={toggleActivePlayer}
           />
 
@@ -558,6 +590,7 @@ export default function GameDashboard() {
             primaryBtn={primaryBtn}
 
             activeCount={selectedActiveIds.length}
+            characterList={characterList}
           />
 
           <CommandConsole

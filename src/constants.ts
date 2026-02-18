@@ -1,5 +1,9 @@
 import type { MissionRequirement } from "./types/game";
 export type MissionConfigs = Record<number, MissionRequirement[]>;
+export type Distribution = {
+  nawabs: number;
+  eic: number;
+}
 
 export const MISSION_CONFIGS: MissionConfigs = {
   5: [
@@ -33,3 +37,12 @@ export const MISSION_CONFIGS: MissionConfigs = {
     { players: 5, failsRequired: 1 }
   ]
 }
+
+export const TEAM_DISTRIBUTIONS: Record<number, Distribution> = {
+  5: { nawabs: 3, eic: 2 },
+  6: { nawabs: 4, eic: 2 },
+  7: { nawabs: 4, eic: 3 },
+  8: { nawabs: 5, eic: 3 },
+  9: { nawabs: 6, eic: 3 },
+  10: { nawabs: 6, eic: 4 },
+};
