@@ -6,11 +6,12 @@ interface IdentityCardProps {
   setIsRevealed: (value: boolean) => void;
   character?: CharacterType | null;
   secretIntel?: string[];
+  disableSecretIntelligence?: boolean;
   gameStarted?: boolean;
   isFinal?: boolean;
 }
 
-const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, gameStarted, isFinal }) => {
+const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, disableSecretIntelligence, gameStarted, isFinal }) => {
 
 if (!gameStarted) return null;
 
@@ -100,6 +101,8 @@ return (
               <div style={{...intelItemStyle, color: "#eee"}}>
                 You can see all identities. Observe the whispers and find the traitors.
               </div>
+            ) : disableSecretIntelligence ? (
+              <div style={intelItemStyle}>Secret Intel is disabled for this match.</div>
             ) : (
               secretIntel?.map((intel, idx) => (
                 <div key={idx} style={intelItemStyle}>{intel}</div>

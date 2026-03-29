@@ -1,9 +1,9 @@
 import { io, Socket } from "socket.io-client";
 import type { CharacterType, Room, RoomJoinedPayload } from "../types/game";
 
-const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
+// const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
 // const SOCKET_URL = "http://172.16.16.6:3000/";
-// const SOCKET_URL = "http://192.168.0.108:3000/"
+const SOCKET_URL = "http://192.168.0.108:3000/"
 // const SOCKET_URL = "http://192.168.203.220:3000/"
 
 class SocketService {
@@ -117,12 +117,27 @@ class SocketService {
     });
   }
 
-  startGame(roomCode: string, playerId: string, activeIds: string[], selectedCharIds:number[]) {
+  startGame(
+    roomCode: string,
+    playerId: string,
+    activeIds: string[],
+    selectedCharIds: number[],
+    disableSecretIntelligence: boolean
+  ) {
     this.socket.emit("startGame", { 
       roomCode, 
       requesterId: playerId, 
       activeIds, // Passing the selected battalion to the backend
-      selectedCharIds
+      selectedCharIds,
+      disableSecretIntelligence
+    });
+  }
+
+  setDisableSecretIntelligence(roomCode: string, playerId: string, disableSecretIntelligence: boolean) {
+    this.socket.emit("setDisableSecretIntelligence", {
+      roomCode,
+      requesterId: playerId,
+      disableSecretIntelligence,
     });
   }
 

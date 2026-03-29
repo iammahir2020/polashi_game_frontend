@@ -28,6 +28,7 @@ export type Room = {
   turnIndex: number;
   locked?: boolean;
   gameStarted?: boolean;
+  disableSecretIntelligence?: boolean;
   secretIntel?: string[]; 
   voting?: VotingState | null;
   proposedTeam?: string[];

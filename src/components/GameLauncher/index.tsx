@@ -7,6 +7,8 @@ interface GameLauncherProps {
   isGameMaster: boolean;
   handleStartGame: (selectedCharIds: number[]) => void;
   handleAssignGeneral: () => void;
+  disableSecretIntelligence: boolean;
+  onToggleDisableSecretIntelligence: (value: boolean) => void;
   primaryBtn: React.CSSProperties;
   activeCount: number;
   characterList: CharacterType[];
@@ -17,6 +19,8 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   isGameMaster,
   handleStartGame,
   handleAssignGeneral,
+  disableSecretIntelligence,
+  onToggleDisableSecretIntelligence,
   primaryBtn,
   activeCount,
   characterList
@@ -98,6 +102,52 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
       >
         {isPreGame ? "Begin Campaign" : "Appoint General"}
       </button>
+
+      <div
+        style={{
+          marginTop: "10px",
+          padding: "12px",
+          borderRadius: "10px",
+          border: "1px solid rgba(197, 160, 89, 0.25)",
+          backgroundColor: "rgba(255,255,255,0.02)",
+          textAlign: "left",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "6px" }}>
+          <div style={{ color: "#e7d6ad", fontSize: "14px", fontWeight: 700 }}>
+            Disable Secret Intelligence
+          </div>
+          <span
+            style={{
+              display: "inline-block",
+              padding: "4px 8px",
+              borderRadius: "999px",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.4px",
+              color: disableSecretIntelligence ? "#ffd2d2" : "#c7ffd6",
+              backgroundColor: disableSecretIntelligence ? "rgba(220, 38, 38, 0.25)" : "rgba(22, 163, 74, 0.25)",
+              border: disableSecretIntelligence ? "1px solid rgba(220, 38, 38, 0.35)" : "1px solid rgba(22, 163, 74, 0.35)",
+            }}
+          >
+            {disableSecretIntelligence ? "Secret Intel Disabled" : "Secret Intel Enabled"}
+          </span>
+        </div>
+
+        <label style={{ display: "flex", alignItems: "center", gap: "10px", color: "#ddd", fontSize: "13px" }}>
+          <input
+            type="checkbox"
+            checked={disableSecretIntelligence}
+            disabled={!!room?.gameStarted}
+            onChange={(e) => onToggleDisableSecretIntelligence(e.target.checked)}
+          />
+          Turn off Secret Intel clues for this match
+        </label>
+
+        <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#9f9f9f", fontStyle: "italic" }}>
+          If enabled, no Secret Intel clues are shown for this match.
+        </p>
+      </div>
 
       {isPickingCharacters && (
         <div style={modalOverlay}>

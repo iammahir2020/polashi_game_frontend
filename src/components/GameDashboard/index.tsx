@@ -39,6 +39,7 @@ export default function GameDashboard() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
   const [intelPopup, setIntelPopup] = useState<{ message: string; type: 'private' | 'public' } | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
   const [selectedActiveIds, setSelectedActiveIds] = useState<string[]>([]);
   const [characterList, setCharacterList] = useState<CharacterType[]>([]);
 
@@ -109,6 +110,7 @@ export default function GameDashboard() {
 
     socketService.onError((msg) => {
       setError(msg);
+      setErrorToast(msg);
       setIsReconnecting(false);
       setLoadingAction(null);
       if (msg.toLowerCase().includes("not found")) {
@@ -140,6 +142,12 @@ export default function GameDashboard() {
       socketService.offAll();
     };
   }, []);
+
+  useEffect(() => {
+    if (!errorToast) return;
+    const timer = setTimeout(() => setErrorToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [errorToast]);
 
   useEffect(() => {
     const handleInternetChange = () => {
@@ -310,7 +318,18 @@ export default function GameDashboard() {
     setIsRevealed(false); 
 
     // Update this call to include the active IDs
-    socketService.startGame(roomCode, playerId, selectedActiveIds, selectedCharIds); 
+    socketService.startGame(
+      roomCode,
+      playerId,
+      selectedActiveIds,
+      selectedCharIds,
+      !!room.disableSecretIntelligence
+    );
+  };
+
+  const handleToggleDisableSecretIntelligence = (disableSecretIntelligence: boolean) => {
+    if (!room || !playerId || !isGameMaster || room.gameStarted) return;
+    socketService.setDisableSecretIntelligence(roomCode, playerId, disableSecretIntelligence);
   };
 
   const handleResetGame = () => { if (!room || !playerId) return; if (window.confirm("Reset the game?")) socketService.resetGame(roomCode, playerId); setIsRevealed(false) };
@@ -558,7 +577,8 @@ export default function GameDashboard() {
             setIsRevealed={setIsRevealed}
             gameStarted={room.gameStarted}
             character={me?.character}
-            secretIntel={room.secretIntel}
+            secretIntel={room.disableSecretIntelligence ? [] : room.secretIntel}
+            disableSecretIntelligence={!!room.disableSecretIntelligence}
           />
 
           <BattalionSelector
@@ -587,11 +607,26 @@ export default function GameDashboard() {
             isGameMaster={isGameMaster}
             handleStartGame={handleStartGame}
             handleAssignGeneral={handleAssignGeneral}
+            disableSecretIntelligence={!!room.disableSecretIntelligence}
+            onToggleDisableSecretIntelligence={handleToggleDisableSecretIntelligence}
             primaryBtn={primaryBtn}
 
             activeCount={selectedActiveIds.length}
             characterList={characterList}
           />
+
+          {!isGameMaster && !room.gameStarted && (
+            <div
+              style={{
+                margin: "8px 0 16px",
+                fontSize: "13px",
+                color: "#bbb",
+                textAlign: "center",
+              }}
+            >
+              Secret Intel: {room.disableSecretIntelligence ? "Disabled" : "Enabled"}
+            </div>
+          )}
 
           <CommandConsole
             room={room}
@@ -648,6 +683,30 @@ export default function GameDashboard() {
             onAttemptAssassination={handleAssassination}
           />
         </>
+      )}
+
+      {errorToast && (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: "18px",
+            transform: "translateX(-50%)",
+            zIndex: 10000,
+            backgroundColor: "rgba(127, 29, 29, 0.96)",
+            border: "1px solid rgba(239, 68, 68, 0.6)",
+            color: "#ffe9e9",
+            padding: "10px 14px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+            maxWidth: "90vw",
+          }}
+          role="alert"
+          aria-live="assertive"
+        >
+          {errorToast}
+        </div>
       )}
     </div>
   );
