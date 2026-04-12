@@ -5,6 +5,7 @@ import GameDashboard from './components/GameDashboard'
 import GameLoader from './components/Loader';
 import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import RouteSeoManager from './seo/RouteSeoManager';
 
 function App() {
   // Check if this is the first load of this session
@@ -45,6 +46,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <RouteSeoManager />
         <Routes>
           <Route path="/" element={<GameDashboard />} />
         </Routes>
