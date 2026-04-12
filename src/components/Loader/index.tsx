@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface GameLoaderProps {
     message?: string;
@@ -7,6 +7,26 @@ interface GameLoaderProps {
   }
 
 const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with Command..." , showButton=false, onProceed}) => {
+  const shouldLoadVideo = useMemo(() => {
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+
+    if (connection?.saveData) {
+      return false;
+    }
+
+    const effectiveType = connection?.effectiveType;
+    if (effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g') {
+      return false;
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return false;
+    }
+
+    return true;
+  }, []);
 
   return (
     <div style={{
@@ -18,18 +38,35 @@ const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with C
       backgroundSize: "cover", backgroundPosition: "center",
       fontFamily: "'Cinzel', serif", overflow: "hidden"
     }}>
-      {/* Background Video */}
-      <video
-        autoPlay muted loop playsInline
-        style={{
-          position: "absolute", top: "50%", left: "50%",
-          minWidth: "110%", minHeight: "110%",
-          transform: "translate(-50%, -50%) scale(0.95)",
-          objectFit: "cover", zIndex: 0, filter: "blur(1px)"
-        }}
-      >
-        <source src="/polashi_bg.mp4" type="video/mp4" />
-      </video>
+      {/* Heavy media is disabled on slow/data-saver connections */}
+      {shouldLoadVideo ? (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          poster="/Nawab.png"
+          style={{
+            position: "absolute", top: "50%", left: "50%",
+            minWidth: "110%", minHeight: "110%",
+            transform: "translate(-50%, -50%) scale(0.95)",
+            objectFit: "cover", zIndex: 0, filter: "blur(1px)"
+          }}
+        >
+          <source src="/polashi_bg.mp4" type="video/mp4" />
+        </video>
+      ) : (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            background:
+              "radial-gradient(circle at 50% 20%, rgba(197,160,89,0.22), transparent 45%), linear-gradient(180deg, #111 0%, #050505 100%)",
+          }}
+        />
+      )}
 
       {/* Overlay */}
       <div style={{
@@ -41,8 +78,11 @@ const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with C
       {/* Content */}
       <div style={{ zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <img 
-          src="/polashi_fav_high_res.png" 
+          src="/Nawab.png"
+          width={80}
+          height={80}
           alt="Logo" 
+          decoding="async"
           style={{ width: '80px', marginBottom: '30px', animation: 'pulse 3s infinite ease-in-out' }} 
         />
         <div className="shimmer-effect" style={{ fontSize: "22px", marginBottom: "20px", textAlign: 'center' }}>

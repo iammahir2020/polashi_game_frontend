@@ -21,7 +21,7 @@ function App() {
     if (isBooting) {
       const bootTimer = setTimeout(() => {
         setIsBooting(false);
-      }, 4000); 
+      }, 1200);
       return () => clearTimeout(bootTimer);
     }
   }, [isBooting]);
