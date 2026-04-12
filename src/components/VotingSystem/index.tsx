@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type { Room } from '../../types/game';
+import { useOverlayA11y } from '../../hooks/useOverlayA11y';
 
 interface VotingSystemProps {
   room: Room | null;
@@ -29,12 +30,33 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   const [pendingVote, setPendingVote] = useState<'yes' | 'no' | null>(null);
 
   const isTeamApproval = room.voting.type === "teamApproval";
+  const currentVotes = room.voting?.votes ?? {};
   const hasVoted = playerId && room.voting.votes[playerId];
   const isOnMission = playerId && room.proposedTeam?.includes(playerId);
   const totalRequiredVotes = isTeamApproval ? room.players.length : (room.proposedTeam?.length || 0);
+  const pendingTeamApprovalVoters = isTeamApproval
+    ? room.players.filter((p) => !(p.id in currentVotes))
+    : [];
+  const pendingSecretVoters = !isTeamApproval
+    ? room.players.filter((p) => (room.proposedTeam || []).includes(p.id) && !(p.id in currentVotes))
+    : [];
+  const pendingVoters = isTeamApproval ? pendingTeamApprovalVoters : pendingSecretVoters;
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   const me = room.players.find(p => p.id === playerId);
   const isNawab = me?.character?.team === "Nawabs";
+
+  const handleOverlayClose = () => {
+    if (pendingVote) {
+      setPendingVote(null);
+      return;
+    }
+    if (isGameMaster && room.voting?.active) {
+      handleClearVote();
+    }
+  };
+
+  useOverlayA11y({ isActive: true, onClose: handleOverlayClose, containerRef: overlayRef });
   
 
   // Inside your VotingSystem component
@@ -61,7 +83,7 @@ const shuffledOptions = useMemo(() => {
 }, [room.voting.active, isTeamApproval]); // Re-shuffles only when a new vote starts
 
   return (
-    <div style={{
+    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Voting session" tabIndex={-1} style={{
       position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
       backgroundColor: "rgba(0, 0, 0, 0.92)", backdropFilter: "blur(8px)",
       zIndex: 20001, display: "flex", flexDirection: "column",
@@ -122,6 +144,31 @@ const shuffledOptions = useMemo(() => {
                 Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{Object.keys(room.voting.votes).length}</span> / {totalRequiredVotes}
               </div>
 
+              {pendingVoters.length > 0 && (
+                <div style={{ marginBottom: "24px", maxWidth: "680px" }}>
+                  <p style={{ color: "#9a9a9a", fontSize: "11px", letterSpacing: "1.6px", textTransform: "uppercase", marginBottom: "10px" }}>
+                    Awaiting Votes From
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
+                    {pendingVoters.map((p) => (
+                      <span
+                        key={p.id}
+                        style={{
+                          color: "#ffe5b3",
+                          fontSize: "12px",
+                          border: "1px solid rgba(197, 160, 89, 0.4)",
+                          backgroundColor: "rgba(197, 160, 89, 0.08)",
+                          borderRadius: "999px",
+                          padding: "4px 10px"
+                        }}
+                      >
+                        {p.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {!hasVoted ? (
                 <div style={{ display: "flex", gap: "40px", justifyContent: "center" }}>
                   {/* <VoteOption
@@ -157,6 +204,31 @@ const shuffledOptions = useMemo(() => {
           ) : (
             /* SPECTATOR VIEW */
             <div style={{ padding: "40px", animation: "pulseOpacity 3s infinite" }}>
+              {!isTeamApproval && pendingSecretVoters.length > 0 && (
+                <div style={{ marginBottom: "20px", maxWidth: "680px" }}>
+                  <p style={{ color: "#9a9a9a", fontSize: "11px", letterSpacing: "1.6px", textTransform: "uppercase", marginBottom: "10px" }}>
+                    Awaiting Secret Votes From
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
+                    {pendingSecretVoters.map((p) => (
+                      <span
+                        key={p.id}
+                        style={{
+                          color: "#ffe5b3",
+                          fontSize: "12px",
+                          border: "1px solid rgba(197, 160, 89, 0.4)",
+                          backgroundColor: "rgba(197, 160, 89, 0.08)",
+                          borderRadius: "999px",
+                          padding: "4px 10px"
+                        }}
+                      >
+                        {p.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <p style={{ color: "#c5a059", fontSize: "22px", fontFamily: "Cinzel", letterSpacing: "2px" }}>
                 Mission in Progress...
               </p>
@@ -298,7 +370,7 @@ const VotingStyles = () => (
       .cancel-btn:hover { background: rgba(255, 118, 117, 0.15); border-color: #ff7675; }
       .flipping-container { width: 140px; height: 140px; position: absolute; top: 50%; left: 50%; transform-style: preserve-3d; animation: royalFlip 8s infinite linear, levitate 4s infinite ease-in-out; display: flex; align-items: center; justify-content: center; }
       .result-image-3d { width: 130px; opacity: 0.4; filter: drop-shadow(0 0 20px rgba(197, 160, 89, 0.4)); backface-visibility: visible; }
-      .verdict-text { font-size: 50px; font-weight: bold; fontFamily: 'Cinzel', serif; position: relative; z-index: 10; pointer-events: none; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
+      .verdict-text { font-size: 50px; font-weight: bold; font-family: 'Cinzel', serif; position: relative; z-index: 10; pointer-events: none; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
       .shadow-fx { position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); width: 60px; height: 10px; background: radial-gradient(ellipse at center, rgba(197, 160, 89, 0.2) 0%, transparent 70%); border-radius: 50%; filter: blur(5px); animation: shadowPulse 4s infinite ease-in-out; }
       
       @keyframes revealVerdict { 0% { opacity: 0; transform: translateY(20px) scale(0.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }

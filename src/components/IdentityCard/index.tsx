@@ -22,6 +22,16 @@ const isNawab = character ? (character.team === "Nawabs" || character.team.inclu
 return (
   <div
     onClick={() => setIsRevealed(!isRevealed)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setIsRevealed(!isRevealed);
+      }
+    }}
+    role="button"
+    tabIndex={0}
+    aria-pressed={isRevealed}
+    aria-label={isObserver ? "Toggle observer card" : "Toggle identity card"}
     style={{
       perspective: "1000px",
       margin: "25px 0",

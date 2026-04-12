@@ -7,17 +7,19 @@ interface BattalionSelectorProps {
   me: any;
   handleTogglePlayer: (id: string) => void;
   handleStartVote: () => void;
+  isTurnComplete: boolean;
 }
 
 const BattalionSelector: React.FC<BattalionSelectorProps> = ({
   room,
   me,
   handleTogglePlayer,
-  handleStartVote
+  handleStartVote,
+  isTurnComplete
 }) => {
   // Guard Clauses
   const isGeneral = me?.isGeneral;
-  const showSelector = isGeneral && room.gameStarted && !room.voting?.active;
+  const showSelector = isGeneral && room.gameStarted && !room.voting?.active && !isTurnComplete;
   
   if (!showSelector) return null;
 

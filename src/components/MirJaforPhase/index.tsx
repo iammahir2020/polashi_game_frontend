@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { Room } from '../../types/game';
+import { useOverlayA11y } from '../../hooks/useOverlayA11y';
 
 interface MirJaforPhaseProps {
   room: Room;
@@ -10,12 +11,15 @@ interface MirJaforPhaseProps {
 const MirJaforPhase: React.FC<MirJaforPhaseProps> = ({ room, playerId, onAttemptAssassination }) => {
   
   if(room.gameStatus !== "MIR_JAFOR_TURN") return null;
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useOverlayA11y({ isActive: true, containerRef: overlayRef });
   
   const me = room.players.find(p => p.id === playerId);
   const isMirJafor = me?.character?.name === "মীর জাফর";
 
   return (
-    <div style={{
+    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Final betrayal phase" tabIndex={-1} style={{
       position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
       backgroundColor: 'rgba(20, 0, 0, 0.95)', zIndex: 15000,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

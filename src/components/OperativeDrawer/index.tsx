@@ -37,6 +37,16 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
       {/* CLICKABLE HEADER */}
       <div
         onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsDrawerOpen(!isDrawerOpen);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isDrawerOpen}
+        aria-label="Toggle operative drawer"
         style={{
           padding: '12px 20px',
           display: 'flex',
@@ -55,7 +65,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
             boxShadow: '0 0 10px #40c057',
           }} />
           <div>
-            <span style={{ fontSize: '10px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>OPERATIVE</span>
+            <span style={{ fontSize: '11px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>OPERATIVE</span>
             <span style={{ fontSize: '16px', color: '#fff', letterSpacing: '1px', textTransform: 'uppercase' }}>
               {currentPlayerName}
             </span>
@@ -63,7 +73,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '10px', color: room.locked ? '#ff922b' : '#00b894' }}>
+          <span style={{ fontSize: '11px', color: room.locked ? '#ff922b' : '#00b894' }}>
             {room.locked ? "🔒 LOCKED" : "🔓 OPEN"}
           </span>
           <span style={{
@@ -78,7 +88,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
 
       {/* EXPANDABLE CONTENT */}
       <div style={{
-        maxHeight: isDrawerOpen ? '300px' : '0px',
+        maxHeight: isDrawerOpen ? '360px' : '0px',
         opacity: isDrawerOpen ? 1 : 0,
         transition: 'all 0.4s ease-in-out',
         padding: isDrawerOpen ? '20px' : '0 20px',
@@ -91,7 +101,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
           {/* ACCESS MODULE */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: '0 0 5px 0', fontSize: '9px', color: '#666', letterSpacing: '1px' }}>SESSION CIPHER</p>
+              <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#888', letterSpacing: '1px' }}>SESSION CIPHER</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ color: '#c5a059', fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px' }}>
                   {roomCode}
@@ -112,9 +122,9 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
                 backgroundColor: copiedStatus === "link" ? '#c5a059' : 'transparent',
                 border: '1px solid #c5a059',
                 color: copiedStatus === "link" ? '#000' : '#c5a059',
-                padding: '10px 15px',
+                padding: '10px 14px',
                 borderRadius: '4px',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
@@ -138,9 +148,9 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
                 background: 'none',
                 border: '1px solid #444',
                 color: '#888',
-                padding: '5px 10px',
+                padding: '8px 12px',
                 borderRadius: '4px',
-                fontSize: '9px',
+                fontSize: '11px',
                 cursor: 'pointer',
                 textTransform: 'uppercase',
                 transition: 'all 0.2s'

@@ -32,6 +32,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
 
   const isInvalid = activeCount < 5 || activeCount > 10;
   const isPreGame = !!(room && !room.gameStarted);
+  const isGameOver = room?.gameStatus === "OVER";
   const config = TEAM_DISTRIBUTIONS[activeCount] || { nawabs: 0, eic: 0 };
 
   // Helper to filter teams
@@ -41,6 +42,13 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   const currentNawabs = characterList.filter(c => selectedCharIds.includes(c.id) && c.team === "Nawabs").length;
   const currentEIC = characterList.filter(c => selectedCharIds.includes(c.id) && (c.team?.includes("EIC") || c.team?.includes("Company"))).length;
   const isSelectionReady = currentNawabs === config.nawabs && currentEIC === config.eic;
+  const showSelectAllForTenPlayers = activeCount === 10;
+
+  const handleSelectAllCharacters = () => {
+    const allNawabIds = nwbChars.map(char => char.id).slice(0, config.nawabs);
+    const allEicIds = eicChars.map(char => char.id).slice(0, config.eic);
+    setSelectedCharIds([...allNawabIds, ...allEicIds]);
+  };
 
   const toggleChar = (id: number) => {
     if (id === 1 || id === 8) return; 
@@ -68,7 +76,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   };
 
   const splitGrid: React.CSSProperties = {
-    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', backgroundColor: 'rgba(255,255,255,0.05)', flex: 1, overflowY: 'auto'
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '2px', backgroundColor: 'rgba(255,255,255,0.05)', flex: 1, overflowY: 'auto'
   };
 
   const teamColumn: React.CSSProperties = {
@@ -92,15 +100,26 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   return (
     <div style={{ textAlign: "center", marginBottom: "30px" }}>
       <p style={{ color: isInvalid && isPreGame ? "#ff7675" : "#aaa", fontSize: "18px", fontFamily: "'EB Garamond', serif", fontStyle: "italic", marginBottom: "15px" }}>
-        {isPreGame ? (isInvalid ? `Draft 5 to 10 operatives.` : `Battalion ready: ${activeCount}`) : "Appoint a General."}
+        {isPreGame
+          ? (isInvalid ? `Draft 5 to 10 operatives.` : `Battalion ready: ${activeCount}`)
+          : isGameOver
+            ? "Campaign ended. Reset to begin a new one."
+            : "Appoint a General."}
       </p>
 
       <button
-        onClick={() => isPreGame ? setIsPickingCharacters(true) : handleAssignGeneral()}
-        disabled={!!(isInvalid && isPreGame)}
-        style={{ ...primaryBtn, backgroundColor: (isInvalid && isPreGame) ? "#222" : "#c5a059", color: (isInvalid && isPreGame) ? "#444" : "#000" }}
+        onClick={() => {
+          if (isGameOver) return;
+          isPreGame ? setIsPickingCharacters(true) : handleAssignGeneral();
+        }}
+        disabled={!!(isInvalid && isPreGame) || isGameOver}
+        style={{
+          ...primaryBtn,
+          backgroundColor: ((isInvalid && isPreGame) || isGameOver) ? "#222" : "#c5a059",
+          color: ((isInvalid && isPreGame) || isGameOver) ? "#666" : "#000"
+        }}
       >
-        {isPreGame ? "Begin Campaign" : "Appoint General"}
+        {isPreGame ? "Begin Campaign" : isGameOver ? "Campaign Ended" : "Appoint General"}
       </button>
 
       <div
@@ -157,6 +176,25 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
             <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#161616' }}>
               <h2 style={{ fontSize: '24px', color: '#c5a059', fontFamily: 'serif', margin: 0 }}>সৈন্যদল বিন্যাস</h2>
               <p style={{ fontSize: '10px', color: 'rgba(197, 160, 89, 0.5)', letterSpacing: '3px', margin: '5px 0 15px' }}>BATTALION BALANCE</p>
+              {showSelectAllForTenPlayers && (
+                <button
+                  onClick={handleSelectAllCharacters}
+                  style={{
+                    marginTop: '4px',
+                    padding: '8px 14px',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(197, 160, 89, 0.65)',
+                    backgroundColor: 'rgba(197, 160, 89, 0.12)',
+                    color: '#e7d6ad',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '0.8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  SELECT ALL CHARACTERS
+                </button>
+              )}
             </div>
 
             {/* Split View: Left (EIC) vs Right (Nawab) */}

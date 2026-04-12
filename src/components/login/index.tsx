@@ -77,7 +77,7 @@ const LoginForm: React.FC = () => {
     if (provider === 'google') {
       signInWithGoogle()
     } else if (provider === 'facebook') {
-      console.log('Facebook login clicked');
+      // Placeholder for future Facebook auth integration.
     }
   };
 

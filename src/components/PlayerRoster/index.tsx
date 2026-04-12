@@ -309,13 +309,27 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                     {p.name} {p.isGameMaster && <span title="Game Master">👑</span>}
                   </span>
 
+                  {p.isGeneral && (
+                    <span style={{
+                      fontSize: '11px',
+                      color: '#c5a059',
+                      border: '1px solid #c5a059',
+                      padding: '2px 7px',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.5px'
+                    }}>
+                      GENERAL
+                    </span>
+                  )}
+
                   {/* REVEALED INFO FOR OBSERVERS */}
                   {showCharacterInfo && (
                     <span style={{
-                      fontSize: '9px',
+                      fontSize: '11px',
                       color: isNawab ? "#00b894" : "#ff7675",
                       border: `1px solid ${isNawab ? "#00b894" : "#ff7675"}`,
-                      padding: '1px 5px',
+                      padding: '2px 7px',
                       borderRadius: '4px',
                       fontWeight: 'bold',
                       backgroundColor: 'rgba(0,0,0,0.3)',
@@ -327,12 +341,12 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
 
                   {/* Status Badges */}
                   {isActive && !gameStarted && (
-                    <span style={{ fontSize: '9px', color: '#c5a059', border: '1px solid #c5a059', padding: '1px 5px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#c5a059', border: '1px solid #c5a059', padding: '2px 7px', borderRadius: '4px' }}>
                       BATTALION
                     </span>
                   )}
                   {!isActive && gameStarted && (
-                    <span style={{ fontSize: '9px', color: '#666', border: '1px solid #333', padding: '1px 5px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#777', border: '1px solid #333', padding: '2px 7px', borderRadius: '4px' }}>
                       OBSERVER
                     </span>
                   )}
@@ -340,15 +354,15 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   {showGuptochorAction && (
-                    <button onClick={(e) => { e.stopPropagation(); onInvestigate?.(p.id); }} className="spy-btn" style={{ border: "1px solid #c5a059", background: "rgba(197, 160, 89, 0.1)", color: "#c5a059", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "14px" }}>
-                      🕵️‍♂️ <span style={{fontSize: '10px'}}>SPY</span>
+                    <button onClick={(e) => { e.stopPropagation(); onInvestigate?.(p.id); }} className="spy-btn" style={{ border: "1px solid #c5a059", background: "rgba(197, 160, 89, 0.1)", color: "#c5a059", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "14px" }}>
+                      🕵️‍♂️ <span style={{fontSize: '11px'}}>SPY</span>
                     </button>
                   )}
 
                   {isGameMaster && !gameStarted && !isMe && (
                     <button 
                       onClick={(e) => { e.stopPropagation(); kickPlayer(p.id); }} 
-                      style={{ border: "none", background: "none", color: "#ff7675", cursor: "pointer", fontSize: "11px", fontWeight: 'bold' }}
+                      style={{ border: "none", background: "none", color: "#ff7675", cursor: "pointer", fontSize: "12px", fontWeight: 'bold', padding: "6px 4px" }}
                     >
                       Dismiss
                     </button>

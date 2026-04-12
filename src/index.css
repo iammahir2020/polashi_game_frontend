@@ -30,9 +30,26 @@ body {
 /* 3. Smooth global transitions for the dark theme */
 * {
   box-sizing: border-box;
-  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
-  user-select: none; /* Prevents accidental text selection during gameplay */
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  user-select: auto;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Accessible keyboard focus ring across the app */
+:focus-visible {
+  outline: 2px solid #c5a059;
+  outline-offset: 2px;
+}
+
+/* Respect reduced-motion user preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* 4. Styled scrollbar to match the aesthetic */

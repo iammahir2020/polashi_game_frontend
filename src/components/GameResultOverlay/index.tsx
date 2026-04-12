@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { Room } from '../../types/game';
 import IdentityCard from '../IdentityCard';
+import { useOverlayA11y } from '../../hooks/useOverlayA11y';
+import { uiButtonGold } from '../../style/ui';
 
 interface GameResultOverlayProps {
   room: Room;
@@ -8,6 +10,8 @@ interface GameResultOverlayProps {
   handleResetGame: () => void;
   primaryBtn: React.CSSProperties;
   playerId: string | null;
+  isDismissed: boolean;
+  onClose: () => void;
 }
 
 const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
@@ -15,17 +19,20 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
   isGameMaster,
   handleResetGame,
   primaryBtn,
-  playerId
+  playerId,
+  isDismissed,
+  onClose
 }) => {
   // Only render if the game status is explicitly OVER
-  if (room.gameStatus !== "OVER") return null;
+  if (room.gameStatus !== "OVER" || isDismissed) return null;
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useOverlayA11y({ isActive: true, onClose, containerRef: overlayRef });
 
   const isGreenWin = room.winner?.includes('Green');
 
-  console.log({room})
-
   return (
-    <div className="victory-overlay" style={{
+    <div ref={overlayRef} className="victory-overlay" role="dialog" aria-modal="true" aria-label="Game result" tabIndex={-1} style={{
       position: 'fixed', 
       top: 0, 
       left: 0, 
@@ -41,6 +48,23 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
       backdropFilter: 'blur(8px)', // Adds a cinematic blur to the game behind
       fontFamily: "'Cinzel', serif"
     }}>
+      <button
+        onClick={onClose}
+        aria-label="Close result"
+        style={{
+          ...uiButtonGold,
+          position: 'absolute',
+          top: '18px',
+          right: '18px',
+          backgroundColor: 'rgba(0,0,0,0.35)',
+          color: '#fff',
+          fontSize: '12px',
+          letterSpacing: '0.6px'
+        }}
+      >
+        CLOSE
+      </button>
+
       {/* Visual flair: Victory/Defeat Header */}
       <h1 style={{ 
         color: isGreenWin ? '#4caf50' : '#f44336', 
@@ -99,8 +123,8 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
             ...primaryBtn, 
             backgroundColor: "#c5a059", 
             color: "#000", 
-            padding: "12px 40px", 
-            width: "300px",
+            padding: "12px 20px", 
+            width: "min(300px, 90vw)",
             fontSize: "18px",
             boxShadow: '0 0 20px rgba(197, 160, 89, 0.3)'
           }}

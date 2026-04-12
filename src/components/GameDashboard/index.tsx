@@ -21,6 +21,14 @@ import GameHeader from "../GameHeader";
 import IntelPopup from "../IntepPopup";
 import MirJaforPhase from "../MirJaforPhase";
 import ObserverScreen from "../ObserverScreen";
+import { uiButtonGhost, uiButtonGold } from "../../style/ui";
+
+type DialogState = {
+  kind: "notice" | "confirm";
+  title: string;
+  message: string;
+  onConfirm?: () => void;
+};
 
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
@@ -42,6 +50,10 @@ export default function GameDashboard() {
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [selectedActiveIds, setSelectedActiveIds] = useState<string[]>([]);
   const [characterList, setCharacterList] = useState<CharacterType[]>([]);
+  const [isResultOverlayDismissed, setIsResultOverlayDismissed] = useState(false);
+  const [awaitingNewGeneral, setAwaitingNewGeneral] = useState(false);
+  const [completedGeneralId, setCompletedGeneralId] = useState<string | null>(null);
+  const [dialogState, setDialogState] = useState<DialogState | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -116,7 +128,11 @@ export default function GameDashboard() {
       if (msg.toLowerCase().includes("not found")) {
         localStorage.removeItem("roomCode");
         localStorage.removeItem("playerId");
-        alert(msg || "An error occurred.");
+        setDialogState({
+          kind: "notice",
+          title: "Room Not Found",
+          message: msg || "An error occurred.",
+        });
       }
     });
 
@@ -279,8 +295,50 @@ export default function GameDashboard() {
     }
   }, [room?.players.length, room?.gameStarted]);
 
+  useEffect(() => {
+    if (room?.gameStatus !== "OVER") {
+      setIsResultOverlayDismissed(false);
+    }
+  }, [room?.gameStatus]);
+
+  useEffect(() => {
+    if (!room?.gameStarted || room.gameStatus === "OVER") {
+      setAwaitingNewGeneral(false);
+      setCompletedGeneralId(null);
+      return;
+    }
+
+    const general = room.players.find((p) => p.isGeneral) || null;
+
+    if (room.voting?.active) {
+      setAwaitingNewGeneral(false);
+      setCompletedGeneralId(null);
+      return;
+    }
+
+    if (room.voting && !room.voting.active && !!room.voting.result) {
+      setAwaitingNewGeneral(true);
+      setCompletedGeneralId(general?.id ?? null);
+      return;
+    }
+
+    if (awaitingNewGeneral && completedGeneralId && general && general.id !== completedGeneralId) {
+      setAwaitingNewGeneral(false);
+      setCompletedGeneralId(null);
+    }
+  }, [
+    room?.gameStarted,
+    room?.gameStatus,
+    room?.voting?.active,
+    room?.voting?.result,
+    room?.players,
+    awaitingNewGeneral,
+    completedGeneralId,
+  ]);
+
   const me = room?.players.find(p => p.id === playerId);
   const isGameMaster = me?.isGameMaster === true;
+  const isCurrentGeneralTurnComplete = !!me?.isGeneral && awaitingNewGeneral && completedGeneralId === me?.id;
 
   const handleForceExit = (reason: string) => {
     setRoom(null);
@@ -312,7 +370,7 @@ export default function GameDashboard() {
     if (!room || !playerId) return;
 
     if (selectedActiveIds.length < 5 || selectedActiveIds.length > 10) {
-      alert("The battalion must consist of 5 to 10 active players.");
+      setErrorToast("The battalion must consist of 5 to 10 active players.");
       return;
     }
     setIsRevealed(false); 
@@ -332,7 +390,18 @@ export default function GameDashboard() {
     socketService.setDisableSecretIntelligence(roomCode, playerId, disableSecretIntelligence);
   };
 
-  const handleResetGame = () => { if (!room || !playerId) return; if (window.confirm("Reset the game?")) socketService.resetGame(roomCode, playerId); setIsRevealed(false) };
+  const handleResetGame = () => {
+    if (!room || !playerId) return;
+    setDialogState({
+      kind: "confirm",
+      title: "Reset Campaign",
+      message: "Reset the game for all players?",
+      onConfirm: () => {
+        socketService.resetGame(roomCode, playerId);
+        setIsRevealed(false);
+      },
+    });
+  };
   const handleAssignGeneral = () => { if (!room || !playerId) return; socketService.assignGeneral(roomCode, playerId); };
 
   const handleStartVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.startVote(roomCode, playerId); };
@@ -389,18 +458,22 @@ export default function GameDashboard() {
       }
     } catch (err) {
       console.error("Fallback copy failed", err);
-      alert(`Could not auto-copy. Please copy manually: ${textToCopy}`);
+      setErrorToast(`Could not auto-copy. Please copy manually: ${textToCopy}`);
     }
   };
 
   const handleDissolve = () => {
-    if (window.confirm("Terminate this session for all players?")) {
-      handleCloseRoom();
-
-      localStorage.removeItem("roomCode");
-      localStorage.removeItem("playerId");
-      window.location.href = "/";
-    }
+    setDialogState({
+      kind: "confirm",
+      title: "Close HQ",
+      message: "Terminate this session for all players?",
+      onConfirm: () => {
+        handleCloseRoom();
+        localStorage.removeItem("roomCode");
+        localStorage.removeItem("playerId");
+        window.location.href = "/";
+      },
+    });
   };
 
   const handleTogglePlayer = (id: string) => {
@@ -440,9 +513,12 @@ export default function GameDashboard() {
     if (!room || !playerId) return;
 
     const target = room.players.find(p => p.id === targetId);
-    if (window.confirm(`Deploy your informant to investigate ${target?.name}?`)) {
-      socketService.investigate(roomCode, targetId, playerId);
-    }
+    setDialogState({
+      kind: "confirm",
+      title: "Deploy Informant",
+      message: `Deploy your informant to investigate ${target?.name}?`,
+      onConfirm: () => socketService.investigate(roomCode, targetId, playerId),
+    });
   };
 
   const handleAssassination = (targetId: string) => {
@@ -512,10 +588,6 @@ export default function GameDashboard() {
 
   const isObserver = room && room.gameStarted && !room.activePlayerIds?.includes(playerId || "");
 
-  if (isObserver) {
-    return <ObserverScreen room={room} />;
-  }
-
 
   return (
     <div style={containerStyle}>
@@ -572,6 +644,22 @@ export default function GameDashboard() {
             leaveRoom={leaveRoom}
           />
 
+          {isObserver ? (
+            <>
+              <ObserverScreen room={room} />
+              <GameResultOverlay
+                room={room}
+                isGameMaster={isGameMaster}
+                handleResetGame={handleResetGame}
+                primaryBtn={primaryBtn}
+                playerId={playerId}
+                isDismissed={isResultOverlayDismissed}
+                onClose={() => setIsResultOverlayDismissed(true)}
+              />
+            </>
+          ) : (
+            <>
+
           <IdentityCard
             isRevealed={isRevealed}
             setIsRevealed={setIsRevealed}
@@ -581,12 +669,48 @@ export default function GameDashboard() {
             disableSecretIntelligence={!!room.disableSecretIntelligence}
           />
 
+          {room.gameStarted && currentGeneral && (
+            <div
+              style={{
+                margin: "10px 0 14px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid rgba(197, 160, 89, 0.45)",
+                backgroundColor: "rgba(197, 160, 89, 0.08)",
+                color: "#e7d6ad",
+                textAlign: "center",
+                fontSize: "13px",
+                letterSpacing: "0.4px"
+              }}
+            >
+              Current General: <strong>{currentGeneral.name}</strong>
+            </div>
+          )}
+
           <BattalionSelector
             room={room}
             me={me}
             handleTogglePlayer={handleTogglePlayer}
             handleStartVote={handleStartVote}
+            isTurnComplete={isCurrentGeneralTurnComplete}
           />
+
+          {room.gameStarted && awaitingNewGeneral && (
+            <div
+              style={{
+                margin: "8px 0 14px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid rgba(197, 160, 89, 0.35)",
+                backgroundColor: "rgba(197, 160, 89, 0.08)",
+                color: "#e7d6ad",
+                textAlign: "center",
+                fontSize: "13px",
+              }}
+            >
+              {isCurrentGeneralTurnComplete ? "Your turn is done, waiting for new general" : "Waiting for new general"}
+            </div>
+          )}
 
           <PlayerRoster
             players={room.players}
@@ -668,6 +792,8 @@ export default function GameDashboard() {
             handleResetGame={handleResetGame}
             primaryBtn={primaryBtn}
             playerId={playerId}
+            isDismissed={isResultOverlayDismissed}
+            onClose={() => setIsResultOverlayDismissed(true)}
           />
 
           <RoundTracker room={room} />
@@ -682,6 +808,8 @@ export default function GameDashboard() {
             playerId={playerId!}
             onAttemptAssassination={handleAssassination}
           />
+            </>
+          )}
         </>
       )}
 
@@ -706,6 +834,72 @@ export default function GameDashboard() {
           aria-live="assertive"
         >
           {errorToast}
+        </div>
+      )}
+
+      {dialogState && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.78)",
+            zIndex: 21000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={dialogState.title}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              backgroundColor: "#151515",
+              border: "1px solid rgba(197, 160, 89, 0.35)",
+              borderRadius: "12px",
+              padding: "18px",
+              boxShadow: "0 14px 30px rgba(0,0,0,0.55)",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 8px",
+                color: "#e7d6ad",
+                fontFamily: "'Cinzel', serif",
+                fontSize: "16px",
+                letterSpacing: "0.6px",
+              }}
+            >
+              {dialogState.title}
+            </h3>
+            <p style={{ margin: "0", color: "#bfbfbf", fontSize: "14px", lineHeight: 1.5 }}>
+              {dialogState.message}
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
+              {dialogState.kind === "confirm" && (
+                <button
+                  onClick={() => setDialogState(null)}
+                  style={uiButtonGhost}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  const callback = dialogState.onConfirm;
+                  setDialogState(null);
+                  callback?.();
+                }}
+                style={uiButtonGold}
+              >
+                {dialogState.kind === "confirm" ? "Confirm" : "OK"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

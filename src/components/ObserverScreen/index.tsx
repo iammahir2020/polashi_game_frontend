@@ -25,7 +25,7 @@ const ObserverScreen: React.FC<{ room: Room }> = ({ room }) => {
         <RoundTracker room={room} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginTop: '30px' }}>
         
         {/* NAWAB LOYALISTS COLUMN */}
         <div style={teamColumnStyle("#1b4332")}>

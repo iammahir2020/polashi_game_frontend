@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useOverlayA11y } from '../../hooks/useOverlayA11y';
 
 interface GeneralRevealData {
   active: boolean;
@@ -14,9 +15,17 @@ interface GeneralRevealProps {
 const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose }) => {
   if (!generalReveal?.active) return null;
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useOverlayA11y({ isActive: !!generalReveal?.active, onClose, containerRef: overlayRef });
+
   return (
     <div
+      ref={overlayRef}
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="General assigned"
+      tabIndex={-1}
       style={{
         position: "fixed",
         top: 0,
