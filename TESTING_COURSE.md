@@ -9,14 +9,16 @@ session — human or Claude — can pick the course up cold.
 
 ## ⚑ You are here
 
-**Level 1 is done.** 94 tests passing, 0 todo, `npm run typecheck` clean, lint clean. All four
-`constants.test.ts` exercises plus `routeSeo.test.ts` 5a/5b reviewed and correct.
+**Level 2 is done.** 107 tests passing, 0 todo, `npm run typecheck` clean, lint unchanged (8
+pre-existing, untouched by this level). All exercises reviewed, one round of feedback (factory
+fragility in `pendingVoters` — hardcoded ids/object literals instead of reading the actual `players`
+array — plus a missing "everyone voted" edge case), both fixed correctly on the second pass.
 
-**Next action:** start **Level 2 — Extract, then test** — the most important level. Read the
-Working agreement's Level 2 checklist below before writing anything: it starts with extracting
-`src/components/VotingSystem/voteSelectors.ts` out of the component (the "untestable code is a
-design problem" idea), then widening `VotingState.votes` to accept both wire formats, then
-`tests/factories.ts` builders, then the worked example on `votesCastCount`.
+**Next action:** start **Level 3 — Component testing (React Testing Library)**. Needs RTL +
+user-event + jest-dom + jsdom installed, and Vitest environments split (`node` for logic files,
+`jsdom` for components) since `vite.config.ts` currently hardcodes `environment: 'node'` globally.
+Worked example: `GameHeader` (prop-only), plus the first `RoundTracker` case. `RoundTracker` exposes
+a real bug — Steps.md #3, unguarded `room.roundHistory[index]`.
 
 Last worked: 2026-09-05.
 
@@ -57,8 +59,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 [x] Step 0  Continuity scaffolding          verify: fresh session resumes correctly
 [x] Level 0 Setup + first green test        verify: npm test
 [x] Level 1 Table-driven tests              verify: npm test
-[~] Level 2 Extract, then test              verify: npm test
-[ ] Level 3 Component testing (RTL)         verify: npm test
+[x] Level 2 Extract, then test              verify: npm test
+[~] Level 3 Component testing (RTL)         verify: npm test
 [ ] Level 4 Mocks, timers, hooks            verify: npm test
 [ ] Level 5 End-to-end (Playwright)         verify: npx playwright test
 [ ] Level 6 GitHub Actions                  verify: green run in the Actions tab
@@ -118,15 +120,32 @@ true only because `ROUTE_SEO` has a single entry today, as the exercise comment 
 No action needed; becomes a real test the day a second route is added.
 
 ### Level 2 — Extract, then test  ← the most important level
-- [ ] `src/components/VotingSystem/voteSelectors.ts` extracted
-- [ ] `VotingState.votes` widened to `Record<string, "yes" | "no" | boolean>`
-- [ ] `tests/factories.ts` — `makeRoom()` / `makePlayer()` builders
-- [ ] **Worked example (Claude):** `votesCastCount` under both wire formats
-- [ ] Exercise: `hasPlayerVoted`
-- [ ] Exercise: `pendingVoters`
-- [ ] Exercise: `voteTally`
-- [ ] Exercise: edge cases — no votes cast, everyone voted
-- [ ] Six `VotingSystem` call sites rewritten to use the selectors
+- [x] `src/components/VotingSystem/voteSelectors.ts` extracted — `hasPlayerVoted`, `votesCastCount`,
+      `pendingVoters`, `voteTally`. Implements Steps.md Step 7.
+- [x] `VotingState.votes` widened to `Record<string, "yes" | "no" | boolean>` (`src/types/game.ts`)
+- [x] `tests/factories.ts` — `makeRoom()` / `makePlayer()` / `makeVotingState()` builders
+- [x] **Worked example (Claude):** `votesCastCount` under both wire formats
+      (`voteSelectors.test.ts`, 2 tests)
+- [x] Exercise: `hasPlayerVoted` — 4 tests (plain vote, missing key, redacted `true`, redacted `false`)
+- [x] Exercise: `pendingVoters` — 4 tests (needs `makePlayer`)
+- [x] Exercise: `voteTally` — 3 tests
+- [x] Exercise: edge cases — empty votes map, everyone voted (both covered, split across the
+      relevant describe blocks rather than a separate section — fine, that's an organization choice)
+- [x] Six `VotingSystem` call sites rewritten to use the selectors (`:34` hasVoted, `:38`/`:41`
+      pendingTeamApprovalVoters/pendingSecretVoters via `selectPendingVoters`, `:144` progress via
+      `votesCastCount`, `:263`/`:265` tallies via `voteTally`)
+
+**Infra review notes (2026-09-05).** Two things worth a future session knowing:
+1. Two of the six rewritten call sites were correctness fixes today, not just forward-compat —
+   `!(p.id in currentVotes)` treated key *presence* as "voted", and the progress counter counted keys
+   rather than votes. Both are silently wrong the day the backend starts sending
+   `{playerId: false}` pre-populated entries; both are now correct under either wire format.
+2. Added `tsconfig.test.json` (referenced from root `tsconfig.json`) because `tests/` was not
+   included by `tsconfig.app.json` (`include: ["src"]`) or `tsconfig.node.json`
+   (`include: ["vite.config.ts"]`) — `tests/factories.ts` would have silently never been typechecked,
+   in CI either, the same class of gap as the `roundIndex` unused-parameter catch in Level 1 but at
+   the project-config level instead of the code level. Verified with `tsc -b --listFiles` before and
+   after.
 
 ### Level 3 — Component testing (React Testing Library)
 - [ ] RTL + user-event + jest-dom + jsdom installed
@@ -179,6 +198,7 @@ No action needed; becomes a real test the day a second route is added.
 | 2026-09-05 | L0 | Cold resume confirmed. Vitest installed + configured; scripts added; `TESTING.md` written; `toAbsoluteUrl` worked example (4 green, 3 todo) | Mahir writes the 3 `toAbsoluteImage` tests |
 | 2026-09-05 | L0 done, L1 | Mahir's 3 exercises green + reviewed (7 passing). L1 worked example written: `constants.test.ts` 9 green / 4 todo, `routeSeo.test.ts` 2 todo | Mahir writes the 6 L1 exercises |
 | 2026-09-05 | L1 done | All 6 L1 exercises green + reviewed twice (typecheck bug found + fixed mid-review). 94 passing, 0 todo, typecheck clean, lint clean | Start Level 2 — extract `voteSelectors.ts` |
+| 2026-09-05 | L2 infra | Extracted `voteSelectors.ts` (Steps.md #7), widened `VotingState.votes`, rewrote 6 call sites, added `tests/factories.ts` + `tsconfig.test.json` (closed a real typecheck coverage gap), worked example `votesCastCount` (2 green, 8 todo). 96 passing, typecheck clean, lint unchanged (8 pre-existing) | Mahir writes the 6 L2 exercises |
 
 ---
 
