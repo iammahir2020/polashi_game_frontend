@@ -9,19 +9,24 @@ session — human or Claude — can pick the course up cold.
 
 ## ⚑ You are here
 
-**Level 3 is done.** All five components (`GameHeader`, `RoundTracker`, `IdentityCard`,
-`EnlistmentForm`, `ObserverScreen`) have full test coverage. **Working agreement changed mid-level**
-(see "Working agreement" section above): from `IdentityCard` onward, Claude writes complete test
-coverage directly — Mahir asked to switch from exercise-driven to worked-examples-only, since his goal
-is understanding, not typing practice. `GameHeader` and `RoundTracker` predate that change and were
-genuinely exercise-driven (see review notes for what went wrong and was fixed, across several rounds).
+**Level 4 is done.** All five pieces landed: `useNetworkStatus`, `useOverlayA11y`, `GeneralReveal`
+(pins Steps.md #5), and — the `GameDashboard`-heavy half — the `copiedStatus`/`loadingAction`
+fake-timer races (Steps.md #8/#7) plus two `vi.mock`-on-the-socket-service scenarios, all four inside
+one `GameDashboard/index.test.tsx`. New shared infra: `tests/mockSocketService.ts` (comprehensive
+stand-in for the whole singleton, ~30 methods, so mounting the 906-line `GameDashboard` doesn't throw
+"X is not a function" from an effect a given test doesn't otherwise care about).
 
-**Next action:** start **Level 4 — Mocks, timers, hooks**, the hardest level in the curriculum
-(`useNetworkStatus`/`renderHook`, `useOverlayA11y`'s listener leak, two fake-timer races, `vi.mock` on
-the socket service). Per the new working agreement, Claude writes this in full too.
+**Also fixed a real config bug found while writing `useNetworkStatus.test.ts`:** the Level 3
+project split (`.test.ts` → node, `.test.tsx` → jsdom) assumed "no JSX" meant "no DOM needed" — wrong.
+A hook test using `renderHook` has no JSX but still needs `window`/`document`/`navigator`, which only
+`jsdom` provides. See review notes below for the fix (an explicit node-only allowlist, jsdom by
+default) and why it's the safer direction to default in.
 
-Verify with `npm test && npm run typecheck` — 158 passing + 3 intentionally red (Steps.md #2, #3, #4 —
-each pinned by its own test, all correctly asserting the DESIRED behavior so they'll flip green when
+**Next action:** start **Level 5 — End-to-end (Playwright)**. Prerequisite first: `VITE_SOCKET_URL`
+wired up (Steps.md Step 2) — `socket.ts` still hardcodes the URL.
+
+Verify with `npm test && npm run typecheck` — 187 passing + 6 intentionally red (Steps.md #2, #3, #4,
+#5, #7, #8 — each pinned by its own test asserting the DESIRED behavior, so each flips green when
 someone actually fixes the underlying bug), typecheck clean, lint unchanged (37 pre-existing).
 
 Last worked: 2026-09-05.
@@ -273,11 +278,88 @@ files before they were "done":
 unchanged (37 pre-existing, none new). **Level 3 is fully done.**
 
 ### Level 4 — Mocks, timers, hooks  ← hardest level
-- [ ] **Worked example (Claude):** `useNetworkStatus` via `renderHook`; `addEventListener` spy setup
-- [ ] Exercise: `useOverlayA11y` proves the keydown listener leak  *(pins Steps.md #5)*
-- [ ] Exercise: fake timers for the `copiedStatus` race  *(pins #8)*
-- [ ] Exercise: fake timers for the `loadingAction` timeout  *(pins #7)*
-- [ ] Exercise: two `GameDashboard` scenarios with `vi.mock` on the socket service
+- [x] **`useNetworkStatus`** via `renderHook` — mount value, `online`/`offline` event flips (`act()`
+      required around manual `dispatchEvent`, see review notes), add/remove listener spies including
+      same-function-identity check  *(5 tests)*
+- [x] **`useOverlayA11y`** — focus/listener add on activate, no-op while inactive, cleanup on unmount
+      and across `isActive` toggles, Escape closes, Tab focus trap (wrap forward/backward, no-op in
+      the middle, refocus container when nothing focusable)  *(13 tests)*. Proves the HOOK'S OWN
+      contract; does NOT by itself pin Steps.md #5 — see next item and the file's own scope note.
+- [x] **`GeneralReveal`** — renders the real conditional-early-return pattern Steps.md #5 describes,
+      pins the leak directly by rendering the actual component through an open→close cycle and
+      counting `document` add/remove calls  *(4 tests; the 2 leak tests expose Steps.md #5, stay red
+      on purpose — one proves a single cycle leaks by exactly one listener, the other proves it
+      compounds linearly rather than being a one-time off-by-one)*
+- [x] **`tests/mockSocketService.ts`** — a comprehensive stand-in for the whole singleton (~30
+      methods) so mounting the full `GameDashboard` doesn't throw "X is not a function" from one of
+      its ~10 effects that a given test isn't otherwise testing
+- [x] **`GameDashboard`** — all four remaining pieces in one file, `index.test.tsx` *(4 tests)*:
+  - Two `vi.mock` scenarios: a simulated `"roomJoined"` event replaces the enlistment form with the
+    room; a simulated `"error"` event shows the server's message. Both drive the mock by capturing
+    the callback `GameDashboard` registered (`socketService.onRoomJoined.mock.calls.at(-1)`) and
+    calling it directly, inside `act()` since it's a state update outside any React-recognized event.
+  - The `loadingAction` race *(pins Steps.md #7, stays red on purpose)* — create fails at t=4000,
+    join starts at t=4000, create's OWN stale 5s timer fires at t=5000 and wrongly clears the join
+    that still has 4 seconds left on its own timeout. Reproduced entirely from the `room: null` lobby
+    state — no need to enter the "in room" tree at all.
+  - The `copiedStatus` race *(pins Steps.md #8, stays red on purpose)* — same shape, one component
+    over: copy code at t=0, copy link at t=500, code's stale 2s timer fires at t=2000 and wrongly
+    clears link's status 500ms before link's own window (due at t=2500) ends. This one DOES need
+    `room` truthy (`OperativeDrawer`, where the copy buttons live, only renders inside `{room && ...}`)
+    — rendered without any other child component crashing on the first real attempt. Needed a
+    `navigator.clipboard` mock (jsdom has none) and `window.isSecureContext` forced `true` (jsdom's
+    default test origin doesn't count as secure, which would silently divert `handleCopy` to its
+    `execCommand` fallback path instead).
+
+**Review notes (2026-09-05).**
+1. **A real config bug, found writing `useNetworkStatus.test.ts`.** The Level 3 project split (by file
+   EXTENSION: `.test.ts` → node, `.test.tsx` → jsdom) assumed no-JSX meant no-DOM-needed. A hook test
+   using `renderHook` has no JSX (so it's a plain `.test.ts`) but still needs `window`/`document`/
+   `navigator` — jsdom only. First run failed with `ReferenceError: document is not defined` under the
+   `node` project. Fixed in `vite.config.ts`: inverted to an explicit `NODE_ONLY_TESTS` allowlist (4
+   known pure-logic files), with `jsdom` as the default for everything else in `src/**` and
+   `tests/**`. Chosen deliberately over the reverse: a file that doesn't need a DOM but gets one anyway
+   just runs a little slower; a file that needs one and doesn't get it fails outright, which is exactly
+   what happened. The allowlist is one array referenced from both projects' configs (include on one
+   side, exclude on the other) so the two can't drift apart.
+2. **`act()` is required around a manually-dispatched DOM event that triggers a React state update.**
+   `window.dispatchEvent(new Event('online'))` called bare left `result.current` still `false` —
+   confirmed by running it, not assumed. `render`/`fireEvent`/`user-event` all wrap themselves in
+   `act()`; a raw dispatch you fire yourself does not, so the assertion can run before React has
+   actually applied the update. Wrapping the dispatch in `act(() => { ... })` fixed it.
+3. **`GeneralReveal`'s own props bug**, caught and fixed before the file was "done": the first draft of
+   `openProps()` used `flipping: true`, which renders the "Consulting the Commanders..." spinner phase,
+   not the name-reveal phase — so the "shows the general's name" test failed for a reason that had
+   nothing to do with the component being broken, only the test's fixture being wrong. Fixed by using
+   `flipping: false` (the reveal phase) as the shared "open" fixture.
+4. **Confirmed real GeneralReveal lint errors (`react-hooks/rules-of-hooks` ×2) are pre-existing, not
+   new** — whole-repo lint is still 37 problems after adding this test file; they were already counted
+   in that baseline, just not previously visible because no one had scoped `eslint` to that one
+   directory before. They're the exact bug being pinned, not a regression.
+5. **`vi.mock`'s factory referencing an imported helper is safe** — no `vi.hoisted()` needed here,
+   because `makeMockSocketService` is an IMPORTED binding, not a local `const`; ES modules hoist
+   imports themselves, so there's no temporal-dead-zone risk the way there would be for a plain local
+   variable. `vi.hoisted()` is only needed to share a *locally declared* value across the mock factory
+   and the test body.
+6. **`vi.mocked(...)` is a type-only cast, not a runtime operation** — needed because TypeScript
+   resolves `socketService`'s type from the REAL `services/socket.ts` (it has no idea `vi.mock`
+   swapped it at runtime), so `.mock.calls` doesn't exist on that type as far as the compiler's
+   concerned without this cast.
+7. **`fireEvent`, not `user-event`, for typing while fake timers are active.** `user-event`'s
+   realistic per-keystroke simulation schedules its own small delays via REAL timers internally,
+   which just hang forever once `vi.useFakeTimers()` is on. `fireEvent.change` fires one raw event
+   synchronously — the right tool once timer control matters more than realistic key-by-key behavior.
+8. **A debugging false alarm, worth remembering the shape of:** the first run of the `copiedStatus`
+   test failed on the FINAL assertion, but scrollback truncation made it look like an EARLIER one
+   (right after the second copy click) had failed instead. Added temporary `console.log`s to check —
+   they showed the earlier assertion was fine; the failure really was the intended one, at the
+   intended line. Removed the debug logs once confirmed. Moral: when a failure's location is
+   ambiguous from truncated output, verify which assertion actually threw before treating it as a bug
+   in the test — don't fix a step that was never broken.
+
+161 tests at the end of Level 3 -> 187 now (5 `useNetworkStatus` + 13 `useOverlayA11y` + 4
+`GeneralReveal` + 4 `GameDashboard` = 26 new). 181 passing + 6 intentionally red (Steps.md
+#2/#3/#4/#5/#7/#8), typecheck clean, lint unchanged. **Level 4 is fully done.**
 
 ### Level 5 — End-to-end (Playwright)
 - [ ] **Prerequisite:** `VITE_SOCKET_URL` wired up  *(Steps.md Step 2)*
@@ -320,6 +402,8 @@ unchanged (37 pre-existing, none new). **Level 3 is fully done.**
 | 2026-09-05 | L3 partial | `RoundTracker` player-count exercise: Mahir's attempt exposed a bad hint from Claude (importing from `constants.test.ts` re-ran its whole suite) plus a `toBe`/`getByText` misuse; after one review round and a stronger hint, Mahir explicitly asked Claude to write the fix, which it did (tally + `getAllByText`). Malformed-`roundHistory` exercise (Steps.md #3) still open. 118 passing, 1 todo, typecheck clean, lint clean | Mahir writes the last `RoundTracker` exercise, then `IdentityCard`/`EnlistmentForm`/`ObserverScreen` |
 | 2026-09-05 | L3 `RoundTracker` done | Steps.md #3 exercise: another bad Claude hint (`.toThrow()` — asserts current buggy behavior, passes today; should assert desired behavior via `.not.toThrow()`, red until fixed). Round 1 fix dropped the `as unknown as Room` cast (typecheck red). Round 2 fix dropped the malformed data along with fixing the assertion (passed for the wrong reason — nothing left to test). Round 3: all three pieces together — genuinely red now, with the real Steps.md #3 TypeError. `RoundTracker/index.test.tsx` fully done. 117 passing + 1 intentionally red, typecheck clean, lint clean | `IdentityCard`, `EnlistmentForm`, `ObserverScreen` — no worked example written yet |
 | 2026-09-05 | **Working agreement changed** — L3 fully done | Mahir asked Claude to write full test coverage for everything remaining (understanding over retention). Wrote `IdentityCard` (13 tests, clean first pass, found the real crash is one line before Steps.md #4's citation), `EnlistmentForm` (21 tests; caught + fixed a real controlled-input pitfall — spy-only typing tests reported single characters, not the full string, because React resets an unchanging controlled value after every keystroke; fixed with a stateful harness), `ObserverScreen` (8 tests, clean first pass). Added `makeCharacter()` to `tests/factories.ts`. 161 tests total, 158 passing + 3 intentionally red (Steps.md #2/#3/#4), typecheck clean, lint unchanged | Start Level 4 — Claude writes it in full |
+| 2026-09-05 | L4 hooks done | `useNetworkStatus` (5 tests; found `act()` is required around a manual `dispatchEvent` — bare `window.dispatchEvent` left state stale), `useOverlayA11y` (13 tests, clean first pass — proves the hook's own contract, not Steps.md #5 itself, see file's scope note), `GeneralReveal` (4 tests; actually pins Steps.md #5 by rendering the real conditional-hooks pattern; fixed one fixture bug of Claude's own — wrong `flipping` value hid the name behind the wrong UI phase). Along the way, fixed a real Level 3 config bug: the node/jsdom project split was by file extension, which a hook test with no JSX but real DOM needs broke immediately — inverted to an explicit node-only allowlist. 183 tests total, 179 passing + 4 intentionally red (Steps.md #2/#3/#4/#5), typecheck clean, lint unchanged | Check in with Mahir before the `GameDashboard`-heavy half: `copiedStatus`/`loadingAction` fake-timer races + two `vi.mock` scenarios |
+| 2026-09-05 | L4 fully done | Explained the new concepts first (`vi.mock` whole-module mocking, driving a mock via a captured callback, fake timers, race conditions vs. missing-guard bugs, mocking browser APIs jsdom lacks) before writing anything, at Mahir's request. Then `tests/mockSocketService.ts` (~30-method stand-in) + `GameDashboard/index.test.tsx` (4 tests): two `vi.mock` scenarios (roomJoined populates the room, error shows the toast) and both fake-timer races (`loadingAction` from the lobby state alone, `copiedStatus` needing `room` truthy + a clipboard mock) — both races genuinely red, confirmed for the right reason after a debugging false alarm (see review notes). 187 tests total, 181 passing + 6 intentionally red (Steps.md #2/#3/#4/#5/#7/#8), typecheck clean, lint unchanged (37 pre-existing) | Start Level 5 — Playwright. Prerequisite: wire up `VITE_SOCKET_URL` (Steps.md Step 2) |
 
 ---
 
