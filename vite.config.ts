@@ -43,14 +43,38 @@ export default defineConfig({
     }),
   ],
   test: {
-    // Files Vitest will treat as test files.
-    include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
     // e2e/ belongs to Playwright, which has its own runner and its own
     // `test` global. If Vitest picked those files up they would fail loudly.
     exclude: ['node_modules', 'dist', 'e2e/**'],
-    // No DOM yet — Level 0 and 1 test pure functions, which need only Node.
-    // Level 3 splits this into per-file environments for component tests.
-    environment: 'node',
+    // Runs before every test file — see the file for what it sets up.
+    setupFiles: ['./tests/setupTests.ts'],
+    // Two projects, one per environment. A plain .ts logic file (Level 0-2)
+    // needs no DOM at all, so it runs under 'node' — fast. A .tsx file (Level
+    // 3+) renders a component, which needs somewhere to render INTO: 'jsdom'
+    // fakes a whole DOM in plain JS, no real browser, at real cost (roughly
+    // 10x slower per file). Splitting by project means only the files that
+    // actually need jsdom pay for it.
+    //
+    // `extends: true` means each project inherits everything above (plugins,
+    // exclude, setupFiles) rather than repeating it.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          include: ['src/**/*.test.tsx', 'tests/**/*.test.tsx'],
+        },
+      },
+    ],
   },
 })
 

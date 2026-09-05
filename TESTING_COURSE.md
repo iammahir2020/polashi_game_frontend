@@ -9,16 +9,20 @@ session — human or Claude — can pick the course up cold.
 
 ## ⚑ You are here
 
-**Level 2 is done.** 107 tests passing, 0 todo, `npm run typecheck` clean, lint unchanged (8
-pre-existing, untouched by this level). All exercises reviewed, one round of feedback (factory
-fragility in `pendingVoters` — hardcoded ids/object literals instead of reading the actual `players`
-array — plus a missing "everyone voted" edge case), both fixed correctly on the second pass.
+**Level 3 is done.** All five components (`GameHeader`, `RoundTracker`, `IdentityCard`,
+`EnlistmentForm`, `ObserverScreen`) have full test coverage. **Working agreement changed mid-level**
+(see "Working agreement" section above): from `IdentityCard` onward, Claude writes complete test
+coverage directly — Mahir asked to switch from exercise-driven to worked-examples-only, since his goal
+is understanding, not typing practice. `GameHeader` and `RoundTracker` predate that change and were
+genuinely exercise-driven (see review notes for what went wrong and was fixed, across several rounds).
 
-**Next action:** start **Level 3 — Component testing (React Testing Library)**. Needs RTL +
-user-event + jest-dom + jsdom installed, and Vitest environments split (`node` for logic files,
-`jsdom` for components) since `vite.config.ts` currently hardcodes `environment: 'node'` globally.
-Worked example: `GameHeader` (prop-only), plus the first `RoundTracker` case. `RoundTracker` exposes
-a real bug — Steps.md #3, unguarded `room.roundHistory[index]`.
+**Next action:** start **Level 4 — Mocks, timers, hooks**, the hardest level in the curriculum
+(`useNetworkStatus`/`renderHook`, `useOverlayA11y`'s listener leak, two fake-timer races, `vi.mock` on
+the socket service). Per the new working agreement, Claude writes this in full too.
+
+Verify with `npm test && npm run typecheck` — 158 passing + 3 intentionally red (Steps.md #2, #3, #4 —
+each pinned by its own test, all correctly asserting the DESIRED behavior so they'll flip green when
+someone actually fixes the underlying bug), typecheck clean, lint unchanged (37 pre-existing).
 
 Last worked: 2026-09-05.
 
@@ -36,18 +40,22 @@ Last worked: 2026-09-05.
 
 ## Working agreement — important
 
-This is a **course**, not a delivery. The learning happens when Mahir writes the tests.
+**Changed 2026-09-05, mid-Level-3** (see session log). Levels 0–2 and the start of Level 3 were
+exercise-driven: Mahir wrote every case, Claude wrote one worked example per level and stub tests with
+hints for the rest. Mahir then explicitly asked to switch: **Claude now writes complete worked
+examples for everything, for the rest of the course.** His stated reason: the goal is to *understand*
+testing, not to build retention through writing his own attempts. This is a standing change, not a
+one-off — don't drift back to stubs-and-hints without him asking again.
 
-- Claude explains the concept, writes **one** fully-commented worked example, then leaves the
-  remaining cases as **stub tests with hints** (`it.todo` or a failing stub + a comment).
-- **Claude does NOT fill in Mahir's exercises.** Not to be "helpful", not to save time, not even
-  when the exercise looks trivial. If asked to review, review — point at what is wrong and why,
-  don't paste the answer unless Mahir explicitly asks for the solution.
+- Claude explains the concept, then writes **full, comprehensive, heavily-commented test coverage**
+  for the file/feature at hand — every case worth showing, not one example plus `it.todo`s.
+- Comments carry the teaching now, since Mahir isn't producing his own attempts to learn from. Explain
+  *why* before *how* — the vocabulary is the hard part, not the syntax — same as before.
 - Don't skip a level until the previous one's verify command passes.
-- Explain *why* before *how*. The vocabulary is the hard part, not the syntax.
+- If Mahir writes something himself (exploring an idea, say), review it honestly.
 
-Exception: at Level 5 we agreed to reassess — Claude may write the 5-player E2E capstone, since it
-teaches Playwright orchestration rather than testing fundamentals.
+Levels 0–2 and part of Level 3 remain genuinely exercise-driven history — don't rewrite what he already
+wrote and got reviewed. This change applies going forward from here.
 
 ---
 
@@ -148,13 +156,121 @@ No action needed; becomes a real test the day a second route is added.
    after.
 
 ### Level 3 — Component testing (React Testing Library)
-- [ ] RTL + user-event + jest-dom + jsdom installed
-- [ ] Vitest environments split (node for logic, jsdom for components); `e2e/**` excluded
-- [ ] **Worked example (Claude):** `GameHeader`, plus the first `RoundTracker` case
-- [ ] Exercise: `RoundTracker` — remaining player counts  *(exposes Steps.md #3)*
-- [ ] Exercise: `IdentityCard` — click and keyboard flip, `aria-pressed`  *(exposes #4)*
-- [ ] Exercise: `EnlistmentForm` — typing, disabled states, `vi.fn()` spies
-- [ ] Exercise: `ObserverScreen`  *(exposes #2)*
+- [x] RTL 16 + user-event 14 + jest-dom 6 + jsdom 25 installed
+- [x] Vitest split into `test.projects`: `node` for `*.test.ts`, `jsdom` for `*.test.tsx` (both
+      `extends: true` from shared root config); `e2e/**` still excluded. Used `projects`, not the
+      simpler `environmentMatchGlobs`, because Vitest 3.2.7 deprecates the latter (confirmed via a
+      run — it printed a deprecation warning) in favor of the former.
+- [x] `tests/setupTests.ts` — jest-dom matchers (`@testing-library/jest-dom/vitest`) + RTL
+      `cleanup()` in `afterEach`, wired via `test.setupFiles`
+- [x] `src/vitest-matchers.d.ts` — re-states the jest-dom/vitest type reference from inside `src/` so
+      `tsconfig.app.json` (which only includes `src`) can see the matcher types; without it,
+      `.toBeInTheDocument()` etc. type-checked fine at the setup file but errored (TS2339) on every
+      `.test.tsx` file, because a `declare module` augmentation is only visible within the same
+      TS project/compilation as the file that declares it
+- [x] **Worked example (Claude):** `GameHeader/index.test.tsx` (3 tests — the whole component, no
+      exercises assigned here per the course plan) + `RoundTracker/index.test.tsx` first 2 cases
+      (happy path; guard-clause "renders nothing" via `queryByText`/`toBeEmptyDOMElement`)
+- [x] Exercise: `RoundTracker` — remaining player counts, `it.each` deriving expected badges from
+      `MISSION_CONFIGS`, not hand-typed. **Written by Claude at Mahir's explicit request** after two
+      review rounds — see notes below. Not free of the "he writes it" rule; flagged as an exception.
+- [x] Exercise: `RoundTracker` — malformed `roundHistory` throws  *(exposes Steps.md #3, stays red
+      on purpose)* — see review notes below; two review rounds, both bugs Mahir's own
+- [x] `IdentityCard` — click and keyboard flip, `aria-pressed`, observer vs. assigned-player mode,
+      secret-intel disabled/enabled  *(13 tests; exposes Steps.md #4, stays red on purpose — the real
+      crash is one line earlier than Steps.md's citation, at `isNawab`'s `.includes` call, same root
+      cause: `character` truthy doesn't guarantee `character.team` defined)*. **Written fully by
+      Claude** — first file under the new working agreement.
+- [x] `EnlistmentForm` — guard clause, typing, all disabled-state combinations (`it.each`), click
+      spies, HQ-code-field lock while loading  *(21 tests)*. **Written fully by Claude.** Hit and
+      corrected a real controlled-input testing pitfall — see review notes.
+- [x] `ObserverScreen` — team-column split (including a genuine mixed-roster test, not just
+      one-team-at-a-time), `activePlayerIds` filtering, live-vote message, embedded `RoundTracker`
+      integration  *(8 tests; exposes Steps.md #2, stays red on purpose)*. **Written fully by Claude.**
+
+**Infra review notes (2026-09-05).** `environmentMatchGlobs` (the option initially reached for, by
+direct analogy to the docs comment already in `vite.config.ts` from Level 0) worked but printed
+`"environmentMatchGlobs" is deprecated. Use test.projects instead` on every run — caught by actually
+running the suite once, not just by it going green. Replaced with `test.projects`, which needed no
+new dependency, just restructuring: two project entries, each `extends: true` off the shared
+plugins/exclude/setupFiles. Test output now labels each file's project (`|node|` / `|jsdom|`),
+confirming the split is real, not just configured. Separately, `src/vitest-matchers.d.ts` closed a
+type-visibility gap of the same shape as Level 2's `tsconfig.test.json` fix: a global augmentation
+declared inside a file that isn't part of a given TS project is invisible to that project, even
+though the runtime behavior (the matcher actually existing on `expect`) is unaffected. Both gaps were
+caught by explicitly running `npm run typecheck` rather than trusting `npm test` alone — the same
+lesson from Level 1's `roundIndex` bug, now recurring at the tooling-config level twice in a row.
+
+**Exercise review notes (2026-09-05) — `RoundTracker` player-count exercise.** Round 1: Mahir's own
+hint (mine, in the stub comment) was itself wrong — it suggested importing `SUPPORTED_PLAYER_COUNTS`
+from `constants.test.ts`, which silently re-ran that file's entire 81-test suite a second time inside
+`RoundTracker`'s run (importing a module executes it; a test file's top-level `describe`/`it` calls
+are side effects of that). Caught by noticing the file's own test count (90, not ~7). Also present:
+`expect(getByText(...)).toBe('2P')` (element vs. string, can never pass) and a `getByText` call that
+throws on a 5-player game because two rounds share a "2P" badge (`getByText` assumes uniqueness).
+Mahir asked for a stronger hint, then explicitly asked Claude to write the fix. Claude did: moved
+`SUPPORTED_PLAYER_COUNTS` into `tests/factories.ts` (a real module both test files import from, never
+each other), replaced the per-mission `getByText`/`toBe` with a tallied `getAllByText`/`toHaveLength`
+per distinct team size. 118 passing, 1 todo (the Steps.md #3 exercise), typecheck clean, lint clean.
+Recorded in memory (`testing-course-working-agreement`): an explicit "write/fix it" request is
+complied with directly, no further pushback — but the default for anything short of that stays
+review-plus-hints.
+
+**Exercise review notes (2026-09-05) — `RoundTracker` malformed-data exercise (Steps.md #3).** Also
+exposed a bad hint of Claude's, this time about the *shape* of a test-before-fix, not just an import:
+the hint said to assert `.toThrow()`, which describes the CURRENT buggy behavior and so passes today
+— exactly backwards from the course's own stated rule ("write the test that fails because of the bug,
+leave it red... then fix and watch it go green," CLAUDE.md/TESTING_COURSE.md). A green "it crashes"
+test signals nothing in CI and would flip to a confusing red the day someone actually fixes the bug.
+Corrected to `.not.toThrow()` — asserts the desired, post-fix behavior, genuinely fails today. Round 2:
+Mahir's first attempted fix removed the malformed `roundHistory: undefined` override along with the
+assertion flip, so the "fixed" test rendered a perfectly valid room — passed, but for the wrong
+reason (nothing left to test). Round 3: both pieces restored together — malformed override + `as
+unknown as Room` cast + `.not.toThrow()` — now fails with the real `TypeError` from Steps.md #3
+(`Cannot read properties of undefined (reading '0')`), which is success at this stage: a red test
+that stays red until someone actually adds the `?.` guard or normalizes the room upstream. Scope note
+carried forward: this test only proves `RoundTracker` itself is fragile to a malformed prop; the
+planned Steps.md fix normalizes the room one layer up in `GameDashboard`, so this specific test may or
+may not flip green from that fix alone depending on whether `RoundTracker` also gets touched directly.
+118 tests total, 117 passing + 1 intentionally red, typecheck clean, lint clean. **Level 3's
+`RoundTracker` file is done** — `IdentityCard`, `EnlistmentForm`, `ObserverScreen` remain for this
+level.
+
+**Working agreement changed here (2026-09-05).** Mahir asked to stop writing exercises himself and
+have Claude write full worked examples for everything remaining, stating his goal is understanding,
+not retention through typing practice. Recorded in `CLAUDE.md`, this file's "Working agreement"
+section, and memory (`testing-course-working-agreement`). Applies from `IdentityCard` onward.
+
+**`IdentityCard`, `EnlistmentForm`, `ObserverScreen` — written fully by Claude, first files under the
+new agreement.** Added `makeCharacter()` to `tests/factories.ts` (same reasoning as `makePlayer`/
+`makeRoom` — a real character has 5 fields, most tests only care about `team`). All three follow the
+same Steps.md pattern already established: a malformed-data test that asserts `.not.toThrow()` (the
+DESIRED behavior), genuinely fails today, and will flip green once the real guard lands — not
+`.toThrow()`, which would pass today for the wrong reason. Found and fixed one real bug in each of two
+files before they were "done":
+- **`IdentityCard`:** none in the test logic — clean on the first full run. One thing worth noting:
+  Steps.md #4 cites `character?.team.toUpperCase()`, but the actual crash happens one line EARLIER, at
+  `isNawab`'s `character.team.includes("Nawabs")` — `===` against `undefined` is safe, `.includes()`
+  on it is not. Same root cause (`character` truthy doesn't imply `character.team` defined), different
+  line than the one named in `Steps.md`.
+- **`EnlistmentForm`:** a genuine, well-known controlled-input testing pitfall — the first draft typed
+  into the name/HQ-code fields with a bare `vi.fn()` spy standing in for `setName`/`setRoomCode` and
+  asserted the LAST call carried the full typed string ("Alice"). It didn't — React resets a
+  controlled input's real DOM value back to its (unchanging, since the spy never updates real state)
+  prop after every keystroke, so each `onChange` only ever reported the single most-recently-typed
+  character. Confirmed by actually running it (failed with `"e"` where `"Alice"` was expected), not
+  assumed. Fixed with a small stateful wrapper component (`ControlledHarness`) mirroring what the real
+  parent (`GameDashboard`) does — the standard, necessary pattern for testing any controlled input.
+  Kept one spy-only single-keystroke test alongside it, which also hit a dead end worth keeping as a
+  comment: manually doing `input.value = 'A'; input.dispatchEvent(new Event('input'))` fires zero
+  times, because assigning `.value` directly bypasses the tracked native setter React's change
+  detection relies on — `user-event` goes through real key dispatch and does trigger it.
+- **`ObserverScreen`:** none — clean on the first full run, including a deliberate "mixed roster, not
+  one-team-at-a-time" test (proves the split is actually team-based, which two single-team tests can't
+  distinguish from "first player here, second player there").
+
+161 tests total, 158 passing + 3 intentionally red (Steps.md #2, #3, #4), typecheck clean, lint
+unchanged (37 pre-existing, none new). **Level 3 is fully done.**
 
 ### Level 4 — Mocks, timers, hooks  ← hardest level
 - [ ] **Worked example (Claude):** `useNetworkStatus` via `renderHook`; `addEventListener` spy setup
@@ -199,6 +315,11 @@ No action needed; becomes a real test the day a second route is added.
 | 2026-09-05 | L0 done, L1 | Mahir's 3 exercises green + reviewed (7 passing). L1 worked example written: `constants.test.ts` 9 green / 4 todo, `routeSeo.test.ts` 2 todo | Mahir writes the 6 L1 exercises |
 | 2026-09-05 | L1 done | All 6 L1 exercises green + reviewed twice (typecheck bug found + fixed mid-review). 94 passing, 0 todo, typecheck clean, lint clean | Start Level 2 — extract `voteSelectors.ts` |
 | 2026-09-05 | L2 infra | Extracted `voteSelectors.ts` (Steps.md #7), widened `VotingState.votes`, rewrote 6 call sites, added `tests/factories.ts` + `tsconfig.test.json` (closed a real typecheck coverage gap), worked example `votesCastCount` (2 green, 8 todo). 96 passing, typecheck clean, lint unchanged (8 pre-existing) | Mahir writes the 6 L2 exercises |
+| 2026-09-05 | L2 done | All 10 exercises + 2 edge cases green, one review round (factory-fragility in `pendingVoters` fixed). 107 passing, typecheck clean, lint clean. Committed and pushed. | Start Level 3 |
+| 2026-09-05 | L3 infra | RTL/user-event/jest-dom/jsdom installed; Vitest split into `test.projects` (node/jsdom) after `environmentMatchGlobs` proved deprecated; `tests/setupTests.ts` + `src/vitest-matchers.d.ts` (closed a type-visibility gap, same shape as L2's); worked examples `GameHeader` (3 tests) + `RoundTracker` first 2 cases. 112 passing, 2 todo, typecheck clean, lint unchanged (37 pre-existing) | Mahir writes the 2 `RoundTracker` exercises |
+| 2026-09-05 | L3 partial | `RoundTracker` player-count exercise: Mahir's attempt exposed a bad hint from Claude (importing from `constants.test.ts` re-ran its whole suite) plus a `toBe`/`getByText` misuse; after one review round and a stronger hint, Mahir explicitly asked Claude to write the fix, which it did (tally + `getAllByText`). Malformed-`roundHistory` exercise (Steps.md #3) still open. 118 passing, 1 todo, typecheck clean, lint clean | Mahir writes the last `RoundTracker` exercise, then `IdentityCard`/`EnlistmentForm`/`ObserverScreen` |
+| 2026-09-05 | L3 `RoundTracker` done | Steps.md #3 exercise: another bad Claude hint (`.toThrow()` — asserts current buggy behavior, passes today; should assert desired behavior via `.not.toThrow()`, red until fixed). Round 1 fix dropped the `as unknown as Room` cast (typecheck red). Round 2 fix dropped the malformed data along with fixing the assertion (passed for the wrong reason — nothing left to test). Round 3: all three pieces together — genuinely red now, with the real Steps.md #3 TypeError. `RoundTracker/index.test.tsx` fully done. 117 passing + 1 intentionally red, typecheck clean, lint clean | `IdentityCard`, `EnlistmentForm`, `ObserverScreen` — no worked example written yet |
+| 2026-09-05 | **Working agreement changed** — L3 fully done | Mahir asked Claude to write full test coverage for everything remaining (understanding over retention). Wrote `IdentityCard` (13 tests, clean first pass, found the real crash is one line before Steps.md #4's citation), `EnlistmentForm` (21 tests; caught + fixed a real controlled-input pitfall — spy-only typing tests reported single characters, not the full string, because React resets an unchanging controlled value after every keystroke; fixed with a stateful harness), `ObserverScreen` (8 tests, clean first pass). Added `makeCharacter()` to `tests/factories.ts`. 161 tests total, 158 passing + 3 intentionally red (Steps.md #2/#3/#4), typecheck clean, lint unchanged | Start Level 4 — Claude writes it in full |
 
 ---
 

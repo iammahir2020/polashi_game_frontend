@@ -20,6 +20,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { MISSION_CONFIGS, TEAM_DISTRIBUTIONS } from './constants';
+import { SUPPORTED_PLAYER_COUNTS } from '../tests/factories';
 
 /**
  * THE TABLE ITSELF IS A DECISION — and it is the whole lesson of this level.
@@ -46,7 +47,6 @@ import { MISSION_CONFIGS, TEAM_DISTRIBUTIONS } from './constants';
  * supports 11 players, this line has to change. That is the point: adding a
  * player count *should* be a deliberate edit in two places, not a silent one.
  */
-const SUPPORTED_PLAYER_COUNTS = [5, 6, 7, 8, 9, 10];
 
 describe('MISSION_CONFIGS', () => {
   // `it.each(table)(name, fn)` generates ONE TEST PER ROW.

@@ -20,9 +20,11 @@
  *   makeRoom({ voting: makeVotingState({ votes: { p1: 'yes' } }) })
  */
 
-import type { Player, Room, VotingState } from '../src/types/game';
+import type { CharacterType, Player, Room, VotingState } from '../src/types/game';
 
 let playerCounter = 0;
+
+export const SUPPORTED_PLAYER_COUNTS = [5, 6, 7, 8, 9, 10];
 
 /**
  * A valid default `Player`. Each call gets a fresh, distinct id/name unless
@@ -34,6 +36,21 @@ export function makePlayer(overrides: Partial<Player> = {}): Player {
     id: `player_${playerCounter}`,
     name: `Player ${playerCounter}`,
     online: true,
+    ...overrides,
+  };
+}
+
+/**
+ * A valid default `CharacterType`: a Nawab-team character. Override `team` to
+ * get an EIC character instead.
+ */
+export function makeCharacter(overrides: Partial<CharacterType> = {}): CharacterType {
+  return {
+    id: 1,
+    name: 'The Nawab',
+    description: 'Ruler of Bengal, unaware of the storm gathering around him.',
+    color: '#1b4332',
+    team: 'Nawabs',
     ...overrides,
   };
 }

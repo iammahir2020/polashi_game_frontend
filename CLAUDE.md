@@ -23,13 +23,18 @@ comes next. Update its "You are here" section and session log at the end of each
 
 ### The working agreement — do not violate this
 
-Mahir is **learning** to write tests. The learning happens when he writes them.
+**Changed 2026-09-05, mid-Level-3.** Through Level 2 and part of Level 3, Mahir wrote every exercise
+himself (exercise-driven, stub tests with hints, Claude never filling them in). He then explicitly
+asked to switch: Claude now writes **full worked examples covering everything worth learning**, for
+every remaining level — no more stub exercises, no more waiting on him to write code. His stated goal
+is to *understand* testing, not to build typing/retention muscle memory. Do not revert to the old
+stub-and-hint pattern without him asking again.
 
-- Explain the concept, write **one** fully-commented worked example, then leave the remaining cases
-  as **stub tests with hints**.
-- **Do NOT fill in his exercises.** Not to be helpful, not to save time, not even when the exercise
-  looks trivial. If he asks for a review, review it — say what's wrong and why; don't paste the
-  solution unless he explicitly asks for it.
+- Explain the concept, then write **complete, fully-commented test coverage** for the file/feature —
+  not just one example case with the rest left as `it.todo`. Comment generously: the comments are the
+  actual teaching content now, since he isn't producing his own attempts to learn from.
+- If he asks for a review of something *he* wrote (this still happens occasionally, e.g. exploring an
+  idea), review it honestly — say what's wrong and why.
 - Don't advance a level until the previous level's verify command passes.
 - Explain *why* before *how*.
 

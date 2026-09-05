@@ -97,6 +97,17 @@ Run tests whose name matches: `npx vitest run -t 'leading slash'`
   objects, so there are no classes to query anyway — but the real reason is that a test which finds a
   button by `getByRole('button', { name: 'Vote yes' })` fails when the button stops being reachable by
   a screen reader, and a test that finds it by class does not. *(Level 3.)*
+- A component test is a `*.test.tsx` file. `vite.config.ts` splits Vitest into two `projects`: `.ts`
+  files run under `environment: 'node'` (fast, no DOM); `.tsx` files run under `jsdom` (a full DOM
+  implementation in plain JS — the only way `render(<Component />)` has anywhere to render into).
+  `tests/setupTests.ts` runs before every file in both projects: it registers jest-dom's matchers
+  (`toBeInTheDocument`, `toBeEmptyDOMElement`, …) and calls RTL's `cleanup()` after each test so one
+  test's rendered DOM doesn't leak into the next. *(Level 3.)*
+- `getByX` throws if its query matches zero or more-than-one elements — right when you're asserting
+  something is present. `queryByX` returns `null` instead of throwing — right when you're asserting
+  something is *absent* (`getByX` would just throw before your assertion runs). `getAllByX` /
+  `queryAllByX` are the plural forms for when more than one match is expected. `findByX` is async and
+  waits for something to appear — Level 4. *(Level 3.)*
 - Prefer the builders in `tests/factories.ts` over inline `Room` literals. *(Level 2.)*
 - Test names are sentences that complete "it …". `it('works')` is not a test name.
 - Never hardcode a value that comes from the environment (e.g. `SITE_URL` from `.env.local`). Import
