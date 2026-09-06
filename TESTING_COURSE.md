@@ -9,27 +9,23 @@ session — human or Claude — can pick the course up cold.
 
 ## ⚑ You are here
 
-**Level 4 is done.** All five pieces landed: `useNetworkStatus`, `useOverlayA11y`, `GeneralReveal`
-(pins Steps.md #5), and — the `GameDashboard`-heavy half — the `copiedStatus`/`loadingAction`
-fake-timer races (Steps.md #8/#7) plus two `vi.mock`-on-the-socket-service scenarios, all four inside
-one `GameDashboard/index.test.tsx`. New shared infra: `tests/mockSocketService.ts` (comprehensive
-stand-in for the whole singleton, ~30 methods, so mounting the 906-line `GameDashboard` doesn't throw
-"X is not a function" from an effect a given test doesn't otherwise care about).
+**Level 5 is fully done.** All of it: infra (`@playwright/test`, `playwright.config.ts`,
+`tsconfig.e2e.json`), the `VITE_SOCKET_URL` prerequisite, the worked example (`app.spec.ts`), SEO
+(`seo.spec.ts`), create-room (`create-room.spec.ts`), reconnect exposing Steps.md #6
+(`reconnect.spec.ts`, intentionally red), the 5-context capstone (`capstone.spec.ts`), and the
+`--ui`/trace-viewer debugging walkthrough (done hands-on by Mahir against a temporary broken test
+Claude set up and then deleted — not part of the real suite). 9/9 e2e tests (8 passing + 1
+intentionally red).
 
-**Also fixed a real config bug found while writing `useNetworkStatus.test.ts`:** the Level 3
-project split (`.test.ts` → node, `.test.tsx` → jsdom) assumed "no JSX" meant "no DOM needed" — wrong.
-A hook test using `renderHook` has no JSX but still needs `window`/`document`/`navigator`, which only
-`jsdom` provides. See review notes below for the fix (an explicit node-only allowlist, jsdom by
-default) and why it's the safer direction to default in.
+**Deliberately NOT starting Level 6 yet** — Mahir has something else to do first. Whatever that turns
+out to be, come back to this file to resume Level 6 (GitHub Actions) afterward: `6a hello.yml`, then
+the worked example `ci.yml`.
 
-**Next action:** start **Level 5 — End-to-end (Playwright)**. Prerequisite first: `VITE_SOCKET_URL`
-wired up (Steps.md Step 2) — `socket.ts` still hardcodes the URL.
+Verify: `npm test && npm run typecheck` — 187 passing + 6 intentionally red (Steps.md #2, #3, #4, #5,
+#7, #8), typecheck clean, lint unchanged (37 pre-existing). `npm run e2e` — 8 passed + 1 intentionally
+red (Steps.md #6).
 
-Verify with `npm test && npm run typecheck` — 187 passing + 6 intentionally red (Steps.md #2, #3, #4,
-#5, #7, #8 — each pinned by its own test asserting the DESIRED behavior, so each flips green when
-someone actually fixes the underlying bug), typecheck clean, lint unchanged (37 pre-existing).
-
-Last worked: 2026-09-05.
+Last worked: 2026-09-06.
 
 ---
 
@@ -73,9 +69,9 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 [x] Level 0 Setup + first green test        verify: npm test
 [x] Level 1 Table-driven tests              verify: npm test
 [x] Level 2 Extract, then test              verify: npm test
-[~] Level 3 Component testing (RTL)         verify: npm test
-[ ] Level 4 Mocks, timers, hooks            verify: npm test
-[ ] Level 5 End-to-end (Playwright)         verify: npx playwright test
+[x] Level 3 Component testing (RTL)         verify: npm test
+[x] Level 4 Mocks, timers, hooks            verify: npm test
+[x] Level 5 End-to-end (Playwright)         verify: npx playwright test
 [ ] Level 6 GitHub Actions                  verify: green run in the Actions tab
 [ ] Level 7 Polish                          verify: npm run lint && npm run build
 ```
@@ -362,15 +358,188 @@ unchanged (37 pre-existing, none new). **Level 3 is fully done.**
 #2/#3/#4/#5/#7/#8), typecheck clean, lint unchanged. **Level 4 is fully done.**
 
 ### Level 5 — End-to-end (Playwright)
-- [ ] **Prerequisite:** `VITE_SOCKET_URL` wired up  *(Steps.md Step 2)*
-- [ ] `@playwright/test` + `e2e/` + config with `webServer`
-- [ ] `page.addInitScript` seeds `sessionStorage.intro_played` to skip the splash
-- [ ] **Worked example (Claude):** tests 1 & 2, plus the two-context fixture
-- [ ] Exercise: SEO — title, canonical, JSON-LD injected
-- [ ] Exercise: create room → HQ code appears  *(backend required)*
-- [ ] Exercise: capstone — 5 contexts play a full game  *(may be handed to Claude, see agreement)*
-- [ ] Exercise: reconnect via `context.setOffline`  *(pins Steps.md #6 / Step 5)*
-- [ ] Debug one deliberately broken test with `--ui` and the trace viewer
+- [x] **Prerequisite:** `VITE_SOCKET_URL` wired up  *(Steps.md Step 2)* — `socket.ts` now reads
+      `import.meta.env.VITE_SOCKET_URL || "<old hardcoded URL>"` (`||` not `??`, so an empty var also
+      falls back), the 3 commented-out LAN IPs deleted, `VITE_SOCKET_URL` added to `ImportMetaEnv` in
+      `vite-env.d.ts`. `.env.local` already had the var set. Verified: typecheck clean, lint unchanged
+      (37 pre-existing), all 187 tests unchanged (181 passing + 6 intentionally red).
+- [x] `@playwright/test` 1.63.0 + `e2e/` + `playwright.config.ts` with `webServer` (`npm run dev` on
+      `http://localhost:5173`, `reuseExistingServer` outside CI) + `tsconfig.e2e.json` (closed a
+      typecheck-coverage gap of the same shape as Level 2/3's — `playwright.config.ts` and `e2e/`
+      weren't included by any existing tsconfig project)
+- [x] `page.addInitScript` / `context.addInitScript` seeds `sessionStorage.intro_played` to skip the
+      splash — used directly in one worked-example test, and wrapped into `e2e/fixtures.ts` for reuse
+- [x] **Worked example (Claude):** `e2e/app.spec.ts` — test 1 (splash skipped when seeded), test 2
+      (splash shown + proceed button when not seeded, proving test 1's skip is really doing something),
+      plus a fixture demo (two independent player contexts, proven independent by typing into one and
+      checking the other's field is untouched)  *(3 tests, all passing against the real dev server, no
+      backend needed — the join/create screen renders regardless of whether the socket connects)*
+- [x] **`e2e/seo.spec.ts`** — title, canonical link shape, JSON-LD count + `@type` values  *(3 tests,
+      all passing, no backend needed)*. Design note worth keeping: `index.html` already ships
+      matching static title/description/OG tags (written by `scripts/generate-seo-files.mjs`-adjacent
+      hand-maintained HTML, not by this test's target code) — so the title and canonical assertions
+      would still pass even if `RouteSeoManager` were deleted from `App.tsx` entirely. The JSON-LD
+      assertion is the one with real teeth: nothing in the static HTML matches
+      `script[data-seo-jsonld]`, so it can only pass if `SeoHead`'s `useEffect` genuinely ran.
+      Canonical asserted by SHAPE (`^https:\/\/.+\/$`), not the literal domain — the domain comes
+      from `VITE_SITE_URL`, the same kind of environment-dependent value Level 0 warned against
+      hardcoding. Title IS hardcoded, deliberately — `SITE_NAME`/`SITE_ALT_NAME` are app content, not
+      environment config, so the risk category is different; also, directly importing `seoConfig.ts`
+      into a Playwright spec isn't safe, since it reads `import.meta.env` at module load time, which
+      Vite provides and plain Node does not.
+- [x] **`e2e/create-room.spec.ts`** — the first test in the whole course where a real client talks to
+      a real (local) server: creates a room, waits for the enlistment form to disappear, asserts a
+      6-character room code appears (matched by SHAPE — `^[A-Z0-9]{6}$` — since the backend generates
+      it randomly; there's no fixed value to assert against, same principle as the canonical-URL
+      test). `playwright.config.ts`'s `webServer` now sets `VITE_SOCKET_URL=http://localhost:3000/`
+      for the dev server it starts, overriding `.env.local`'s production URL just for this process —
+      the actual payoff of Level 5's `VITE_SOCKET_URL` prerequisite. Confirmed the local backend's
+      CORS (`origin: process.env.CLIENT_URL || "*"`) is wide open by default before relying on it.
+      *(1 test, passed first run)*
+- [x] **`e2e/reconnect.spec.ts`** — exposes Steps.md #6  *(1 test, stays red on purpose)*. Not via
+      `context.setOffline` in the end — see review notes for what was actually tried, what didn't work
+      and why, and what got built instead (a dev-only `window.__socketService` hook + a direct
+      listener-count check).
+- [x] **`e2e/capstone.spec.ts`** — 5 simulated players (new `fivePlayerPages` fixture in
+      `e2e/fixtures.ts`) create a room, select characters, and play 3 mission rounds to completion,
+      through the Mir Jafor assassination phase, to a genuine `"Game result"` dialog on all 5 pages
+      *(1 test, ~36s, passed 3/3 consecutive runs against different random General/Mir Jafor
+      assignments each time)*. Design note worth keeping — see review notes: every mission vote is
+      SUCCESS, never SABOTAGE, and that's not a simplification, it's the only way to make the test
+      deterministic at all, since character assignments are genuinely redacted per-player by the
+      backend (confirmed by reading the real broadcast payload) and a Nawab clicking SABOTAGE silently
+      submits "Yes" anyway.
+- [x] Debug one deliberately broken test with `--ui` and the trace viewer — Claude set up a
+      temporary `e2e/broken-example.spec.ts` (a copy of `app.spec.ts`'s first test with the alias
+      placeholder text subtly wrong: `'Enter Your Alias...'` vs. the real `'Enter Alias...'`),
+      confirmed it failed cleanly (not a hang) and that `--trace on` produced a real `trace.zip`
+      before handing it off. Mahir found the mismatch via `--ui` mode's timeline/DOM-snapshot/locator
+      picker and the trace viewer, fixed it, deleted the practice file. Not something to keep in the
+      real suite — the exercise was the process, not a permanent test.
+
+**Review notes (2026-09-06).**
+1. **The cached chromium (`chromium-1234`) didn't match this Playwright version.** `@playwright/test`
+   1.63.0 expects chromium revision 1243, not 1234 — the earlier environment note was recorded against
+   an older/different Playwright install. `npx playwright install chromium` downloaded 1243 (~300MB);
+   confirmed by simply running the tests rather than assuming the cached browser would work.
+2. **A real ESLint config gap**, same *shape* as the tsconfig gaps in Levels 2/3/5 but a different
+   tool: `react-hooks`/`react-refresh` were applied to every `.ts`/`.tsx` file in the repo with no
+   scoping, so Playwright's own fixture convention — naming the second callback argument `use` — got
+   flagged by `react-hooks/rules-of-hooks` as though it were React's `use()` hook, purely by name
+   collision, in a file with no React import at all. Fixed by scoping those two plugins to
+   `src/**/*.{ts,tsx}` only in `eslint.config.js`, leaving the base JS/TS rules for everywhere else.
+   Whole-repo lint count unchanged at 37 after the fix, confirming nothing on `src/**` was lost.
+3. **`tsconfig.e2e.json` needs the `DOM` lib**, unlike `tsconfig.test.json`/`tsconfig.node.json` — even
+   though the `.spec.ts` files themselves run in Node, callbacks passed to `page.addInitScript` are
+   serialized and executed INSIDE the real browser, referencing `window`/`sessionStorage`. Without
+   `"DOM"` in `lib`, typecheck failed with `Cannot find name 'window'` inside those callbacks specifically.
+4. Added `test-results/`, `playwright-report/`, `blob-report/`, `playwright/.cache/` to `.gitignore` —
+   none existed before Playwright was installed, all appear the first time a run finishes.
+
+All 3 e2e tests passed on the first real run against the actual dev server — no reproduction-and-fix
+cycle needed for the tests' own logic this time, only for the surrounding tooling (chromium version,
+ESLint scope, tsconfig lib). `npm test` unchanged (187 total, 181 passing + 6 intentionally red),
+typecheck clean, lint unchanged (37 pre-existing).
+
+**Review notes (2026-09-06, continued) — the reconnect test (Steps.md #6), the most honest process of
+the whole course so far.**
+
+Backend confirmed reachable (`http://localhost:3000` — Mahir started `../palassy-backend` in a
+separate window), CORS confirmed wide open by default (`origin: process.env.CLIENT_URL || "*"`, unset).
+`playwright.config.ts`'s `webServer.env` now overrides `VITE_SOCKET_URL` to point the dev server it
+starts at the local backend, without touching `.env.local`.
+
+**First attempt genuinely failed to reproduce the bug, and that result was reported honestly rather
+than papered over.** The obvious approach — two player contexts, one goes offline
+(`context.setOffline(true)`) then back online, check the roster recovers — was actually run (not just
+imagined), twice: once via a bare reload, once via a real two-context offline/online cycle with a
+second player leaving mid-outage. **Both passed.** Steps.md's own verify criterion needs internal
+socket state (`socketService.socket.listeners("roomUpdated").length`) unreachable from outside the
+app — no `window` hook existed to check it. Rather than guess further or quietly ship a test that
+"passed" without actually exercising the bug, this was stopped and put to Mahir directly via
+`AskUserQuestion` — he chose to add a debug hook and test it properly.
+
+**Added `window.__socketService`** in `socket.ts`, guarded by `import.meta.env.DEV` (Vite statically
+replaces this with `false` in a production build, so the whole block is dead code there and gets
+stripped — never ships). Typed via a new `e2e/global.d.ts` ambient declaration (a minimal LOCAL shape,
+not an import of the app's real `SocketService` class — keeps `tsconfig.e2e.json` decoupled from the
+app's internals). Confirmed lint/typecheck clean, whole-repo lint count unchanged (37).
+
+**Then re-ran the ACTUAL experiment with the hook in place**, and the real mechanism turned out
+narrower and more precise than either attempt had assumed: on a single, completely ordinary page load
+(no offline/online cycling needed at all) — `roomJoined`/`roomUpdated`/`errorMessage`/`kicked` every
+one ends up at count 1 (correct!), while `connect`/`disconnect` end up at count **0**. React's
+StrictMode (`main.tsx`) double-invokes every effect once on mount (mount → cleanup → mount again). The
+main socket effect's cleanup calls `offAll()`, wiping every listener on the socket. `connect()` itself
+is guarded by an `initialized` flag on the singleton that never resets, so the second mount pass
+early-returns and never re-registers "connect"/"disconnect" — but the REST of that same effect's body
+(the other four `.on(...)` calls) isn't gated by that flag at all, so each gets wiped once and
+re-registered once on the second pass, landing back at the correct count by coincidence. Confirmed via
+a throwaway diagnostic script run directly against the dev server (deleted once its purpose was
+served) before writing the real spec — the actual numbers, not a guess.
+
+`e2e/reconnect.spec.ts` (1 test) asserts the desired invariant (`connect`/`disconnect` count === 1
+each) — fails today with the exact predicted 0/0, will flip green once Steps.md Step 5's real fix
+(move "connect"/"disconnect" registration into the constructor, delete `initialized` entirely) lands.
+Scope is stated honestly in the file's own header comment: this proves the listeners are gone, which
+is the root mechanical bug and exactly what Steps.md's own verify criterion checks — it does NOT
+independently prove a broken user journey, since the one journey actually tried by hand recovered fine
+via the surviving `roomUpdated` listener.
+
+8/8 e2e tests total (7 passing + 1 intentionally red), 187 Vitest unchanged, typecheck clean, lint
+unchanged (37 pre-existing).
+
+**Review notes (2026-09-06, continued) — the 5-context capstone.**
+
+Read the actual game rules and backend handlers first (`startGame`, `assignGeneral`, `castVote`'s
+resolution logic, `attemptAssassination`) before writing anything — this is the first test needing a
+real, multi-step game state machine, not just one or two socket events.
+
+**One assumption caught and corrected before it caused a wrong test:** initially assumed Mir Jafor
+(character id 1) was team Nawabs and Mir Madan (id 8) was team EIC. The backend's actual
+`CharacterList` has it the other way around — Mir Jafor is EIC, Mir Madan is Nawabs (a deliberate
+game-design choice reflecting historical allegiance over nationality). Checked the real data before
+writing the character-selection step rather than trusting the assumption — the NET selection count
+needed (2 more Nawab clicks, 1 more EIC click) turned out unchanged either way, but hardcoding specific
+character names under the wrong assumption would have broken the test outright.
+
+**The real design constraint, confirmed by reading the server's broadcast logic, not assumed:**
+`broadcastRoomUpdate` redacts every OTHER player's `character` field per recipient — a client only ever
+sees its own role until `gameStatus === "OVER"`. That means a script driving these 5 clients has
+exactly the same information a real player would: no way to know who's secretly EIC vs. Nawab mid-game.
+Combined with the frontend's rule that a Nawab clicking SABOTAGE silently submits "Yes" anyway, this
+means "have everyone attempt sabotage" is NOT deterministic — the actual fail count would depend on the
+random character shuffle. "Have everyone always vote SUCCESS" sidesteps this entirely, since SUCCESS
+resolves to "Yes" regardless of team. Chose this deliberately, documented why in the spec file itself,
+rather than silently picking whichever produced a working test.
+
+**Built incrementally against the real, running backend**, verifying actual DOM/behavior at each
+stage via throwaway diagnostic scripts (deleted once each stage was confirmed and folded into the real
+spec) rather than writing all ~200 lines blind:
+- Confirmed `PlayerRoster`'s pre-game auto-active-selection (`GameDashboard` syncs `selectedActiveIds`
+  to every joined player automatically, confirmed via source) meant no manual roster-clicking step was
+  needed at all.
+- Found a real locator ambiguity: `BattalionSelector`'s team-proposal buttons and `PlayerRoster`'s
+  plain (non-interactive) roster rows can show the SAME player name simultaneously on the General's
+  own screen — `getByText(name)` matched both; `getByRole('button', { name, exact: true })` correctly
+  matches only the clickable one, since `PlayerRoster`'s rows are plain unlabeled `<div>`s (no
+  accessible role at all — a real, minor accessibility gap, noted but out of scope to fix here) while
+  `BattalionSelector`'s really are `<button>` elements.
+- Confirmed which of the 5 clients is "General" and which is "Mir Jafor" are both determined by
+  POLLING all 5 pages for whichever one shows the relevant UI text, never assumed or tracked — both
+  are assigned randomly server-side, confirmed by running the flow 3 times and seeing a different
+  assignment each time, all 3 passing.
+- Confirmed `attemptAssassination`'s backend handler reaches a genuine `"OVER"` state regardless of
+  which player is targeted (only WHO wins differs) — so the test clicks whichever assassination-target
+  button is first, without needing to identify the actual "Mir Madan" character among the other 4.
+
+Added `fivePlayerPages` to `e2e/fixtures.ts` (same one-`browser.newContext()`-per-player pattern as the
+existing two-player fixture, scaled up). 1 test, ~36s runtime, **3/3 consecutive passes** with a
+different random General/Mir Jafor assignment each run — checked deliberately, since a capstone this
+size is exactly where a test could pass once by luck and be flaky in practice.
+
+9/9 e2e tests total (8 passing + 1 intentionally red), 187 Vitest unchanged, typecheck clean, lint
+unchanged (37 pre-existing).
 
 ### Level 6 — GitHub Actions
 - [ ] 6a `hello.yml` — smallest workflow that runs, then delete it
@@ -404,6 +573,12 @@ unchanged (37 pre-existing, none new). **Level 3 is fully done.**
 | 2026-09-05 | **Working agreement changed** — L3 fully done | Mahir asked Claude to write full test coverage for everything remaining (understanding over retention). Wrote `IdentityCard` (13 tests, clean first pass, found the real crash is one line before Steps.md #4's citation), `EnlistmentForm` (21 tests; caught + fixed a real controlled-input pitfall — spy-only typing tests reported single characters, not the full string, because React resets an unchanging controlled value after every keystroke; fixed with a stateful harness), `ObserverScreen` (8 tests, clean first pass). Added `makeCharacter()` to `tests/factories.ts`. 161 tests total, 158 passing + 3 intentionally red (Steps.md #2/#3/#4), typecheck clean, lint unchanged | Start Level 4 — Claude writes it in full |
 | 2026-09-05 | L4 hooks done | `useNetworkStatus` (5 tests; found `act()` is required around a manual `dispatchEvent` — bare `window.dispatchEvent` left state stale), `useOverlayA11y` (13 tests, clean first pass — proves the hook's own contract, not Steps.md #5 itself, see file's scope note), `GeneralReveal` (4 tests; actually pins Steps.md #5 by rendering the real conditional-hooks pattern; fixed one fixture bug of Claude's own — wrong `flipping` value hid the name behind the wrong UI phase). Along the way, fixed a real Level 3 config bug: the node/jsdom project split was by file extension, which a hook test with no JSX but real DOM needs broke immediately — inverted to an explicit node-only allowlist. 183 tests total, 179 passing + 4 intentionally red (Steps.md #2/#3/#4/#5), typecheck clean, lint unchanged | Check in with Mahir before the `GameDashboard`-heavy half: `copiedStatus`/`loadingAction` fake-timer races + two `vi.mock` scenarios |
 | 2026-09-05 | L4 fully done | Explained the new concepts first (`vi.mock` whole-module mocking, driving a mock via a captured callback, fake timers, race conditions vs. missing-guard bugs, mocking browser APIs jsdom lacks) before writing anything, at Mahir's request. Then `tests/mockSocketService.ts` (~30-method stand-in) + `GameDashboard/index.test.tsx` (4 tests): two `vi.mock` scenarios (roomJoined populates the room, error shows the toast) and both fake-timer races (`loadingAction` from the lobby state alone, `copiedStatus` needing `room` truthy + a clipboard mock) — both races genuinely red, confirmed for the right reason after a debugging false alarm (see review notes). 187 tests total, 181 passing + 6 intentionally red (Steps.md #2/#3/#4/#5/#7/#8), typecheck clean, lint unchanged (37 pre-existing) | Start Level 5 — Playwright. Prerequisite: wire up `VITE_SOCKET_URL` (Steps.md Step 2) |
+| 2026-09-06 | L5 prerequisite done | `socket.ts` reads `VITE_SOCKET_URL` with the old hardcoded URL as a byte-identical fallback; 3 commented LAN IPs deleted; `vite-env.d.ts` updated. All 187 tests, typecheck, and lint unchanged | Install Playwright, scaffold `e2e/`, write the worked example |
+| 2026-09-06 | L5 infra + worked example done | Installed `@playwright/test` 1.63.0; found the cached chromium-1234 didn't match (needed 1243, `npx playwright install chromium` fixed it). `playwright.config.ts` + `tsconfig.e2e.json` (closed another typecheck gap) + `e2e/fixtures.ts` (two-player contexts) + `e2e/app.spec.ts` (3 tests: splash-skip, splash-shown-then-proceed, fixture independence proof) — all 3 passed against the real dev server on the first run. Found and fixed a real ESLint gap along the way: `react-hooks` rules applied repo-wide flagged Playwright's `use` fixture parameter as React's `use()` hook; scoped those rules to `src/**` only. Also corrected a stale row in this file's own "Order of work" table (Step 5 was mis-assigned to L4). 187 Vitest tests unchanged, typecheck clean, lint unchanged (37) | SEO tags, create-room (needs backend), reconnect (`context.setOffline`), 5-context capstone, `--ui` debug walkthrough |
+| 2026-09-06 | L5 SEO test done | `e2e/seo.spec.ts` (3 tests, all passing first run, no backend needed): title (hardcoded deliberately — app content, not environment config, and `seoConfig.ts` isn't safely importable into a Playwright spec since it reads `import.meta.env` at module load), canonical link asserted by shape not literal domain (the domain IS environment config, same Level 0 lesson), JSON-LD count + `@type` order (the one assertion here that's actually impossible to pass by accident, since nothing in the static `index.html` matches that selector). 6/6 e2e passing total, 187 Vitest unchanged, typecheck clean, lint unchanged (37) | The three backend-dependent exercises: create-room, reconnect, 5-context capstone |
+| 2026-09-06 | L5 create-room + reconnect done | Backend confirmed running + CORS open; `webServer.env` in `playwright.config.ts` points the dev server at `localhost:3000`. `e2e/create-room.spec.ts` (1 test) passed first run — the first real client-to-real-server test in the course. `e2e/reconnect.spec.ts`: first attempt (two contexts, `context.setOffline`) genuinely tried twice and genuinely passed both times — reported honestly rather than treated as done, since Steps.md's own verify criterion needs internal socket state with no way to reach it. Asked Mahir how to proceed; he chose adding a debug hook. Added dev-only `window.__socketService` in `socket.ts` (stripped from prod via `import.meta.env.DEV`) + `e2e/global.d.ts` for its type. Re-ran the real experiment: on an ordinary page load (StrictMode's double-invoke), `connect`/`disconnect` listeners end up at 0 while every other listener that same effect registers coincidentally ends up correct at 1 — confirmed with a throwaway diagnostic script before writing the real spec. 1 test, genuinely red for the confirmed reason. 8/8 e2e total (7 passing + 1 red), 187 Vitest unchanged, typecheck clean, lint unchanged (37) | 5-context capstone, then the `--ui` debugging walkthrough |
+| 2026-09-06 | L5 capstone done | Read the real game rules (startGame, assignGeneral, castVote resolution, attemptAssassination) before writing anything. Caught and corrected a wrong assumption (Mir Jafor/Mir Madan team assignments were backwards from what I assumed) by checking the actual backend data. Confirmed characters are genuinely redacted per-player server-side, meaning "always vote SUCCESS" is the only deterministic strategy (SABOTAGE's outcome depends on hidden team data). Built incrementally against the real backend with throwaway diagnostic scripts at each stage (room creation, character picker DOM, team proposal, voting, round repeat, Mir Jafor phase), catching a real locator ambiguity (BattalionSelector buttons vs. PlayerRoster's unlabeled spans) along the way. Added `fivePlayerPages` fixture. 1 test (~36s), verified 3/3 consecutive passes with different random assignments each run. 9/9 e2e total (8 passing + 1 intentionally red), 187 Vitest unchanged, typecheck clean, lint unchanged (37) | Debug one deliberately broken test with `--ui` and the trace viewer — the last Level 5 item |
+| 2026-09-06 | **Level 5 fully done** | Set up temporary `e2e/broken-example.spec.ts` (subtle placeholder-text typo, confirmed it failed cleanly not hung, confirmed `--trace on` produces a real `trace.zip`) and handed the actual debugging off — `--ui` mode and the trace viewer are interactive GUI tools, not something to fake through text. Mahir found the mismatch and fixed it himself, deleted the practice file. Also fixed a stale progress-table bug while closing out: the top-of-file summary table still showed Level 3 as `[~]` and Level 4 as `[ ]` despite both being long done in the detailed sections — corrected all three (3, 4, 5) to `[x]`. Deliberately not starting Level 6 — Mahir has something else to do first | Whatever Mahir needs next; resume at Level 6 (GitHub Actions) afterward |
 
 ---
 
@@ -439,14 +614,19 @@ red with a `// FAILS: Steps.md #N` marker, then fix and watch it go green.
 | L5 prereq | 2 — configurable socket URL |
 | L3 | 3 — error boundary + guards |
 | L4 | 4 — timer lifecycle |
-| L4 | 5 — socket listener lifecycle |
+| L5 | 5 — socket listener lifecycle *(corrected 2026-09-06 — this row said L4, but the detailed Level 5
+      checklist has always correctly put it there: "reconnect via `context.setOffline`". Not pinned by
+      anything in the actual Level 4 work; the mismatch was in this summary table, not in what got built)* |
 | L4 | 6 — overlay hook order |
 | L2 | 7 — vote selectors |
 | L5 | 10 — smoke run |
 
-### Environment facts (verified 2026-09-05)
+### Environment facts (updated 2026-09-06)
 - Node v20.20.2, npm 10.8.2
-- Playwright Chromium already cached at `~/.cache/ms-playwright/chromium-1234`
+- Playwright Chromium cached at `~/.cache/ms-playwright/chromium-1243` (`@playwright/test` 1.63.0).
+  *(The chromium-1234 note from 2026-09-05 was stale by the time Playwright was actually installed —
+  1234 belonged to a different Playwright version. Confirmed by running the tests, not assumed;
+  `npx playwright install chromium` fixed it.)*
 - Backend: `/home/mahir/Repositories/palassy-game/palassy-backend` — `npm start`, port 3000.
   Rooms are in-memory; the Mongo connection failure is caught at `server.js:30-32`, so it boots
   without a database.
