@@ -1,10 +1,13 @@
 import { io, Socket } from "socket.io-client";
 import type { CharacterType, Room, RoomJoinedPayload } from "../types/game";
 
-const SOCKET_URL = "https://polashi-game-backend.onrender.com/";
-// const SOCKET_URL = "http://172.16.16.6:3000/";
-// const SOCKET_URL = "http://192.168.0.108:3000/"
-// const SOCKET_URL = "http://192.168.203.220:3000/"
+// `||` on purpose, not `??`: an EMPTY string (e.g. `VITE_SOCKET_URL=` left
+// blank in some environment) should also fall back, not be treated as a
+// deliberate "connect to nothing". The fallback is byte-identical to the
+// value this used to be hardcoded to, so leaving `VITE_SOCKET_URL` unset
+// anywhere (a deploy that predates this change, say) changes nothing.
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || "https://polashi-game-backend.onrender.com/";
 
 class SocketService {
   socket: Socket;
@@ -225,3 +228,18 @@ class SocketService {
 }
 
 export const socketService = new SocketService();
+
+// Dev-only escape hatch, for E2E tests only: `socketService` is a
+// module-scoped singleton, unreachable from outside the app's own code —
+// there's no other way for a real browser, driven by Playwright, to inspect
+// its internal state (e.g. how many listeners are attached to a given
+// event). `Steps.md` #6's own verify criterion needs exactly that
+// (`socketService.socket.listeners("roomUpdated").length === 1`), so this
+// exists purely to make that checkable, not to change any behavior.
+// `import.meta.env.DEV` is statically `false` in a production build — Vite
+// replaces it at build time, so this whole block is dead code there and
+// gets stripped, never shipped.
+if (import.meta.env.DEV) {
+  (window as typeof window & { __socketService?: typeof socketService }).__socketService =
+    socketService;
+}

@@ -17,7 +17,13 @@ export type MissionRequirement = {
 
 export type VotingState = {
   active: boolean;
-  votes: Record<string, "yes" | "no">; // Key is playerId, value is "yes" or "no"
+  // Key is playerId. Value is "yes" | "no" once a vote is cast and visible.
+  // `true` is reserved for a redacted secret vote: the backend may confirm a
+  // player HAS voted without revealing what they chose while voting is still
+  // active. `false` marks a player as explicitly not-yet-voted (as opposed to
+  // simply absent from the map) — both are boolean, neither is a real choice.
+  // Always read this map through `voteSelectors.ts`, never by key presence.
+  votes: Record<string, "yes" | "no" | boolean>;
   result: "Yes" | "No" | null;
   type: "teamApproval" | "missionOutcome";
 };

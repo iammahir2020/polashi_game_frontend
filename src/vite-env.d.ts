@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_SITE_URL?: string
   readonly VITE_SITE_SAME_AS?: string
+  readonly VITE_SOCKET_URL?: string
 }
 
 interface ImportMeta {
