@@ -1,12 +1,14 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { AuthProvider } from './components/login/AuthContext'
-import GameDashboard from './components/GameDashboard'
 import GameLoader from './components/Loader';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import RouteSeoManager from './seo/RouteSeoManager';
 import HowToPlay from './pages/HowToPlay';
+
+// The game (and socket.io with it) loads only when the game route is opened.
+const GameDashboard = lazy(() => import('./components/GameDashboard'));
 
 // Static pages skip the intro splash so visitors (and crawlers) see content at once.
 const STATIC_PATHS = ['/how-to-play'];
@@ -52,7 +54,14 @@ function App() {
       <BrowserRouter>
         <RouteSeoManager />
         <Routes>
-          <Route path="/" element={<GameDashboard />} />
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={<GameLoader message="Links Established." />}>
+                <GameDashboard />
+              </Suspense>
+            }
+          />
           <Route path="/how-to-play" element={<HowToPlay />} />
         </Routes>
         <Analytics />
