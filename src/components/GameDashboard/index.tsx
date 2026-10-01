@@ -21,6 +21,7 @@ import GameHeader from "../GameHeader";
 import IntelPopup from "../IntepPopup";
 import MirJaforPhase from "../MirJaforPhase";
 import ObserverScreen from "../ObserverScreen";
+import CreditFooter from "../CreditFooter";
 import { uiButtonGhost, uiButtonGold } from "../../style/ui";
 
 type DialogState = {
@@ -812,6 +813,9 @@ export default function GameDashboard() {
           )}
         </>
       )}
+
+      {/* Credits on the landing and lobby screens only, never over the board */}
+      {!room?.gameStarted && <CreditFooter />}
 
       {errorToast && (
         <div
