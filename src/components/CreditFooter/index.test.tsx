@@ -22,4 +22,19 @@ describe('CreditFooter', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
+
+  it('links to the how-to-play page by default', () => {
+    render(<CreditFooter />);
+
+    expect(screen.getByRole('link', { name: /how to play/i })).toHaveAttribute(
+      'href',
+      '/how-to-play',
+    );
+  });
+
+  it('can hide the how-to-play link, for use on that page itself', () => {
+    render(<CreditFooter showHowToPlay={false} />);
+
+    expect(screen.queryByRole('link', { name: /how to play/i })).not.toBeInTheDocument();
+  });
 });

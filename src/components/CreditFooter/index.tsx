@@ -1,7 +1,11 @@
 import React from 'react';
 import { PHYSICAL_GAME_URL } from './links';
 
-const CreditFooter: React.FC = () => {
+interface CreditFooterProps {
+  showHowToPlay?: boolean;
+}
+
+const CreditFooter: React.FC<CreditFooterProps> = ({ showHowToPlay = true }) => {
   return (
     <footer style={footerStyle}>
       <p style={{ margin: 0 }}>
@@ -11,6 +15,13 @@ const CreditFooter: React.FC = () => {
           Get the physical game →
         </a>
       </p>
+      {showHowToPlay && (
+        <p style={{ margin: '6px 0 0' }}>
+          <a href="/how-to-play" style={linkStyle}>
+            About &amp; how to play
+          </a>
+        </p>
+      )}
     </footer>
   );
 };

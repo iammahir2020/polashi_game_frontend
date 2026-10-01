@@ -78,6 +78,13 @@ export const ROUTE_SEO: Record<AppRoute, RouteSeoEntry> = {
     image: DEFAULT_IMAGE,
     jsonLd: baseSchemas('/'),
   },
+  '/how-to-play': {
+    title: 'How to Play Polashi (পলাশী) – Rules, Teams and Roles',
+    description:
+      'How to play The Battle of Polashi online: 5–10 players, Nawab vs East India Company, five rounds of council and secret votes, and the Mir Jafor endgame.',
+    image: DEFAULT_IMAGE,
+    jsonLd: baseSchemas('/how-to-play'),
+  },
 };
 
 // Room invite links (/?room=CODE) are private session URLs: never index them.

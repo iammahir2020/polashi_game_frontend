@@ -6,6 +6,10 @@ import GameLoader from './components/Loader';
 import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import RouteSeoManager from './seo/RouteSeoManager';
+import HowToPlay from './pages/HowToPlay';
+
+// Static pages skip the intro splash so visitors (and crawlers) see content at once.
+const STATIC_PATHS = ['/how-to-play'];
 
 function App() {
   // Check if this is the first load of this session
@@ -14,7 +18,7 @@ function App() {
   });
   
   const [hasProceeded, setHasProceeded] = useState(() => {
-    return !!sessionStorage.getItem('intro_played');
+    return !!sessionStorage.getItem('intro_played') || STATIC_PATHS.includes(window.location.pathname);
   });
 
   useEffect(() => {
@@ -49,6 +53,7 @@ function App() {
         <RouteSeoManager />
         <Routes>
           <Route path="/" element={<GameDashboard />} />
+          <Route path="/how-to-play" element={<HowToPlay />} />
         </Routes>
         <Analytics />
       </BrowserRouter>
