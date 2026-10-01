@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Generated at build time by scripts/generate-seo-files.mjs
+public/sitemap.xml

@@ -3,8 +3,8 @@ import SeoHead from './SeoHead';
 import { resolveRouteSeo } from './routeSeo';
 
 export default function RouteSeoManager() {
-  const { pathname } = useLocation();
-  const metadata = resolveRouteSeo(pathname);
+  const { pathname, search } = useLocation();
+  const metadata = resolveRouteSeo(pathname, search);
 
   return (
     <SeoHead
