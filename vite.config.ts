@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'robots.txt', 'Nawab.png', 'EIC.png'],
+      includeAssets: ['favicon.ico', 'favicon-32.png', 'apple-touch-icon.png', 'robots.txt', 'Nawab.png', 'EIC.png'],
       devOptions: {
         enabled: true,
       },
@@ -22,22 +22,9 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: '.',
         icons: [
-          {
-            src: '/polashi_fav_high_res.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/polashi_fav_high_res.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: '/polashi_fav_high_res.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
+          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/pwa-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

@@ -2,7 +2,7 @@ export const SITE_NAME = 'The Battle of Polashi';
 export const SITE_ALT_NAME = 'Polashi (পলাশী)';
 export const SITE_DESCRIPTION =
   'The Battle of Polashi is a social strategy web game inspired by historical intrigue, alliances, and deception.';
-export const DEFAULT_IMAGE = '/polashi_fav_high_res.png';
+export const DEFAULT_IMAGE = '/og-image.jpg';
 
 export const SITE_URL = (
   import.meta.env.VITE_SITE_URL || 'https://the-great-polashi-game.vercel.app'
