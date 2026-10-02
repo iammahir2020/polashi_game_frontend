@@ -16,7 +16,7 @@ const RoundTracker = ({ room }: { room: Room }) => {
     <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', margin: '20px 0' }}>
       {currentConfig.map((config, index) => {
         const roundNum = index + 1;
-        const result = room.roundHistory[index]; // "Green" or "Red"
+        const result = room.roundHistory?.[index]; // "Green" or "Red"
         const isActive = room.currentRound === roundNum;
 
         return (

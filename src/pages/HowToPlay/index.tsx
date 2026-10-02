@@ -158,6 +158,28 @@ const HowToPlay: React.FC = () => {
         </p>
       </section>
 
+      <section style={sectionStyle}>
+        <h2 style={headingStyle}>Privacy</h2>
+        <p>
+          There are no accounts and no sign-in, and the game sets no cookies. You play under an
+          alias of your choice, so you don't need to use your real name.
+        </p>
+        <p>
+          Your browser keeps the room code, your player id and a rejoin key so a reload puts you
+          back in your seat. Leaving the room, being removed or the room closing deletes them.
+        </p>
+        <p>
+          While a game runs, the server holds the room in memory and deletes it once everyone has
+          gone. When a game starts it saves a record for statistics: the room code, each
+          player&apos;s alias, role and side, each round&apos;s General, team, votes and result,
+          and the winner.
+        </p>
+        <p>
+          Page views are counted with Vercel Web Analytics, which is anonymous and uses no
+          cookies.
+        </p>
+      </section>
+
       <p style={{ textAlign: 'center', margin: '32px 0 0' }}>
         <a href="/" style={ctaStyle}>Play now</a>
       </p>

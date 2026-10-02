@@ -335,7 +335,7 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                       backgroundColor: 'rgba(0,0,0,0.3)',
                       letterSpacing: '0.5px'
                     }}>
-                      {p.character?.name.toUpperCase()}
+                      {p.character?.name?.toUpperCase()}
                     </span>
                   )}
 

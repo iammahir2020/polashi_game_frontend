@@ -4,7 +4,7 @@ import RoundTracker from '../RoundTracker';
 
 const ObserverScreen: React.FC<{ room: Room }> = ({ room }) => {
   // Separate players into teams for easier observer reading
-  const activePlayers = room.players.filter(p => room.activePlayerIds.includes(p.id));
+  const activePlayers = room.players.filter(p => (room.activePlayerIds ?? []).includes(p.id));
   const nawabs = activePlayers.filter(p => p.character?.team.includes("Nawabs"));
   const eic = activePlayers.filter(p => !p.character?.team.includes("Nawabs"));
 

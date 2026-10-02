@@ -25,6 +25,12 @@ Verify: `npm test && npm run typecheck` — 187 passing + 6 intentionally red (S
 #7, #8), typecheck clean, lint unchanged (37 pre-existing). `npm run e2e` — 8 passed + 1 intentionally
 red (Steps.md #6).
 
+**Update 2026-10-02 (security hardening, branch `chore/security-hardening`):** the bugs behind
+Steps.md #2, #3, #4, #6, #7 and #8 were fixed as part of the security work, so those tests are now
+green without any change to the tests themselves (their titles still say "FAILS"; rename them when
+you next touch the course). Current: `npm test` 257 passing, `npm run e2e` all green with the
+backend running locally.
+
 Last worked: 2026-09-06.
 
 ---
@@ -579,6 +585,7 @@ unchanged (37 pre-existing).
 | 2026-09-06 | L5 create-room + reconnect done | Backend confirmed running + CORS open; `webServer.env` in `playwright.config.ts` points the dev server at `localhost:3000`. `e2e/create-room.spec.ts` (1 test) passed first run — the first real client-to-real-server test in the course. `e2e/reconnect.spec.ts`: first attempt (two contexts, `context.setOffline`) genuinely tried twice and genuinely passed both times — reported honestly rather than treated as done, since Steps.md's own verify criterion needs internal socket state with no way to reach it. Asked Mahir how to proceed; he chose adding a debug hook. Added dev-only `window.__socketService` in `socket.ts` (stripped from prod via `import.meta.env.DEV`) + `e2e/global.d.ts` for its type. Re-ran the real experiment: on an ordinary page load (StrictMode's double-invoke), `connect`/`disconnect` listeners end up at 0 while every other listener that same effect registers coincidentally ends up correct at 1 — confirmed with a throwaway diagnostic script before writing the real spec. 1 test, genuinely red for the confirmed reason. 8/8 e2e total (7 passing + 1 red), 187 Vitest unchanged, typecheck clean, lint unchanged (37) | 5-context capstone, then the `--ui` debugging walkthrough |
 | 2026-09-06 | L5 capstone done | Read the real game rules (startGame, assignGeneral, castVote resolution, attemptAssassination) before writing anything. Caught and corrected a wrong assumption (Mir Jafor/Mir Madan team assignments were backwards from what I assumed) by checking the actual backend data. Confirmed characters are genuinely redacted per-player server-side, meaning "always vote SUCCESS" is the only deterministic strategy (SABOTAGE's outcome depends on hidden team data). Built incrementally against the real backend with throwaway diagnostic scripts at each stage (room creation, character picker DOM, team proposal, voting, round repeat, Mir Jafor phase), catching a real locator ambiguity (BattalionSelector buttons vs. PlayerRoster's unlabeled spans) along the way. Added `fivePlayerPages` fixture. 1 test (~36s), verified 3/3 consecutive passes with different random assignments each run. 9/9 e2e total (8 passing + 1 intentionally red), 187 Vitest unchanged, typecheck clean, lint unchanged (37) | Debug one deliberately broken test with `--ui` and the trace viewer — the last Level 5 item |
 | 2026-09-06 | **Level 5 fully done** | Set up temporary `e2e/broken-example.spec.ts` (subtle placeholder-text typo, confirmed it failed cleanly not hung, confirmed `--trace on` produces a real `trace.zip`) and handed the actual debugging off — `--ui` mode and the trace viewer are interactive GUI tools, not something to fake through text. Mahir found the mismatch and fixed it himself, deleted the practice file. Also fixed a stale progress-table bug while closing out: the top-of-file summary table still showed Level 3 as `[~]` and Level 4 as `[ ]` despite both being long done in the detailed sections — corrected all three (3, 4, 5) to `[x]`. Deliberately not starting Level 6 — Mahir has something else to do first | Whatever Mahir needs next; resume at Level 6 (GitHub Actions) afterward |
+| 2026-10-02 | (outside the course) | Security hardening fixed Steps.md #2, #3, #4, #6, #7, #8; those tests are green now. New tests for payload checks, name rules, rejoin storage, error boundary, CSP | Rename the old "FAILS" titles; resume Level 6 |
 
 ---
 

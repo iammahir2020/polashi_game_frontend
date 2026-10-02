@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import type { CharacterType, Player, Room } from "../../types/game";
 import { socketService } from "../../services/socket";
+import { clearSession, loadSession, saveSession } from "../../services/sessionStore";
+import { cleanRoomCode, normalizeName } from "../../lib/names";
 import GameLoader from "../Loader";
 import { MISSION_CONFIGS } from "../../constants";
 import RoundTracker from "../RoundTracker";
@@ -34,15 +36,15 @@ type DialogState = {
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
   const [room, setRoom] = useState<Room | null>(null);
-  const [roomCode, setRoomCode] = useState(localStorage.getItem("roomCode") || "");
+  const [roomCode, setRoomCode] = useState(() => loadSession().roomCode || "");
   const [name, setName] = useState("");
-  const [playerId, setPlayerId] = useState<string | null>(localStorage.getItem("playerId") || null);
+  const [playerId, setPlayerId] = useState<string | null>(() => loadSession().playerId || null);
   const [wasKicked, setWasKicked] = useState(false);
   const [error, setError] = useState("");
   const [newConnection, setNetConnection] = useState<"ok" | "down">("down");
   const [isRevealed, setIsRevealed] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState<"code" | "link" | null>(null);
-  const [isReconnecting, setIsReconnecting] = useState(!!localStorage.getItem("roomCode"));
+  const [isReconnecting, setIsReconnecting] = useState(() => !!loadSession().roomCode);
   const [currentGeneral, setCurrentGeneral] = useState<Player | null>(null);
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -56,12 +58,33 @@ export default function GameDashboard() {
   const [completedGeneralId, setCompletedGeneralId] = useState<string | null>(null);
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
 
+  // One pending reset timer each for the create/join spinner and the "copied"
+  // label. Starting a new action cancels the previous timer, so an old timer
+  // can't clear the state of a newer action (Steps.md #7 and #8).
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+  }, []);
+
+  // Ignores a repeat of the same action within a short window (double clicks,
+  // impatient taps). The server is what enforces the rules; this only stops
+  // accidental duplicates such as re-rolling the General twice.
+  const lastActionAtRef = useRef<Record<string, number>>({});
+  const runOnce = useCallback((key: string, action: () => void, windowMs = 800) => {
+    const now = Date.now();
+    if (now - (lastActionAtRef.current[key] ?? -Infinity) < windowMs) return;
+    lastActionAtRef.current[key] = now;
+    action();
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlRoom = params.get('room');
 
     if (urlRoom) {
-      setRoomCode(urlRoom.toUpperCase());
+      setRoomCode(cleanRoomCode(urlRoom));
 
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -105,12 +128,11 @@ export default function GameDashboard() {
       setError("");
       setLoadingAction(null);
 
-      localStorage.setItem("roomCode", data.roomCode);
-      localStorage.setItem("playerId", data.playerId);
+      saveSession(data.roomCode, data.playerId, data.reconnectToken);
     });
 
     socketService.onRoomUpdated((updatedRoom: Room) => {
-      const myId = localStorage.getItem("playerId");
+      const myId = loadSession().playerId;
       const amIInList = updatedRoom.players.some(p => p.id === myId);
 
       if (myId && !amIInList) {
@@ -127,8 +149,7 @@ export default function GameDashboard() {
       setIsReconnecting(false);
       setLoadingAction(null);
       if (msg.toLowerCase().includes("not found")) {
-        localStorage.removeItem("roomCode");
-        localStorage.removeItem("playerId");
+        clearSession();
         setDialogState({
           kind: "notice",
           title: "Room Not Found",
@@ -139,12 +160,10 @@ export default function GameDashboard() {
 
     socketService.socket.on("kicked", () => {
       handleForceExit("You have been kicked by the Game Master.");
-      localStorage.removeItem("roomCode");
-      localStorage.removeItem("playerId");
+      clearSession();
     });
 
-    const savedRoom = localStorage.getItem("roomCode");
-    const savedPlayer = localStorage.getItem("playerId");
+    const { roomCode: savedRoom, playerId: savedPlayer } = loadSession();
 
     if (savedRoom && savedPlayer) {
       socketService.reconnect(savedRoom, savedPlayer);
@@ -231,8 +250,7 @@ export default function GameDashboard() {
   useEffect(() => {
     socketService.onRoomDissolved(() => {
       // 1. Clear Local Storage
-      localStorage.removeItem("roomCode");
-      localStorage.removeItem("playerId");
+      clearSession();
   
       // 2. Clear Local State to force the "Join/Create" UI to show
       setRoom(null);
@@ -347,25 +365,40 @@ export default function GameDashboard() {
     setPlayerId(null);
     setWasKicked(true);
     setError(reason);
-    localStorage.removeItem("roomCode");
-    localStorage.removeItem("playerId");
+    clearSession();
+  };
+
+  // Clears the create/join spinner after 5 s if the server never answers.
+  const startLoading = (action: "create" | "join") => {
+    if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+    setLoadingAction(action);
+    loadingTimerRef.current = setTimeout(() => setLoadingAction(null), 5000);
+  };
+
+  const cleanNameOrWarn = () => {
+    const cleanName = normalizeName(name);
+    if (!cleanName) setErrorToast("Please enter a name.");
+    return cleanName;
   };
 
   const createRoom = () => {
-    setLoadingAction("create");
+    const cleanName = cleanNameOrWarn();
+    if (!cleanName) return;
+    startLoading("create");
     setWasKicked(false);
-    socketService.createRoom(name);
-    setTimeout(() => setLoadingAction(null), 5000);
+    socketService.createRoom(cleanName);
   };
   const joinRoom = () => {
-    setLoadingAction("join");
+    const cleanName = cleanNameOrWarn();
+    const code = cleanRoomCode(roomCode);
+    if (!cleanName || !code) return;
+    startLoading("join");
     setWasKicked(false);
-    socketService.joinRoom(roomCode, name);
-    setTimeout(() => setLoadingAction(null), 5000);
+    socketService.joinRoom(code, cleanName);
   };
 
-  const kickPlayer = (targetId: string) => { socketService.kickPlayer(roomCode, targetId, playerId!); };
-  const toggleLock = () => { if (!room || !playerId || room.gameStarted) return; socketService.lockRoom(roomCode, !room?.locked, playerId); };
+  const kickPlayer = (targetId: string) => { if (!playerId) return; runOnce(`kick:${targetId}`, () => socketService.kickPlayer(roomCode, targetId, playerId)); };
+  const toggleLock = () => { if (!room || !playerId || room.gameStarted) return; runOnce("lock", () => socketService.lockRoom(roomCode, !room?.locked, playerId)); };
   // const handleStartGame = () => { if (!room || !playerId) return; setIsRevealed(false); socketService.startGame(roomCode, playerId); };
   const handleStartGame = (selectedCharIds: number[]) => {
     if (!room || !playerId) return;
@@ -377,13 +410,13 @@ export default function GameDashboard() {
     setIsRevealed(false); 
 
     // Update this call to include the active IDs
-    socketService.startGame(
+    runOnce("startGame", () => socketService.startGame(
       roomCode,
       playerId,
       selectedActiveIds,
       selectedCharIds,
       !!room.disableSecretIntelligence
-    );
+    ));
   };
 
   const handleToggleDisableSecretIntelligence = (disableSecretIntelligence: boolean) => {
@@ -398,27 +431,35 @@ export default function GameDashboard() {
       title: "Reset Campaign",
       message: "Reset the game for all players?",
       onConfirm: () => {
-        socketService.resetGame(roomCode, playerId);
+        runOnce("reset", () => socketService.resetGame(roomCode, playerId));
         setIsRevealed(false);
       },
     });
   };
-  const handleAssignGeneral = () => { if (!room || !playerId) return; socketService.assignGeneral(roomCode, playerId); };
+  const handleAssignGeneral = () => { if (!room || !playerId) return; runOnce("assignGeneral", () => socketService.assignGeneral(roomCode, playerId), 1500); };
 
-  const handleStartVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.startVote(roomCode, playerId); };
-  const handleClearVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.clearVote(roomCode, playerId); };
-  const handleYesVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.castVote(roomCode, playerId, "yes"); };
-  const handleNoVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.castVote(roomCode, playerId, "no"); };
-  const handleCloseRoom = () => { if (!room || !playerId) return; socketService.closeRoom(roomCode, playerId); };
-  const handleStartSecretVote = () => { if (!room || !playerId || !room.gameStarted) return; socketService.startSecretVote(roomCode, playerId); };
+  const handleStartVote = () => { if (!room || !playerId || !room.gameStarted) return; runOnce("startVote", () => socketService.startVote(roomCode, playerId)); };
+  const handleClearVote = () => { if (!room || !playerId || !room.gameStarted) return; runOnce("clearVote", () => socketService.clearVote(roomCode, playerId)); };
+  const handleYesVote = () => { if (!room || !playerId || !room.gameStarted) return; runOnce("castVote", () => socketService.castVote(roomCode, playerId, "yes")); };
+  const handleNoVote = () => { if (!room || !playerId || !room.gameStarted) return; runOnce("castVote", () => socketService.castVote(roomCode, playerId, "no")); };
+  const handleCloseRoom = () => { if (!room || !playerId) return; runOnce("closeRoom", () => socketService.closeRoom(roomCode, playerId)); };
+  const handleStartSecretVote = () => { if (!room || !playerId || !room.gameStarted) return; runOnce("startSecretVote", () => socketService.startSecretVote(roomCode, playerId)); };
   const handleSetTeam = (playerIds: string[]) => { if (!room || !playerId || !room.gameStarted) return; socketService.proposeTeam(roomCode, playerIds); };
 
   const leaveRoom = () => {
-    const currentRoomCode = roomCode || localStorage.getItem("roomCode");
-    const myId = playerId || localStorage.getItem("playerId");
+    const saved = loadSession();
+    const currentRoomCode = roomCode || saved.roomCode;
+    const myId = playerId || saved.playerId;
     if (currentRoomCode && myId) socketService.leaveRoom(currentRoomCode, myId);
     setRoom(null); setRoomCode(""); setPlayerId(null); setWasKicked(false); setError("");
-    localStorage.removeItem("roomCode"); localStorage.removeItem("playerId");
+    clearSession();
+  };
+
+  // Shows "copied" for 2 s; a newer copy restarts the window.
+  const flashCopied = (type: "code" | "link") => {
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    setCopiedStatus(type);
+    copiedTimerRef.current = setTimeout(() => setCopiedStatus(null), 2000);
   };
 
   const handleCopy = async (type: "code" | "link") => {
@@ -429,11 +470,10 @@ export default function GameDashboard() {
     if (navigator.clipboard && window.isSecureContext) {
       try {
         await navigator.clipboard.writeText(textToCopy);
-        setCopiedStatus(type);
-        setTimeout(() => setCopiedStatus(null), 2000);
+        flashCopied(type);
         return;
       } catch (err) {
-        console.error("Modern copy failed, switching to fallback", err);
+        if (import.meta.env.DEV) console.error("Modern copy failed, switching to fallback", err);
       }
     }
     try {
@@ -452,13 +492,12 @@ export default function GameDashboard() {
       document.body.removeChild(textArea);
 
       if (successful) {
-        setCopiedStatus(type);
-        setTimeout(() => setCopiedStatus(null), 2000);
+        flashCopied(type);
       } else {
         throw new Error("ExecCommand returned false");
       }
     } catch (err) {
-      console.error("Fallback copy failed", err);
+      if (import.meta.env.DEV) console.error("Fallback copy failed", err);
       setErrorToast(`Could not auto-copy. Please copy manually: ${textToCopy}`);
     }
   };
@@ -470,8 +509,7 @@ export default function GameDashboard() {
       message: "Terminate this session for all players?",
       onConfirm: () => {
         handleCloseRoom();
-        localStorage.removeItem("roomCode");
-        localStorage.removeItem("playerId");
+        clearSession();
         window.location.href = "/";
       },
     });
@@ -493,7 +531,7 @@ export default function GameDashboard() {
     const currentReq = MISSION_CONFIGS[activeCount]?.[roundIndex];
 
     if (!currentReq) {
-      console.error("Mission configuration not found for active count:", activeCount);
+      if (import.meta.env.DEV) console.error("Mission configuration not found for active count:", activeCount);
       return;
     }
 
@@ -518,13 +556,13 @@ export default function GameDashboard() {
       kind: "confirm",
       title: "Deploy Informant",
       message: `Deploy your informant to investigate ${target?.name}?`,
-      onConfirm: () => socketService.investigate(roomCode, targetId, playerId),
+      onConfirm: () => runOnce("investigate", () => socketService.investigate(roomCode, targetId, playerId), 1500),
     });
   };
 
   const handleAssassination = (targetId: string) => {
     if (!room || !playerId) return;
-    socketService.attemptAssassination(roomCode, targetId, playerId);
+    runOnce("assassinate", () => socketService.attemptAssassination(roomCode, targetId, playerId), 1500);
   };
 
   const toggleActivePlayer = (id: string) => {

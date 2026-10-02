@@ -2,14 +2,17 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
 
 // Google reads the verification tag from the served HTML, not the rendered
-// page, so it is injected at build time rather than by SeoHead.
+// page, so it is injected at build time rather than by SeoHead. The live
+// site's tag is already in index.html; this only adds one (e.g. for another
+// domain) when index.html has none, so the page never carries two.
 function googleSiteVerification(token: string | undefined): Plugin {
   return {
     name: 'google-site-verification',
-    transformIndexHtml() {
-      if (!token) return []
+    transformIndexHtml(html) {
+      if (!token || html.includes('name="google-site-verification"')) return []
       return [
         {
           tag: 'meta',
@@ -38,6 +41,35 @@ function servePrerenderedPages(paths: string[]): Plugin {
   }
 }
 
+// Applies the production response headers from vercel.json (CSP and friends)
+// to `vite preview`, so local previews and the e2e tests run under the same
+// policy as the live site. Not applied to `vite dev`, whose HMR client needs
+// inline scripts.
+type VercelHeaderRule = { source: string; headers: { key: string; value: string }[] }
+function vercelHeadersInPreview(): Plugin {
+  const config = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf-8')) as {
+    headers?: VercelHeaderRule[]
+  }
+  const rules = (config.headers ?? []).map((rule) => ({
+    pattern: new RegExp(`^${rule.source.replace(/\(\.\*\)/g, '.*')}$`),
+    headers: rule.headers,
+  }))
+  return {
+    name: 'vercel-headers-in-preview',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = (req.url ?? '/').split('?')[0]
+        for (const rule of rules) {
+          if (rule.pattern.test(pathname)) {
+            for (const { key, value } of rule.headers) res.setHeader(key, value)
+          }
+        }
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
 
@@ -45,12 +77,24 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       googleSiteVerification(env.VITE_GOOGLE_SITE_VERIFICATION),
+      vercelHeadersInPreview(),
       servePrerenderedPages(['/how-to-play']),
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'favicon-32.png', 'apple-touch-icon.png', 'robots.txt', 'Nawab.png', 'EIC.png'],
         devOptions: {
           enabled: true,
+        },
+        workbox: {
+          // Pages and files that must come from the network, not the cached
+          // app shell: the pre-rendered how-to-play page, crawler files, and
+          // Vercel's analytics endpoints.
+          navigateFallbackDenylist: [
+            /^\/how-to-play/,
+            /^\/sitemap\.xml$/,
+            /^\/robots\.txt$/,
+            /^\/_vercel\//,
+          ],
         },
         manifest: {
           name: 'The Battle of Polashi (পলাশী)',

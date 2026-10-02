@@ -26,8 +26,8 @@ Live: https://the-great-polashi-game.vercel.app
   the Guptochor next.
 - **Mir Jafor endgame.** If the Nawabs win three rounds, Mir Jafor gets one guess at who Mir Madan is.
   A correct guess hands the win to the East India Company.
-- **Reconnects.** Room code and player id are kept in `localStorage`, so a refreshed or dropped client
-  rejoins its seat.
+- **Reconnects.** Room code, player id and the seat's secret rejoin token are kept in `localStorage`,
+  so a refreshed or dropped client rejoins its seat. Only the token's owner can reclaim a seat.
 - **PWA.** Installable, with a service worker (vite-plugin-pwa) that caches the app shell. Playing still
   needs a connection to the game server.
 - **SEO.** Per-route title, description, Open Graph tags and JSON-LD; a pre-rendered `/how-to-play`
@@ -55,13 +55,28 @@ The backend lives in a separate repository:
 https://github.com/iammahir2020/polashi_game_backend
 
 - [src/services/socket.ts](src/services/socket.ts) wraps every socket event the client sends or
-  listens for. The server URL is set at the top of that file.
+  listens for. The server URL comes from `VITE_SOCKET_URL`, falling back to the production server.
+- [src/services/payloads.ts](src/services/payloads.ts) checks every payload the server sends before
+  React renders it.
 - [src/components/GameDashboard/index.tsx](src/components/GameDashboard/index.tsx) holds the client
   state and switches between the lobby, the board and the overlays.
 - [src/seo/](src/seo/) holds the metadata for each public route.
 
-The `src/auth/`, `src/lib/firebase.ts` and login components are an earlier Firebase sign-in flow that
-is no longer used; the game has no accounts.
+## Security
+
+The game server is the authority: it identifies each player by their socket, checks every action
+(host-only actions, the General's team, the Mir Jafor strike), and sends each player only what they
+may see. [SECURITY_AUDIT.md](SECURITY_AUDIT.md) lists every finding and how it was fixed. On the
+client side:
+
+- Every server payload is cleaned before rendering ([src/services/payloads.ts](src/services/payloads.ts)),
+  and an error boundary shows a recovery screen instead of a blank page.
+- Names and room codes are cleaned while typing ([src/lib/names.ts](src/lib/names.ts)); the server
+  applies the same rules.
+- [vercel.json](vercel.json) sets a Content-Security-Policy, clickjacking protection and other
+  security headers. `vite preview` applies the same headers, so the e2e tests run under the
+  production policy. **If the game server moves, update `connect-src` in `vercel.json` along with
+  `VITE_SOCKET_URL`.**
 
 ## Local setup
 
@@ -79,9 +94,10 @@ Optional environment variables (put them in `.env.local`):
 | `VITE_SITE_URL` | Canonical site URL used in meta tags, JSON-LD and the sitemap |
 | `VITE_SITE_SAME_AS` | Comma-separated profile URLs for JSON-LD `sameAs` |
 | `VITE_GOOGLE_SITE_VERIFICATION` | Google Search Console token; adds the verification meta tag to the build |
+| `VITE_SOCKET_URL` | Game server URL (default: the production server on Render) |
 
-To play against a local backend, run polashi_game_backend and point `SOCKET_URL` in
-`src/services/socket.ts` at it.
+To play against a local backend, run polashi_game_backend (`npm start`, port 3000) and set
+`VITE_SOCKET_URL=http://localhost:3000/`.
 
 ## Scripts
 
@@ -101,9 +117,10 @@ To play against a local backend, run polashi_game_backend and point `SOCKET_URL`
 
 ## Testing
 
-Unit and component tests sit next to their source as `*.test.ts(x)` and run in jsdom. They cover the
-credit footer, the how-to-play page, the SEO metadata and JSON-LD, and a check that the static tags
-in `index.html` match `src/seo/seoConfig.ts`.
+Unit and component tests sit next to their source as `*.test.ts(x)` and run in jsdom (pure logic in
+node). They cover the game constants and vote logic, the main components, the server payload checks,
+name rules, the rejoin storage, the error boundary, the SEO metadata and JSON-LD, and a check that
+the static tags in `index.html` match `src/seo/seoConfig.ts`.
 
 ```sh
 npm test
@@ -115,13 +132,27 @@ pointed at a local backend on port 3000; see [TESTING.md](TESTING.md). The build
 (`landing`, `static`) run against the production build (`vite preview` on port 4317, started
 automatically) and stub the socket.io connection, so they never reach the game server. The build specs cover the intro splash, the enlistment form, the credit footer, head tags and JSON-LD,
 noindex on room links, the pre-rendered how-to-play page with JavaScript off, the sitemap, robots.txt,
-the manifest and every image the app references. Each test runs on a desktop and a mobile viewport.
+the manifest and every image the app references, the security headers, and that no page triggers a
+CSP violation. Each build spec runs on a desktop and a mobile viewport.
 
 ```sh
 npx playwright install chromium   # once
 npm run e2e:build                 # no backend needed
 npm run e2e                       # everything, with the backend running
 ```
+
+## Deploying
+
+Deploy this frontend before a backend that issues rejoin tokens: this version stores and sends the
+token, and also works with an older server that doesn't. The other way round, a player on an old
+tab who reloads mid-game is asked to join again.
+
+## Privacy
+
+No accounts, no sign-in, no cookies. The browser stores the room code, player id and rejoin token
+for the current seat and deletes them on leaving. The server logs each game for statistics (room
+code, aliases, roles and sides, each round's General, team, votes and result, winner). Page views
+are counted by Vercel Web Analytics, which is cookieless. The same summary is on the How to play page.
 
 ## Credits & disclaimer
 

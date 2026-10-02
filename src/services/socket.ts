@@ -1,5 +1,16 @@
 import { io, Socket } from "socket.io-client";
-import type { CharacterType, Room, RoomJoinedPayload } from "../types/game";
+import type { CharacterType, Room } from "../types/game";
+import { loadSession } from "./sessionStore";
+import {
+  sanitizeCharacterList,
+  sanitizeErrorMessage,
+  sanitizeGeneralAnimation,
+  sanitizeGuptochorResult,
+  sanitizeNotification,
+  sanitizeRoom,
+  sanitizeRoomJoined,
+  type CleanRoomJoined,
+} from "./payloads";
 
 // `||` on purpose, not `??`: an EMPTY string (e.g. `VITE_SOCKET_URL=` left
 // blank in some environment) should also fall back, not be treated as a
@@ -9,9 +20,43 @@ import type { CharacterType, Room, RoomJoinedPayload } from "../types/game";
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL || "https://polashi-game-backend.onrender.com/";
 
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.log(...args);
+};
+
+// Drops a malformed server payload instead of letting it reach React.
+function guarded<T>(event: string, clean: (raw: unknown) => T | null, cb: (data: T) => void) {
+  return (raw: unknown) => {
+    const data = clean(raw);
+    if (data === null) {
+      if (import.meta.env.DEV) console.warn(`Ignored malformed "${event}" payload`, raw);
+      return;
+    }
+    cb(data);
+  };
+}
+
+// Server events the UI subscribes to. `offAll` removes only these, never the
+// service's own connect/disconnect handlers (Steps.md #6).
+const GAME_EVENTS = [
+  "roomJoined",
+  "roomUpdated",
+  "gameUpdated",
+  "errorMessage",
+  "kicked",
+  "roomDissolved",
+  "characterListUpdate",
+  "triggerGeneralAnimation",
+  "guptochorResult",
+  "notification",
+] as const;
+
 class SocketService {
   socket: Socket;
   private initialized = false;
+  // True once a rejoin was sent on the current connection, so a page load
+  // doesn't send it twice (the dashboard asks on mount, and so does "connect").
+  private rejoinSent = false;
 
   constructor() {
     this.socket = io(SOCKET_URL, {
@@ -19,7 +64,29 @@ class SocketService {
       transports: ["websocket"],
       reconnection: true,
       reconnectionAttempts: Infinity,
+      // Exponential backoff with jitter: 1 s, 2 s, 4 s... up to 30 s, each
+      // randomized by +/-50%, so a server restart isn't hit by every client
+      // at once and a long outage doesn't mean a retry every few seconds.
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
+    });
+
+    // Registered once for the life of the app, so remounting the dashboard
+    // (or React StrictMode's mount/unmount/mount) never adds a second copy or
+    // loses them.
+    this.socket.on("connect", () => {
+      devLog("Socket connected");
+
+      const { roomCode, playerId } = loadSession();
+      if (roomCode && playerId && !this.rejoinSent) {
+        this.reconnect(roomCode, playerId);
+      }
+    });
+
+    this.socket.on("disconnect", (reason) => {
+      this.rejoinSent = false;
+      devLog("Socket disconnected:", reason);
     });
   }
 
@@ -29,20 +96,6 @@ class SocketService {
 
     this.socket.connect();
     this.initialized = true;
-
-    this.socket.on("connect", () => {
-      console.log("🟢 Socket connected:", this.socket.id);
-      
-      const savedRoom = localStorage.getItem("roomCode");
-      const savedPlayer = localStorage.getItem("playerId");
-      if (savedRoom && savedPlayer) {
-        this.reconnect(savedRoom, savedPlayer);
-      }
-    });
-
-    this.socket.on("disconnect", (reason) => {
-      console.log("🔴 Socket disconnected:", reason);
-    });
   }
 
   disconnect() {
@@ -57,7 +110,7 @@ class SocketService {
   }
 
   onCharacterList(callback: (list: CharacterType[]) => void) {
-    this.socket.on("characterListUpdate", callback);
+    this.socket.on("characterListUpdate", guarded("characterListUpdate", sanitizeCharacterList, callback));
   }
 
   closeRoom(roomCode: string, playerId: string) {
@@ -68,8 +121,11 @@ class SocketService {
     this.socket.emit("joinRoom", { roomCode, name });
   }
 
+  // Reclaims a seat. The server requires the secret token it gave this player.
   reconnect(roomCode: string, playerId: string) {
-    this.socket.emit("reconnectPlayer", { roomCode, playerId });
+    const { reconnectToken } = loadSession();
+    this.rejoinSent = true;
+    this.socket.emit("reconnectPlayer", { roomCode, playerId, ...(reconnectToken ? { reconnectToken } : {}) });
   }
 
   leaveRoom(roomCode: string, playerId: string) {
@@ -169,11 +225,11 @@ class SocketService {
   }
 
   onGuptochorResult(cb: (data: { targetName: string, alliance: string }) => void) {
-    this.socket.on("guptochorResult", cb);
+    this.socket.on("guptochorResult", guarded("guptochorResult", sanitizeGuptochorResult, cb));
   }
 
-  onRoomJoined(cb: (data: RoomJoinedPayload) => void) {
-    this.socket.on("roomJoined", cb);
+  onRoomJoined(cb: (data: CleanRoomJoined) => void) {
+    this.socket.on("roomJoined", guarded("roomJoined", sanitizeRoomJoined, cb));
   }
 
   onRoomDissolved(cb: () => void) {
@@ -181,19 +237,25 @@ class SocketService {
   }
 
   onRoomUpdated(cb: (room: Room) => void) {
-    this.socket.on("roomUpdated", cb);
+    this.socket.on("roomUpdated", guarded("roomUpdated", sanitizeRoom, cb));
   }
 
   onGeneralAnimation(cb: (data: { name: string }) => void) {
-    this.socket.on("triggerGeneralAnimation", cb);
+    this.socket.on("triggerGeneralAnimation", guarded("triggerGeneralAnimation", sanitizeGeneralAnimation, cb));
   }
 
   onGameUpdated(cb: (data: { room: Room }) => void) {
-    this.socket.on("gameUpdated", cb);
+    this.socket.on(
+      "gameUpdated",
+      guarded("gameUpdated", (raw) => {
+        const room = sanitizeRoom((raw as { room?: unknown } | null)?.room);
+        return room ? { room } : null;
+      }, cb),
+    );
   }
 
   onError(cb: (msg: string) => void) {
-    this.socket.on("errorMessage", cb);
+    this.socket.on("errorMessage", (raw: unknown) => cb(sanitizeErrorMessage(raw)));
   }
 
   onKicked(cb: () => void) {
@@ -203,7 +265,7 @@ class SocketService {
   onNotification(
     callback: (data: { message: string; type: string; requesterId?: string; targetId?: string }) => void,
   ) {
-    this.socket.on("notification", callback);
+    this.socket.on("notification", guarded("notification", sanitizeNotification, callback));
   }
 
   requestCharacterList() {
@@ -215,7 +277,7 @@ class SocketService {
   }
   
   offAll() {
-    this.socket.removeAllListeners();
+    GAME_EVENTS.forEach((event) => this.socket.off(event));
   }
 
   offRoomJoined() { this.socket.off("roomJoined"); }
