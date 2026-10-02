@@ -12,6 +12,8 @@ interface GameLauncherProps {
   primaryBtn: React.CSSProperties;
   activeCount: number;
   characterList: CharacterType[];
+  // Inside a war-room panel: no outer margin.
+  embedded?: boolean;
 }
 
 const GameLauncher: React.FC<GameLauncherProps> = ({
@@ -23,7 +25,8 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   onToggleDisableSecretIntelligence,
   primaryBtn,
   activeCount,
-  characterList
+  characterList,
+  embedded
 }) => {
   const [isPickingCharacters, setIsPickingCharacters] = useState(false);
   const [selectedCharIds, setSelectedCharIds] = useState<number[]>([1, 8]);
@@ -98,7 +101,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   });
 
   return (
-    <div style={{ textAlign: "center", marginBottom: "30px" }}>
+    <div style={{ textAlign: "center", marginBottom: embedded ? 0 : "30px" }}>
       <p style={{ color: isInvalid && isPreGame ? "#ff7675" : "#aaa", fontSize: "18px", fontFamily: "'EB Garamond', serif", fontStyle: "italic", marginBottom: "15px" }}>
         {isPreGame
           ? (isInvalid ? `Draft 5 to 10 operatives.` : `Battalion ready: ${activeCount}`)

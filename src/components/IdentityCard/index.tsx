@@ -9,9 +9,11 @@ interface IdentityCardProps {
   disableSecretIntelligence?: boolean;
   gameStarted?: boolean;
   isFinal?: boolean;
+  // Inside a war-room column: no outer margin.
+  embedded?: boolean;
 }
 
-const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, disableSecretIntelligence, gameStarted, isFinal }) => {
+const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, disableSecretIntelligence, gameStarted, isFinal, embedded }) => {
 
 if (!gameStarted) return null;
 
@@ -34,7 +36,7 @@ return (
     aria-label={isObserver ? "Toggle observer card" : "Toggle identity card"}
     style={{
       perspective: "1000px",
-      margin: "25px 0",
+      margin: embedded ? 0 : "25px 0",
       cursor: "pointer",
       height: isFinal ? "280px" : "450px",
     }}

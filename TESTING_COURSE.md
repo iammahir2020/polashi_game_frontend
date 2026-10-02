@@ -31,7 +31,15 @@ green without any change to the tests themselves (their titles still say "FAILS"
 you next touch the course). Current: `npm test` 257 passing, `npm run e2e` all green with the
 backend running locally.
 
-Last worked: 2026-09-06.
+**Update 2026-10-03 (wide-screen layout, branch `feat/wide-screen-layout`):** worth reading as a
+worked example of testing *responsive* code. jsdom has no `window.matchMedia`, so every component
+test sees the phone layout; `tests/matchMedia.ts` is a fake screen you can resize. See
+`src/hooks/useLayout.test.ts` (breakpoints, resize, unsubscribe on unmount), the "on a wide screen"
+block at the end of `GameDashboard/index.test.tsx`, plus `VotingSystem`, `PlayerRoster`,
+`WarRoom/phase` and `WarRoom/WideHeader` tests. The 5-player capstone now plays through the desktop
+layout (Playwright's Desktop Chrome is 1280px wide). Current: `npm test` 294 passing, e2e 42/42.
+
+Last worked: 2026-10-03.
 
 ---
 
@@ -586,6 +594,7 @@ unchanged (37 pre-existing).
 | 2026-09-06 | L5 capstone done | Read the real game rules (startGame, assignGeneral, castVote resolution, attemptAssassination) before writing anything. Caught and corrected a wrong assumption (Mir Jafor/Mir Madan team assignments were backwards from what I assumed) by checking the actual backend data. Confirmed characters are genuinely redacted per-player server-side, meaning "always vote SUCCESS" is the only deterministic strategy (SABOTAGE's outcome depends on hidden team data). Built incrementally against the real backend with throwaway diagnostic scripts at each stage (room creation, character picker DOM, team proposal, voting, round repeat, Mir Jafor phase), catching a real locator ambiguity (BattalionSelector buttons vs. PlayerRoster's unlabeled spans) along the way. Added `fivePlayerPages` fixture. 1 test (~36s), verified 3/3 consecutive passes with different random assignments each run. 9/9 e2e total (8 passing + 1 intentionally red), 187 Vitest unchanged, typecheck clean, lint unchanged (37) | Debug one deliberately broken test with `--ui` and the trace viewer — the last Level 5 item |
 | 2026-09-06 | **Level 5 fully done** | Set up temporary `e2e/broken-example.spec.ts` (subtle placeholder-text typo, confirmed it failed cleanly not hung, confirmed `--trace on` produces a real `trace.zip`) and handed the actual debugging off — `--ui` mode and the trace viewer are interactive GUI tools, not something to fake through text. Mahir found the mismatch and fixed it himself, deleted the practice file. Also fixed a stale progress-table bug while closing out: the top-of-file summary table still showed Level 3 as `[~]` and Level 4 as `[ ]` despite both being long done in the detailed sections — corrected all three (3, 4, 5) to `[x]`. Deliberately not starting Level 6 — Mahir has something else to do first | Whatever Mahir needs next; resume at Level 6 (GitHub Actions) afterward |
 | 2026-10-02 | (outside the course) | Security hardening fixed Steps.md #2, #3, #4, #6, #7, #8; those tests are green now. New tests for payload checks, name rules, rejoin storage, error boundary, CSP | Rename the old "FAILS" titles; resume Level 6 |
+| 2026-10-03 | (outside the course) | Tablet/desktop layout. New: `tests/matchMedia.ts` (fake resizable screen), tests for `useLayout`, the inline vote, the always-open roster, the war-room header and phase line, and the dashboard's wide arrangement (37 new). The capstone caught a real layering bug (the deciding verdict hid under Mir Jafor's screen) | Rename the old "FAILS" titles; resume Level 6 |
 
 ---
 

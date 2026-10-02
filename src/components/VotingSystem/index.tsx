@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Room, VotingState } from '../../types/game';
 import { useOverlayA11y } from '../../hooks/useOverlayA11y';
 import {
@@ -18,6 +18,9 @@ interface VotingSystemProps {
   handleStartVote: () => void;
   handleStartSecretVote: () => void;
   primaryBtn: React.CSSProperties;
+  // Tablet/desktop: the vote plays out in a panel of the war room, so the
+  // roster and your role stay in view. Phones keep the full-screen overlay.
+  inline?: boolean;
 }
 
 type ActiveVotingProps = Omit<VotingSystemProps, 'room'> & {
@@ -38,7 +41,8 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
   handleClearVote,
   handleStartVote,
   handleStartSecretVote,
-  primaryBtn
+  primaryBtn,
+  inline = false
 }) => {
   const [pendingVote, setPendingVote] = useState<'yes' | 'no' | null>(null);
 
@@ -72,19 +76,32 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
     }
   };
 
-  useOverlayA11y({ isActive: true, onClose: handleOverlayClose, containerRef: overlayRef });
-  
+  // Focus trap and Escape only for the full-screen overlay; inline, the rest
+  // of the page stays usable.
+  useOverlayA11y({ isActive: !inline, onClose: handleOverlayClose, containerRef: overlayRef });
 
+  // Inline, bring the vote into view when it opens and when its verdict lands,
+  // since it may start below the fold of the war room.
+  useEffect(() => {
+    if (!inline) return;
+    overlayRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [inline, room.voting.type, room.voting.active]);
+
+  // Spacing: the full-screen overlay has room to breathe; the inline panel keeps
+  // the choices above the fold.
+  const space = (overlay: string, inlineValue: string) => (inline ? inlineValue : overlay);
+
+  const containerProps = inline
+    ? { role: "region", "aria-label": "Voting session", style: inlineContainerStyle }
+    : {
+        role: "dialog", "aria-modal": true, "aria-label": "Voting session", tabIndex: -1,
+        style: overlayContainerStyle,
+      };
 
   return (
-    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Voting session" tabIndex={-1} style={{
-      position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-      backgroundColor: "rgba(0, 0, 0, 0.92)", backdropFilter: "blur(8px)",
-      zIndex: 20001, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center"
-    }}>
+    <div ref={overlayRef} {...containerProps}>
       {/* 1. HEADER SECTION */}
-      <div style={{ marginBottom: "30px" }}>
+      <div style={{ marginBottom: space("30px", "12px") }}>
         <div style={{ color: "#c5a059", fontSize: "12px", letterSpacing: "4px", textTransform: "uppercase", marginBottom: "8px" }}>
           {isTeamApproval ? "Royal Court" : "Battlefield"}
         </div>
@@ -100,7 +117,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
       </div>
 
       {/* 2. TEAM BATTALION DISPLAY */}
-      <div style={{ margin: "20px 0" }}>
+      <div style={{ margin: space("20px 0", "4px 0 12px") }}>
         <p style={{ color: "#666", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase" }}>
           Proposed Battalion:
         </p>
@@ -124,7 +141,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
           {/* 3A. ACTIVE VOTING VIEW */}
           {(isTeamApproval || isOnMission) ? (
             <>
-              <p style={{ color: "#888", fontFamily: "'EB Garamond', serif", fontSize: "18px", fontStyle: "italic", marginBottom: "30px" }}>
+              <p style={{ color: "#888", fontFamily: "'EB Garamond', serif", fontSize: "18px", fontStyle: "italic", marginBottom: space("30px", "14px") }}>
                 {isTeamApproval
                   ? "The assembly awaits your decision. Choose wisely."
                   : "The fate of the mission rests in your hands. Act in secret."}
@@ -133,13 +150,13 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
               <div style={{
                 backgroundColor: "rgba(255,255,255,0.03)", padding: "15px 30px", borderRadius: "50px",
                 border: "1px solid rgba(197, 160, 89, 0.2)", color: "#c5a059", fontSize: "14px",
-                marginBottom: "40px", display: 'inline-block'
+                marginBottom: space("40px", "18px"), display: 'inline-block'
               }}>
                 Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{votesCastCount(currentVotes)}</span> / {totalRequiredVotes}
               </div>
 
               {pendingVoters.length > 0 && (
-                <div style={{ marginBottom: "24px", maxWidth: "680px" }}>
+                <div style={{ marginBottom: space("24px", "16px"), maxWidth: "680px" }}>
                   <p style={{ color: "#9a9a9a", fontSize: "11px", letterSpacing: "1.6px", textTransform: "uppercase", marginBottom: "10px" }}>
                     Awaiting Votes From
                   </p>
@@ -194,7 +211,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
             </>
           ) : (
             /* SPECTATOR VIEW */
-            <div style={{ padding: "40px", animation: "pulseOpacity 3s infinite" }}>
+            <div style={{ padding: space("40px", "12px"), animation: "pulseOpacity 3s infinite" }}>
               {!isTeamApproval && pendingSecretVoters.length > 0 && (
                 <div style={{ marginBottom: "20px", maxWidth: "680px" }}>
                   <p style={{ color: "#9a9a9a", fontSize: "11px", letterSpacing: "1.6px", textTransform: "uppercase", marginBottom: "10px" }}>
@@ -269,7 +286,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
       )}
 
       {isGameMaster && room.voting.active && (
-        <div style={{ marginTop: "40px" }}>
+        <div style={{ marginTop: space("40px", "22px") }}>
           <button onClick={handleClearVote} className="cancel-btn">🚫 Cancel Voting Session</button>
         </div>
       )}
@@ -316,13 +333,13 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
                 };
                 setPendingVote(null);
               }}
-              style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "12px 40px" }}
+              style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "12px 40px", whiteSpace: "nowrap" }}
             >
               CONFIRM
             </button>
             <button
               onClick={() => setPendingVote(null)}
-              style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #444", padding: "12px 40px" }}
+              style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #444", padding: "12px 40px", whiteSpace: "nowrap" }}
             >
               GO BACK
             </button>
@@ -333,6 +350,21 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
       <VotingStyles />
     </div>
   );
+};
+
+const overlayContainerStyle: React.CSSProperties = {
+  position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+  backgroundColor: "rgba(0, 0, 0, 0.92)", backdropFilter: "blur(8px)",
+  zIndex: 20001, display: "flex", flexDirection: "column",
+  alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center"
+};
+
+const inlineContainerStyle: React.CSSProperties = {
+  position: "relative", display: "flex", flexDirection: "column", alignItems: "center",
+  textAlign: "center", padding: "32px 24px",
+  backgroundColor: "rgba(10, 10, 10, 0.9)",
+  border: "1px solid rgba(197, 160, 89, 0.55)", borderRadius: "16px",
+  boxShadow: "0 0 40px rgba(197, 160, 89, 0.12), 0 18px 40px rgba(0, 0, 0, 0.5)",
 };
 
 // --- SMALL HELPER COMPONENTS ---
