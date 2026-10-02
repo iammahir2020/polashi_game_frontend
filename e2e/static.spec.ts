@@ -104,3 +104,13 @@ test.describe('the content security policy does not block the app', () => {
     expect(await violations(page)).toEqual([]);
   });
 });
+
+test('Google Search Console verification tag is in the served HTML, exactly once', async ({ request }) => {
+  for (const path of ['/', '/how-to-play']) {
+    const html = await (await request.get(path)).text();
+    const tags = html.match(/<meta name="google-site-verification" content="([^"]+)"/g) ?? [];
+    expect(tags, path).toEqual([
+      '<meta name="google-site-verification" content="N7FTTPpCkAag0cAJWyCs3R5KMLhydi7yOCzpWAMJXS0"',
+    ]);
+  }
+});

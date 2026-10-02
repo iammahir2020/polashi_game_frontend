@@ -5,12 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
 
 // Google reads the verification tag from the served HTML, not the rendered
-// page, so it is injected at build time rather than by SeoHead.
+// page, so it is injected at build time rather than by SeoHead. The live
+// site's tag is already in index.html; this only adds one (e.g. for another
+// domain) when index.html has none, so the page never carries two.
 function googleSiteVerification(token: string | undefined): Plugin {
   return {
     name: 'google-site-verification',
-    transformIndexHtml() {
-      if (!token) return []
+    transformIndexHtml(html) {
+      if (!token || html.includes('name="google-site-verification"')) return []
       return [
         {
           tag: 'meta',
