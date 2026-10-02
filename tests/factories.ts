@@ -81,7 +81,6 @@ export function makeRoom(overrides: Partial<Room> = {}): Room {
   return {
     roomCode: 'TEST01',
     players: [],
-    turnIndex: 0,
     currentRound: 1,
     scoreGreen: 0,
     scoreRed: 0,

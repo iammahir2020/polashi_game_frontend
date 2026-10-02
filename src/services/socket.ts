@@ -41,9 +41,7 @@ function guarded<T>(event: string, clean: (raw: unknown) => T | null, cb: (data:
 const GAME_EVENTS = [
   "roomJoined",
   "roomUpdated",
-  "gameUpdated",
   "errorMessage",
-  "kicked",
   "roomDissolved",
   "characterListUpdate",
   "triggerGeneralAnimation",
@@ -96,13 +94,6 @@ class SocketService {
 
     this.socket.connect();
     this.initialized = true;
-  }
-
-  disconnect() {
-    if (this.socket.connected) {
-      this.socket.disconnect();
-      this.initialized = false;
-    }
   }
 
   createRoom(name: string) {
@@ -244,22 +235,8 @@ class SocketService {
     this.socket.on("triggerGeneralAnimation", guarded("triggerGeneralAnimation", sanitizeGeneralAnimation, cb));
   }
 
-  onGameUpdated(cb: (data: { room: Room }) => void) {
-    this.socket.on(
-      "gameUpdated",
-      guarded("gameUpdated", (raw) => {
-        const room = sanitizeRoom((raw as { room?: unknown } | null)?.room);
-        return room ? { room } : null;
-      }, cb),
-    );
-  }
-
   onError(cb: (msg: string) => void) {
     this.socket.on("errorMessage", (raw: unknown) => cb(sanitizeErrorMessage(raw)));
-  }
-
-  onKicked(cb: () => void) {
-    this.socket.on("kicked", cb);
   }
 
   onNotification(
@@ -280,12 +257,7 @@ class SocketService {
     GAME_EVENTS.forEach((event) => this.socket.off(event));
   }
 
-  offRoomJoined() { this.socket.off("roomJoined"); }
-  offRoomUpdated() { this.socket.off("roomUpdated"); }
-  offGameUpdated() { this.socket.off("gameUpdated"); }
   offGeneralAnimation() { this.socket.off("triggerGeneralAnimation"); }
-  offError() { this.socket.off("errorMessage"); }
-  offKicked() { this.socket.off("kicked"); }
   offRoomDissolved() { this.socket.off("roomDissolved"); }
   offGuptochorResult() { this.socket.off("guptochorResult"); }
   offNotification() { this.socket.off("notification"); }

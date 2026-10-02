@@ -34,7 +34,6 @@ export function makeMockSocketService() {
       id: 'mock-socket-id',
     },
     connect: vi.fn(),
-    disconnect: vi.fn(),
     reconnect: vi.fn(),
 
     createRoom: vi.fn(),

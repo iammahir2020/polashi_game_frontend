@@ -243,3 +243,26 @@ describe('IdentityCard', () => {
     });
   });
 });
+
+/**
+ * Nothing on the card may load from another website.
+ *
+ * The site's Content Security Policy (vercel.json) only lets images come from
+ * the site itself. The card used to pull a paper texture from
+ * transparenttextures.com and a fallback badge from flaticon.com: the browser
+ * blocked both, so they never showed and each one logged a policy violation.
+ * jsdom doesn't enforce the policy, so this test checks the source of the
+ * problem instead: no external address anywhere in what the card renders,
+ * including its <style> block, for a player and for an observer.
+ */
+describe('IdentityCard: only same-site assets', () => {
+  it.each([
+    ['a player', makeCharacter()],
+    ['an observer', null],
+  ])('renders no external URL for %s', (_who, character) => {
+    const { container } = render(
+      <IdentityCard isRevealed setIsRevealed={vi.fn()} gameStarted character={character} secretIntel={[]} />,
+    );
+    expect(container.innerHTML).not.toMatch(/https?:\/\//);
+  });
+});
