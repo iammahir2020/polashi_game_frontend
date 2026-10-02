@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Room } from '../../types/game';
+import { cleanNameInput, cleanRoomCode, NAME_MAX, ROOM_CODE_MAX } from '../../lib/names';
 
 interface EnlistmentFormProps {
   room: Room | null;
@@ -55,7 +56,9 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
             animation: !name ? 'goldPulse 2s infinite' : 'none'
           }}
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          maxLength={NAME_MAX * 2}
+          autoComplete="nickname"
+          onChange={(e) => setName(cleanNameInput(e.target.value))}
         />
       </div>
 
@@ -117,7 +120,10 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
                 opacity: loadingAction ? 0.5 : 1
               }}
               value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              maxLength={ROOM_CODE_MAX}
+              autoComplete="off"
+              autoCapitalize="characters"
+              onChange={(e) => setRoomCode(cleanRoomCode(e.target.value))}
             />
             <button
               style={{
