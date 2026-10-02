@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 
 interface GameLoaderProps {
     message?: string;
@@ -6,67 +6,51 @@ interface GameLoaderProps {
     onProceed?: () => void;
   }
 
+// Landscape screens tall enough to fit the content under the wide scene's
+// painted title (desktops, laptops, tablets) get the wide scene; portrait
+// screens and phones held sideways get the vertical one. The browser downloads
+// only the one it shows.
+const WIDE_SCREEN = '(min-aspect-ratio: 1/1) and (min-height: 500px)';
+
 const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with Command..." , showButton=false, onProceed}) => {
-  const shouldLoadVideo = useMemo(() => {
-    const connection = (navigator as Navigator & {
-      connection?: { saveData?: boolean; effectiveType?: string };
-    }).connection;
-
-    if (connection?.saveData) {
-      return false;
-    }
-
-    const effectiveType = connection?.effectiveType;
-    if (effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g') {
-      return false;
-    }
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return false;
-    }
-
-    return true;
-  }, []);
-
   return (
-    <div style={{
+    <div className="loader-root" style={{
       height: "100dvh", width: "100vw",
       display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
+      alignItems: "center",
       position: "fixed", top: 0, left: 0, zIndex: 9999, // Layer it over everything
       backgroundColor: "#000",
-      backgroundSize: "cover", backgroundPosition: "center",
       fontFamily: "'Cinzel', serif", overflow: "hidden"
     }}>
-      {/* Heavy media is disabled on slow/data-saver connections */}
-      {shouldLoadVideo ? (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          poster="/polashi_bg.webp"
+      {/* Shown while the image loads, or if it can't */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          background:
+            "radial-gradient(circle at 50% 20%, rgba(197,160,89,0.22), transparent 45%), linear-gradient(180deg, #111 0%, #050505 100%)",
+        }}
+      />
+      <picture>
+        <source media={WIDE_SCREEN} srcSet="/polashi_bg_wide.webp" type="image/webp" />
+        <source media={WIDE_SCREEN} srcSet="/polashi_bg_wide.jpg" />
+        <source srcSet="/polashi_bg.webp" type="image/webp" />
+        <img
+          className="loader-bg"
+          src="/polashi_bg.jpg"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          fetchPriority="high"
           style={{
-            position: "absolute", top: "50%", left: "50%",
-            minWidth: "110%", minHeight: "110%",
-            transform: "translate(-50%, -50%) scale(0.95)",
-            objectFit: "cover", zIndex: 0, filter: "blur(1px)"
-          }}
-        >
-          <source src="/polashi_bg.mp4" type="video/mp4" />
-        </video>
-      ) : (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
+            position: "absolute", inset: 0,
+            width: "100%", height: "100%",
+            objectFit: "cover",
             zIndex: 0,
-            background:
-              "radial-gradient(circle at 50% 20%, rgba(197,160,89,0.22), transparent 45%), linear-gradient(180deg, #111 0%, #050505 100%)",
           }}
         />
-      )}
+      </picture>
 
       {/* Overlay */}
       <div style={{
@@ -102,6 +86,15 @@ const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with C
       </div>
 
       <style>{`
+        /* Portrait: content centred over the scene. Landscape: the wide scene
+           has the title painted on its left, so the image keeps its left edge
+           and the content sits low, in the open ground between the armies. */
+        .loader-root { justify-content: center; }
+        .loader-bg { object-position: center; }
+        @media ${WIDE_SCREEN} {
+          .loader-root { justify-content: flex-end; padding-bottom: max(32px, 9vh); }
+          .loader-bg { object-position: left center; }
+        }
         .spinner {
           width: 40px; height: 40px;
           border: 3px solid rgba(197, 160, 89, 0.1);

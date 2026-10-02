@@ -54,7 +54,7 @@ test('manifest and every referenced image are served', async ({ request }) => {
   const images = [
     ...manifest.icons.map((icon: { src: string }) => icon.src),
     '/favicon.ico', '/favicon-32.png', '/apple-touch-icon.png', '/og-image.jpg',
-    '/polashi_bg.webp', '/polashi_bg.jpg', '/polashi_bg.mp4',
+    '/polashi_bg.webp', '/polashi_bg.jpg', '/polashi_bg_wide.webp', '/polashi_bg_wide.jpg',
     '/Nawab.png', '/EIC.png', '/Observer.png',
     '/green_seal.png', '/red_seal.png', '/green_card.png', '/red_card.png',
   ]
@@ -90,7 +90,7 @@ test.describe('the content security policy does not block the app', () => {
   const violations = (page: import('@playwright/test').Page) =>
     page.evaluate(() => (window as typeof window & { __cspViolations?: string[] }).__cspViolations ?? []);
 
-  test('splash, video poster, fonts, enlistment screen and socket', async ({ page }) => {
+  test('splash background, fonts, enlistment screen and socket', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'ENTER POLASHI' }).click();
     await expect(page.getByPlaceholder('Enter Alias...')).toBeVisible();
