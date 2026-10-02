@@ -205,6 +205,8 @@ interface PlayerRosterProps {
   // Selection Props
   selectedActiveIds: string[];
   onToggleActive: (id: string) => void;
+  // Tablet/desktop sidebar: the list is always shown, no dropdown.
+  alwaysOpen?: boolean;
 }
 
 const PlayerRoster: React.FC<PlayerRosterProps> = ({
@@ -217,17 +219,36 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
   guptochorUsed,
   onInvestigate,
   selectedActiveIds,
-  onToggleActive
+  onToggleActive,
+  alwaysOpen = false
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenState, setIsOpen] = useState(false);
+  const isOpen = alwaysOpen || isOpenState;
 
   if (players.length === 0) return null;
 
   // Determine if the person viewing this component is an observer
   const amIObserver = gameStarted && !selectedActiveIds.includes(playerId || "");
 
+  const summary = (
+    <div style={{
+      fontSize: "13px",
+      color: isOpen ? "#c5a059" : "#aaa",
+      textTransform: "uppercase",
+      letterSpacing: "2px",
+      fontFamily: "'Cinzel', serif",
+      margin: 0
+    }}>
+      {amIObserver ? "Spymaster View: " : "Marshalled: "}
+      <span style={{ color: "white", fontWeight: "bold" }}>{selectedActiveIds.length} Active</span>
+    </div>
+  );
+
   return (
-    <div style={{ marginTop: '20px' }}>
+    <div style={{ marginTop: alwaysOpen ? 0 : '20px' }}>
+      {alwaysOpen ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "0 0 4px" }}>{summary}</div>
+      ) : (
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
@@ -245,23 +266,14 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
           outline: "none"
         }}
       >
-        <div style={{
-          fontSize: "13px",
-          color: isOpen ? "#c5a059" : "#aaa",
-          textTransform: "uppercase",
-          letterSpacing: "2px",
-          fontFamily: "'Cinzel', serif",
-          margin: 0
-        }}>
-          {amIObserver ? "Spymaster View: " : "Marshalled: "} 
-          <span style={{ color: "white", fontWeight: "bold" }}>{selectedActiveIds.length} Active</span>
-        </div>
+        {summary}
         <span style={{ color: "#c5a059", fontSize: "12px", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}>▼</span>
       </button>
+      )}
 
       <div style={{
-        maxHeight: isOpen ? "1000px" : "0px",
-        overflow: "hidden",
+        maxHeight: alwaysOpen ? "none" : isOpen ? "1000px" : "0px",
+        overflow: alwaysOpen ? "visible" : "hidden",
         transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
         opacity: isOpen ? 1 : 0,
         marginTop: isOpen ? "12px" : "0px"

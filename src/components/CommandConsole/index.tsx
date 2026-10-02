@@ -9,6 +9,8 @@ interface CommandConsoleProps {
   handleStartVote: () => void;
   handleResetGame: () => void;
   handleDissolve: () => void;
+  // Inside a war-room column: no outer margin.
+  embedded?: boolean;
 }
 
 const CommandConsole: React.FC<CommandConsoleProps> = ({
@@ -18,7 +20,8 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
   toggleLock,
   handleStartVote,
   handleResetGame,
-  handleDissolve
+  handleDissolve,
+  embedded
 }) => {
   // Guard clause: Only the Game Master should ever see this
   if (!isGameMaster) return null;
@@ -27,7 +30,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
 
   return (
     <div style={{
-      marginTop: 40,
+      marginTop: embedded ? 0 : 40,
       padding: "24px",
       backgroundColor: room.locked ? "#1a1610" : "#111814",
       borderRadius: "16px",

@@ -28,7 +28,8 @@ vi.mock('../../services/socket', () => ({
 
 import GameDashboard from './index';
 import { socketService } from '../../services/socket'; // resolves to the mock above
-import { makePlayer, makeRoom } from '../../../tests/factories';
+import { makePlayer, makeRoom, makeVotingState } from '../../../tests/factories';
+import { installMatchMedia } from '../../../tests/matchMedia';
 
 /**
  * `GameDashboard` doesn't call `socketService.getRoom()` and use a result —
@@ -274,5 +275,92 @@ describe('GameDashboard', () => {
       // (Steps.md Step 4), instead of needing to be rewritten afterward.
       expect(screen.getByRole('button', { name: 'LINK COPIED' })).toBeInTheDocument();
     });
+  });
+});
+
+/**
+ * The tablet/desktop war room.
+ *
+ * Every test above runs in plain jsdom, which has no `window.matchMedia`, so
+ * `useLayout` reports "compact" and they all exercise the PHONE layout. Here
+ * we install a fake 1440px screen (see `tests/matchMedia.ts`) to check that
+ * the same dashboard, fed the same server events, switches to the wide
+ * arrangement, and that the one place the two layouts deliberately differ
+ * (where a vote is shown) follows the rules:
+ *   - an ordinary vote plays out inline, in a panel;
+ *   - the vote that ends the campaign stays a full-screen overlay, so its
+ *     verdict sits on top of Mir Jafor's phase / the result, as on phones.
+ */
+describe('GameDashboard on a wide screen', () => {
+  let fakeScreen: ReturnType<typeof installMatchMedia>;
+  beforeEach(() => { fakeScreen = installMatchMedia(1440); });
+  afterEach(() => fakeScreen.uninstall());
+
+  // Same trick as the tests above: hand GameDashboard a room as if the server
+  // had just sent "roomJoined".
+  function joinWith(room: ReturnType<typeof makeRoom>, playerId: string) {
+    act(() => {
+      latestCallbackGivenTo(socketService.onRoomJoined)({
+        roomCode: room.roomCode, room, role: 'player', playerId, isGameMaster: false,
+      });
+    });
+  }
+
+  const me = makePlayer({ name: 'Clive' });
+  const players = [makePlayer({ name: 'Siraj', isGameMaster: true }), me, makePlayer(), makePlayer(), makePlayer()];
+  const inGame = (overrides: Parameters<typeof makeRoom>[0] = {}) => makeRoom({
+    roomCode: 'WAR001', players, activePlayerIds: players.map((p) => p.id), gameStarted: true, ...overrides,
+  });
+
+  it('greets a visitor with the hero text beside the enlistment form', () => {
+    render(<GameDashboard />);
+    expect(screen.getByText(/Trust no one in the Nawab's camp/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter Alias...')).toBeInTheDocument();
+  });
+
+  it('replaces the phone drawer with an always-visible header and roster panel', () => {
+    render(<GameDashboard />);
+    joinWith(inGame(), me.id);
+
+    // The phone layout's collapsible drawer is gone...
+    expect(screen.queryByRole('button', { name: 'Toggle operative drawer' })).toBeNull();
+    // ...its contents are in the header instead, always visible.
+    expect(screen.getByText('WAR001')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /abandon post/i })).toBeInTheDocument();
+    // The roster has its own labelled panel (a <section> is a "region").
+    expect(screen.getByRole('region', { name: 'Roster' })).toBeInTheDocument();
+  });
+
+  it('shows an ordinary vote inline, so the rest of the war room stays usable', () => {
+    render(<GameDashboard />);
+    joinWith(inGame({ voting: makeVotingState({ active: true, type: 'teamApproval', votes: {} }) }), me.id);
+
+    expect(screen.getByRole('region', { name: 'Voting session' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Voting session' })).toBeNull();
+  });
+
+  it("counts the battalion the server dealt in, not this device's draft", () => {
+    // Six players joined, but the host stood one down: five play, one
+    // observes. Only the host's device knows the draft; everyone else's draft
+    // list holds all six, so once the game starts the roster must count from
+    // the room the server sent instead (this used to say "6 Active").
+    const watcher = makePlayer({ name: 'Olu' });
+    render(<GameDashboard />);
+    joinWith(inGame({ players: [...players, watcher], activePlayerIds: players.map((p) => p.id) }), watcher.id);
+
+    expect(screen.getByText('5 Active')).toBeInTheDocument();
+  });
+
+  it('keeps the deciding verdict full-screen, above the Mir Jafor phase', () => {
+    render(<GameDashboard />);
+    // The third successful mission just closed: the verdict is still showing,
+    // and the game has moved on to Mir Jafor's turn.
+    joinWith(inGame({
+      gameStatus: 'MIR_JAFOR_TURN',
+      voting: makeVotingState({ active: false, type: 'missionOutcome', result: 'Yes', votes: { v1: 'yes' } }),
+    }), me.id);
+
+    expect(screen.getByRole('dialog', { name: 'Voting session' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Voting session' })).toBeNull();
   });
 });

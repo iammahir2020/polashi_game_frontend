@@ -25,6 +25,13 @@ import MirJaforPhase from "../MirJaforPhase";
 import ObserverScreen from "../ObserverScreen";
 import CreditFooter from "../CreditFooter";
 import { uiButtonGhost, uiButtonGold } from "../../style/ui";
+import { useLayout } from "../../hooks/useLayout";
+import Backdrop from "../WarRoom/Backdrop";
+import CampaignPanel from "../WarRoom/CampaignPanel";
+import LandingHero from "../WarRoom/LandingHero";
+import Panel from "../WarRoom/Panel";
+import WideHeader from "../WarRoom/WideHeader";
+import { columnStyle, mutedTextStyle } from "../WarRoom/styles";
 
 type DialogState = {
   kind: "notice" | "confirm";
@@ -35,6 +42,7 @@ type DialogState = {
 
 export default function GameDashboard() {
   const isConnectedToSocket = useNetworkStatus();
+  const layout = useLayout();
   const [room, setRoom] = useState<Room | null>(null);
   const [roomCode, setRoomCode] = useState(() => loadSession().roomCode || "");
   const [name, setName] = useState("");
@@ -627,21 +635,132 @@ export default function GameDashboard() {
 
   const isObserver = room && room.gameStarted && !room.activePlayerIds?.includes(playerId || "");
 
+  // --- Pieces of the screen ---------------------------------------------------
+  // Built here once and arranged below: the phone layout stacks them in one
+  // column, the tablet and desktop layouts place them in columns.
 
-  return (
-    <div style={containerStyle}>
+  const renderRoster = (alwaysOpen = false) => room && (
+    <PlayerRoster
+      players={room.players}
+      playerId={playerId}
+      isGameMaster={isGameMaster}
+      gameStarted={room.gameStarted}
+      kickPlayer={kickPlayer}
+      guptochorId={room.guptochorId}
+      guptochorUsed={room.guptochorUsed}
+      onInvestigate={handleInvestigate}
 
-      <GameHeader
-        newConnection={newConnection}
-        isConnectedToSocket={isConnectedToSocket}
-      />
+      // Before the game: the host's draft. Once it starts: the battalion the
+      // server actually dealt in (the draft only exists on the host's device).
+      selectedActiveIds={room.gameStarted ? room.activePlayerIds : selectedActiveIds}
+      onToggleActive={toggleActivePlayer}
+      alwaysOpen={alwaysOpen}
+    />
+  );
 
+  const renderLauncher = (embedded = false) => room && (
+    <GameLauncher
+      room={room}
+      isGameMaster={isGameMaster}
+      handleStartGame={handleStartGame}
+      handleAssignGeneral={handleAssignGeneral}
+      disableSecretIntelligence={!!room.disableSecretIntelligence}
+      onToggleDisableSecretIntelligence={handleToggleDisableSecretIntelligence}
+      primaryBtn={primaryBtn}
+
+      activeCount={selectedActiveIds.length}
+      characterList={characterList}
+      embedded={embedded}
+    />
+  );
+
+  const renderConsole = (embedded = false) => room && (
+    <CommandConsole
+      room={room}
+      isGameMaster={isGameMaster}
+      playerId={playerId}
+      toggleLock={toggleLock}
+      handleStartVote={handleStartVote}
+      handleResetGame={handleResetGame}
+      handleDissolve={handleDissolve}
+      embedded={embedded}
+    />
+  );
+
+  const renderVoting = (inline = false) => room && (
+    <VotingSystem
+      room={room}
+      playerId={playerId}
+      isGameMaster={isGameMaster}
+      handleYesVote={handleYesVote}
+      handleNoVote={handleNoVote}
+      handleClearVote={handleClearVote}
+      handleStartVote={handleStartVote}
+      handleStartSecretVote={handleStartSecretVote}
+      primaryBtn={primaryBtn}
+      inline={inline}
+    />
+  );
+
+  const renderIdentity = (embedded = false) => room && (
+    <IdentityCard
+      isRevealed={isRevealed}
+      setIsRevealed={setIsRevealed}
+      gameStarted={room.gameStarted}
+      character={me?.character}
+      secretIntel={room.disableSecretIntelligence ? [] : room.secretIntel}
+      disableSecretIntelligence={!!room.disableSecretIntelligence}
+      embedded={embedded}
+    />
+  );
+
+  const renderBattalion = (embedded = false) => room && (
+    <BattalionSelector
+      room={room}
+      me={me}
+      handleTogglePlayer={handleTogglePlayer}
+      handleStartVote={handleStartVote}
+      isTurnComplete={isCurrentGeneralTurnComplete}
+      embedded={embedded}
+    />
+  );
+
+  const renderResultOverlay = () => room && (
+    <GameResultOverlay
+      room={room}
+      isGameMaster={isGameMaster}
+      handleResetGame={handleResetGame}
+      primaryBtn={primaryBtn}
+      playerId={playerId}
+      isDismissed={isResultOverlayDismissed}
+      onClose={() => setIsResultOverlayDismissed(true)}
+    />
+  );
+
+  const enlistmentForm = (
+    <EnlistmentForm
+      room={room}
+      wasKicked={wasKicked}
+      name={name}
+      setName={setName}
+      roomCode={roomCode}
+      setRoomCode={setRoomCode}
+      loadingAction={loadingAction}
+      createRoom={createRoom}
+      joinRoom={joinRoom}
+      cardStyle={cardStyle}
+      inputStyle={inputStyle}
+      primaryBtn={primaryBtn}
+    />
+  );
+
+  const alerts = (
+    <>
       <RoomLockedAlert
         error={error}
         wasKicked={wasKicked}
         cardStyle={cardStyle}
       />
-
 
       <AccessRevoked
         wasKicked={wasKicked}
@@ -654,207 +773,32 @@ export default function GameDashboard() {
           setError("");
         }}
       />
+    </>
+  );
 
-      <EnlistmentForm
-        room={room}
-        wasKicked={wasKicked}
-        name={name}
-        setName={setName}
-        roomCode={roomCode}
-        setRoomCode={setRoomCode}
-        loadingAction={loadingAction}
-        createRoom={createRoom}
-        joinRoom={joinRoom}
-        cardStyle={cardStyle}
-        inputStyle={inputStyle}
-        primaryBtn={primaryBtn}
-      />
+  // Full-screen moments, the same in every layout.
+  const generalRevealOverlay = (
+    <GeneralReveal
+      generalReveal={generalReveal}
+      onClose={() => setGeneralReveal(null)}
+    />
+  );
+  const intelPopupOverlay = (
+    <IntelPopup
+      intelPopup={intelPopup}
+      onClose={() => setIntelPopup(null)}
+    />
+  );
+  const mirJaforOverlay = room && (
+    <MirJaforPhase
+      room={room}
+      playerId={playerId!}
+      onAttemptAssassination={handleAssassination}
+    />
+  );
 
-      {room && (
-        <>
-          <OperativeDrawer
-            room={room}
-            playerId={playerId}
-            roomCode={roomCode}
-            isDrawerOpen={isDrawerOpen}
-            setIsDrawerOpen={setIsDrawerOpen}
-            handleCopy={handleCopy}
-            copiedStatus={copiedStatus}
-            leaveRoom={leaveRoom}
-          />
-
-          {isObserver ? (
-            <>
-              <ObserverScreen room={room} />
-              <GameResultOverlay
-                room={room}
-                isGameMaster={isGameMaster}
-                handleResetGame={handleResetGame}
-                primaryBtn={primaryBtn}
-                playerId={playerId}
-                isDismissed={isResultOverlayDismissed}
-                onClose={() => setIsResultOverlayDismissed(true)}
-              />
-            </>
-          ) : (
-            <>
-
-          <IdentityCard
-            isRevealed={isRevealed}
-            setIsRevealed={setIsRevealed}
-            gameStarted={room.gameStarted}
-            character={me?.character}
-            secretIntel={room.disableSecretIntelligence ? [] : room.secretIntel}
-            disableSecretIntelligence={!!room.disableSecretIntelligence}
-          />
-
-          {room.gameStarted && currentGeneral && (
-            <div
-              style={{
-                margin: "10px 0 14px",
-                padding: "10px 12px",
-                borderRadius: "10px",
-                border: "1px solid rgba(197, 160, 89, 0.45)",
-                backgroundColor: "rgba(197, 160, 89, 0.08)",
-                color: "#e7d6ad",
-                textAlign: "center",
-                fontSize: "13px",
-                letterSpacing: "0.4px"
-              }}
-            >
-              Current General: <strong>{currentGeneral.name}</strong>
-            </div>
-          )}
-
-          <BattalionSelector
-            room={room}
-            me={me}
-            handleTogglePlayer={handleTogglePlayer}
-            handleStartVote={handleStartVote}
-            isTurnComplete={isCurrentGeneralTurnComplete}
-          />
-
-          {room.gameStarted && awaitingNewGeneral && (
-            <div
-              style={{
-                margin: "8px 0 14px",
-                padding: "10px 12px",
-                borderRadius: "10px",
-                border: "1px solid rgba(197, 160, 89, 0.35)",
-                backgroundColor: "rgba(197, 160, 89, 0.08)",
-                color: "#e7d6ad",
-                textAlign: "center",
-                fontSize: "13px",
-              }}
-            >
-              {isCurrentGeneralTurnComplete ? "Your turn is done, waiting for new general" : "Waiting for new general"}
-            </div>
-          )}
-
-          <PlayerRoster
-            players={room.players}
-            playerId={playerId}
-            isGameMaster={isGameMaster}
-            gameStarted={room.gameStarted}
-            kickPlayer={kickPlayer}
-            guptochorId={room.guptochorId}
-            guptochorUsed={room.guptochorUsed}
-            onInvestigate={handleInvestigate}
-
-            selectedActiveIds={selectedActiveIds}
-            onToggleActive={toggleActivePlayer}
-          />
-
-          <GameLauncher
-            room={room}
-            isGameMaster={isGameMaster}
-            handleStartGame={handleStartGame}
-            handleAssignGeneral={handleAssignGeneral}
-            disableSecretIntelligence={!!room.disableSecretIntelligence}
-            onToggleDisableSecretIntelligence={handleToggleDisableSecretIntelligence}
-            primaryBtn={primaryBtn}
-
-            activeCount={selectedActiveIds.length}
-            characterList={characterList}
-          />
-
-          {!isGameMaster && !room.gameStarted && (
-            <div
-              style={{
-                margin: "8px 0 16px",
-                fontSize: "13px",
-                color: "#bbb",
-                textAlign: "center",
-              }}
-            >
-              Secret Intel: {room.disableSecretIntelligence ? "Disabled" : "Enabled"}
-            </div>
-          )}
-
-          <CommandConsole
-            room={room}
-            isGameMaster={isGameMaster}
-            playerId={playerId}
-            toggleLock={toggleLock}
-            handleStartVote={handleStartVote}
-            handleResetGame={handleResetGame}
-            handleDissolve={handleDissolve}
-          />
-
-          <GeneralReveal
-            generalReveal={generalReveal}
-            onClose={() => setGeneralReveal(null)}
-          />
-
-          {
-            !isObserver && (
-
-
-              <VotingSystem
-                room={room}
-                playerId={playerId}
-                isGameMaster={isGameMaster}
-                handleYesVote={handleYesVote}
-                handleNoVote={handleNoVote}
-                handleClearVote={handleClearVote}
-                handleStartVote={handleStartVote}
-                handleStartSecretVote={handleStartSecretVote}
-                primaryBtn={primaryBtn}
-              />
-            )
-          }
-
-
-          <GameResultOverlay
-            room={room}
-            isGameMaster={isGameMaster}
-            handleResetGame={handleResetGame}
-            primaryBtn={primaryBtn}
-            playerId={playerId}
-            isDismissed={isResultOverlayDismissed}
-            onClose={() => setIsResultOverlayDismissed(true)}
-          />
-
-          <RoundTracker room={room} />
-
-          <IntelPopup
-            intelPopup={intelPopup}
-            onClose={() => setIntelPopup(null)}
-          />
-
-          <MirJaforPhase
-            room={room}
-            playerId={playerId!}
-            onAttemptAssassination={handleAssassination}
-          />
-            </>
-          )}
-        </>
-      )}
-
-      {/* Credits on the landing and lobby screens only, never over the board */}
-      {!room?.gameStarted && <CreditFooter />}
-
+  const toastAndDialog = (
+    <>
       {errorToast && (
         <div
           style={{
@@ -944,6 +888,270 @@ export default function GameDashboard() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  // --- Tablet and desktop ---------------------------------------------------
+  if (layout !== "compact") {
+    const isWide = layout === "wide";
+    const sideWidth = isWide ? "340px" : "300px";
+    const grid = (columns: string): React.CSSProperties => ({
+      display: "grid",
+      gridTemplateColumns: columns,
+      gap: isWide ? "24px" : "20px",
+      alignItems: "start",
+    });
+
+    let body: React.ReactNode = null;
+
+    if (!room) {
+      body = !wasKicked && (
+        <div style={{ ...grid(`minmax(0, 1fr) minmax(360px, 440px)`), alignItems: "center", gap: isWide ? "64px" : "32px", minHeight: "calc(100vh - 220px)" }}>
+          <LandingHero />
+          <div>{enlistmentForm}</div>
+        </div>
+      );
+    } else if (isObserver) {
+      body = (
+        <div style={grid(`minmax(0, 1fr) ${sideWidth}`)}>
+          <Panel label="Spymaster's view">
+            <ObserverScreen room={room} embedded />
+          </Panel>
+          <Panel title="Roster">{renderRoster(true)}</Panel>
+        </div>
+      );
+    } else if (!room.gameStarted) {
+      body = (
+        <div style={grid(`minmax(0, 1fr) ${isWide ? "380px" : sideWidth}`)}>
+          <div style={columnStyle}>
+            <Panel title="War Council">
+              <p style={{ ...mutedTextStyle, marginBottom: "18px" }}>
+                {isGameMaster
+                  ? "Everyone who joins is drafted into the battalion. Click a name in the roster to stand them down or draft them again. A campaign needs 5 to 10 players."
+                  : "You are enlisted. The host will begin the campaign once everyone has arrived. Share the HQ code above to bring in more allies."}
+              </p>
+              {isGameMaster ? renderLauncher(true) : (
+                <div style={{ color: "#bbb", fontSize: "14px" }}>
+                  Secret Intel: {room.disableSecretIntelligence ? "Disabled" : "Enabled"}
+                </div>
+              )}
+            </Panel>
+            {renderConsole(true)}
+          </div>
+          <Panel title="Roster">{renderRoster(true)}</Panel>
+        </div>
+      );
+    } else {
+      const campaign = (
+        <CampaignPanel
+          room={room}
+          me={me}
+          currentGeneral={currentGeneral}
+          isGameMaster={isGameMaster}
+          awaitingNewGeneral={awaitingNewGeneral}
+          isTurnComplete={isCurrentGeneralTurnComplete}
+        />
+      );
+      const centre = (
+        <div style={columnStyle}>
+          {campaign}
+          {/* Inline while the campaign is running. The vote that ends it (into
+              Mir Jafor's turn or game over) stays a full-screen overlay, so its
+              verdict sits above those screens until dismissed, as on phones. */}
+          {renderVoting(room.gameStatus === "ACTIVE")}
+          {renderBattalion(true)}
+          {isGameMaster && <Panel title="Command">{renderLauncher(true)}</Panel>}
+        </div>
+      );
+      const roster = <Panel title="Roster">{renderRoster(true)}</Panel>;
+
+      body = isWide ? (
+        <div style={grid(`320px minmax(0, 1fr) ${sideWidth}`)}>
+          <div style={columnStyle}>{renderIdentity(true)}</div>
+          {centre}
+          <div style={columnStyle}>
+            {roster}
+            {renderConsole(true)}
+          </div>
+        </div>
+      ) : (
+        <div style={grid(`minmax(0, 1fr) ${sideWidth}`)}>
+          {centre}
+          <div style={columnStyle}>
+            {renderIdentity(true)}
+            {roster}
+            {renderConsole(true)}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <Backdrop />
+        <div
+          style={{
+            // No z-index: overlays inside (vote confirmation, character picker)
+            // must stack against the full-screen ones exactly as on phones.
+            position: "relative",
+            maxWidth: "1440px",
+            margin: "0 auto",
+            padding: isWide ? "20px 28px 32px" : "16px 20px 28px",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            gap: isWide ? "24px" : "20px",
+            fontFamily: "'EB Garamond', serif",
+            color: "#e0e0e0",
+            lineHeight: "1.5",
+          }}
+        >
+          <WideHeader
+            newConnection={newConnection}
+            isConnectedToSocket={isConnectedToSocket}
+            room={room}
+            playerId={playerId}
+            roomCode={roomCode}
+            handleCopy={handleCopy}
+            copiedStatus={copiedStatus}
+            leaveRoom={leaveRoom}
+            dense={!isWide}
+          />
+
+          {alerts}
+          {body}
+
+          {/* Credits on the landing and lobby screens only, never over the board */}
+          {!room?.gameStarted && <CreditFooter />}
+        </div>
+
+        {room && renderResultOverlay()}
+        {room && !isObserver && (
+          <>
+            {generalRevealOverlay}
+            {intelPopupOverlay}
+            {mirJaforOverlay}
+          </>
+        )}
+        {toastAndDialog}
+      </>
+    );
+  }
+
+  // --- Phone --------------------------------------------------------------------
+  return (
+    <div style={containerStyle}>
+
+      <GameHeader
+        newConnection={newConnection}
+        isConnectedToSocket={isConnectedToSocket}
+      />
+
+      {alerts}
+
+      {enlistmentForm}
+
+      {room && (
+        <>
+          <OperativeDrawer
+            room={room}
+            playerId={playerId}
+            roomCode={roomCode}
+            isDrawerOpen={isDrawerOpen}
+            setIsDrawerOpen={setIsDrawerOpen}
+            handleCopy={handleCopy}
+            copiedStatus={copiedStatus}
+            leaveRoom={leaveRoom}
+          />
+
+          {isObserver ? (
+            <>
+              <ObserverScreen room={room} />
+              {renderResultOverlay()}
+            </>
+          ) : (
+            <>
+
+          {renderIdentity()}
+
+          {room.gameStarted && currentGeneral && (
+            <div
+              style={{
+                margin: "10px 0 14px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid rgba(197, 160, 89, 0.45)",
+                backgroundColor: "rgba(197, 160, 89, 0.08)",
+                color: "#e7d6ad",
+                textAlign: "center",
+                fontSize: "13px",
+                letterSpacing: "0.4px"
+              }}
+            >
+              Current General: <strong>{currentGeneral.name}</strong>
+            </div>
+          )}
+
+          {renderBattalion()}
+
+          {room.gameStarted && awaitingNewGeneral && (
+            <div
+              style={{
+                margin: "8px 0 14px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1px solid rgba(197, 160, 89, 0.35)",
+                backgroundColor: "rgba(197, 160, 89, 0.08)",
+                color: "#e7d6ad",
+                textAlign: "center",
+                fontSize: "13px",
+              }}
+            >
+              {isCurrentGeneralTurnComplete ? "Your turn is done, waiting for new general" : "Waiting for new general"}
+            </div>
+          )}
+
+          {renderRoster()}
+
+          {renderLauncher()}
+
+          {!isGameMaster && !room.gameStarted && (
+            <div
+              style={{
+                margin: "8px 0 16px",
+                fontSize: "13px",
+                color: "#bbb",
+                textAlign: "center",
+              }}
+            >
+              Secret Intel: {room.disableSecretIntelligence ? "Disabled" : "Enabled"}
+            </div>
+          )}
+
+          {renderConsole()}
+
+          {generalRevealOverlay}
+
+          {
+            !isObserver && renderVoting()
+          }
+
+          {renderResultOverlay()}
+
+          <RoundTracker room={room} />
+
+          {intelPopupOverlay}
+
+          {mirJaforOverlay}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Credits on the landing and lobby screens only, never over the board */}
+      {!room?.gameStarted && <CreditFooter />}
+
+      {toastAndDialog}
     </div>
   );
 }

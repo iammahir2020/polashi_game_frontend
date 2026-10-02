@@ -2,14 +2,15 @@ import React from 'react';
 import type { Room } from '../../types/game';
 import RoundTracker from '../RoundTracker';
 
-const ObserverScreen: React.FC<{ room: Room }> = ({ room }) => {
+// `embedded`: inside the war room, where the page already supplies width and padding.
+const ObserverScreen: React.FC<{ room: Room; embedded?: boolean }> = ({ room, embedded }) => {
   // Separate players into teams for easier observer reading
   const activePlayers = room.players.filter(p => (room.activePlayerIds ?? []).includes(p.id));
   const nawabs = activePlayers.filter(p => p.character?.team.includes("Nawabs"));
   const eic = activePlayers.filter(p => !p.character?.team.includes("Nawabs"));
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', color: '#fff' }}>
+    <div style={{ padding: embedded ? 0 : '20px', maxWidth: embedded ? 'none' : '800px', margin: '0 auto', color: '#fff' }}>
       {/* HEADER SECTION */}
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <h1 style={{ fontFamily: "'Cinzel', serif", color: '#c5a059', letterSpacing: '4px' }}>

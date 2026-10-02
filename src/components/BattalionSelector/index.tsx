@@ -8,6 +8,8 @@ interface BattalionSelectorProps {
   handleTogglePlayer: (id: string) => void;
   handleStartVote: () => void;
   isTurnComplete: boolean;
+  // Inside a war-room column: no outer margin.
+  embedded?: boolean;
 }
 
 const BattalionSelector: React.FC<BattalionSelectorProps> = ({
@@ -15,7 +17,8 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
   me,
   handleTogglePlayer,
   handleStartVote,
-  isTurnComplete
+  isTurnComplete,
+  embedded
 }) => {
   // Guard Clauses
   const isGeneral = me?.isGeneral;
@@ -35,9 +38,9 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
 
   return (
     <div style={{
-      margin: "20px 0",
-      padding: "20px",
-      background: "rgba(197, 160, 89, 0.05)",
+      margin: embedded ? 0 : "20px 0",
+      padding: embedded ? "24px" : "20px",
+      background: embedded ? "rgba(24, 21, 15, 0.92)" : "rgba(197, 160, 89, 0.05)",
       border: `1px solid ${isSelectionComplete ? "#c5a059" : "rgba(197, 160, 89, 0.3)"}`,
       borderRadius: "12px",
       fontFamily: "'Cinzel', serif",
