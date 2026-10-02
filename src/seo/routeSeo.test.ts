@@ -1,13 +1,64 @@
-import { describe, expect, it } from 'vitest';
-import { NOINDEX_ROBOTS, ROUTE_SEO, baseSchemas, resolveRouteSeo } from './routeSeo';
+/**
+ * LEVEL 1 — EXERCISE 5 (all yours; no worked example in this file)
+ *
+ * `resolveRouteSeo` in ./routeSeo.ts is a four-line function, and it is the only
+ * thing standing between a mistyped URL and a page with no <title>. Four lines is
+ * exactly the size of thing people skip testing.
+ *
+ * Read it first. `ROUTE_SEO` started with ONE entry, '/'; '/how-to-play' has
+ * since been added, which is exactly the day 5b below stopped being trivial.
+ *
+ * Since then the fallback also marks unknown paths `noindex` (only public pages
+ * in routes.ts should be indexed), so it returns a noindex COPY of the root
+ * entry rather than the root entry itself.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { baseSchemas, NOINDEX_ROBOTS, resolveRouteSeo, ROUTE_SEO } from './routeSeo';
 import { SITEMAP_ROUTES } from './routes';
 import { SITE_DESCRIPTION, SITE_TITLE } from './seoConfig';
 
+// HINT: you'll want `resolveRouteSeo` and `ROUTE_SEO` from './routeSeo'.
+
 describe('resolveRouteSeo', () => {
-  it('returns the home entry for /', () => {
-    expect(resolveRouteSeo('/')).toBe(ROUTE_SEO['/']);
+  // EXERCISE 5a
+  // The rule: any path that isn't in ROUTE_SEO falls back to the '/' entry.
+  //
+  // A good table here is a handful of genuinely different *kinds* of unknown
+  // path, not five spellings of the same one. Think about what a crawler or a
+  // stray link actually throws at a site: a plausible-looking route, a deep
+  // nested path, a trailing slash, an empty string, something with a query
+  // string glued on. Each row should be able to fail for its own reason.
+
+  const routes = ['/signup','/results','','/user/1/info','/playerinfo?user=1']
+  
+  // NOTE: this used to assert *identity* with `toBe(ROUTE_SEO['/'])`. The
+  // fallback now returns a copy with `robots: noindex` added, so `toEqual` on
+  // the expected shape is the right check, and `not.toBe` proves it really is
+  // a copy and not the shared root object mutated in place.
+  it.each(routes)(
+    'falls back to the root entry for an unknown path, for route %s',
+  (route)=>{
+    const result = resolveRouteSeo(route)
+    expect(result).toEqual({ ...ROUTE_SEO['/'], robots: NOINDEX_ROBOTS })
+    expect(result).not.toBe(ROUTE_SEO['/'])
   });
 
+  // EXERCISE 5b
+  // The other half of the rule — the part people forget. 5a on its own would
+  // still pass if the function ignored its argument and always returned the root
+  // entry. Prove it actually looks the path up.
+  //
+  // HINT: with only one route defined, there is exactly one input that proves
+  // this. That feels almost too small to be worth a test; write it anyway and
+  // notice how it stops being trivial the day a second route appears.
+  it.each(['/', '/how-to-play'] as const)('returns the matching entry for a known path, route %s', (route) => {
+    const result = resolveRouteSeo(route)
+    expect(result).toBe(ROUTE_SEO[route])
+  });
+});
+
+describe('resolveRouteSeo indexing', () => {
   it('keeps every public route indexable', () => {
     for (const { path } of SITEMAP_ROUTES) {
       expect(resolveRouteSeo(path).robots).toBeUndefined();

@@ -92,7 +92,8 @@ To play against a local backend, run polashi_game_backend and point `SOCKET_URL`
 | `npm run preview` | Serves the production build |
 | `npm test` | Runs the Vitest suite once |
 | `npm run test:watch` | Vitest in watch mode |
-| `npm run test:e2e` | Playwright end-to-end tests (builds first) |
+| `npm run e2e` | All Playwright end-to-end tests (some need a local backend on :3000) |
+| `npm run e2e:build` | Only the end-to-end tests that run against the production build, no backend needed |
 | `npm run typecheck` | `tsc -b --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run art` | Draws the source art in `art-src/` from code |
@@ -108,15 +109,18 @@ in `index.html` match `src/seo/seoConfig.ts`.
 npm test
 ```
 
-End-to-end tests in `e2e/` use Playwright against the production build (`vite preview` on port
-4317, started automatically). They stub the socket.io connection, so they never reach the game
-server. They cover the intro splash, the enlistment form, the credit footer, head tags and JSON-LD,
+End-to-end tests in `e2e/` use Playwright, in two suites. The multiplayer specs (`app`,
+`create-room`, `reconnect`, `capstone`, `seo`) run against `npm run dev` with `VITE_SOCKET_URL`
+pointed at a local backend on port 3000; see [TESTING.md](TESTING.md). The build specs
+(`landing`, `static`) run against the production build (`vite preview` on port 4317, started
+automatically) and stub the socket.io connection, so they never reach the game server. The build specs cover the intro splash, the enlistment form, the credit footer, head tags and JSON-LD,
 noindex on room links, the pre-rendered how-to-play page with JavaScript off, the sitemap, robots.txt,
 the manifest and every image the app references. Each test runs on a desktop and a mobile viewport.
 
 ```sh
 npx playwright install chromium   # once
-npm run test:e2e
+npm run e2e:build                 # no backend needed
+npm run e2e                       # everything, with the backend running
 ```
 
 ## Credits & disclaimer

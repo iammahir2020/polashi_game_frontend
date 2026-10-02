@@ -1,6 +1,12 @@
 import React, { useRef, useState } from 'react';
 import type { Room, VotingState } from '../../types/game';
 import { useOverlayA11y } from '../../hooks/useOverlayA11y';
+import {
+  hasPlayerVoted,
+  pendingVoters as selectPendingVoters,
+  voteTally,
+  votesCastCount,
+} from './voteSelectors';
 
 interface VotingSystemProps {
   room: Room | null;
@@ -38,14 +44,17 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
 
   const isTeamApproval = room.voting.type === "teamApproval";
   const currentVotes = room.voting?.votes ?? {};
-  const hasVoted = playerId && room.voting.votes[playerId];
+  const hasVoted = Boolean(playerId && hasPlayerVoted(currentVotes, playerId));
   const isOnMission = playerId && room.proposedTeam?.includes(playerId);
   const totalRequiredVotes = isTeamApproval ? room.players.length : (room.proposedTeam?.length || 0);
+  const eligibleVoterIds = isTeamApproval
+    ? room.players.map((p) => p.id)
+    : (room.proposedTeam ?? []);
   const pendingTeamApprovalVoters = isTeamApproval
-    ? room.players.filter((p) => !(p.id in currentVotes))
+    ? selectPendingVoters(room.players, currentVotes, eligibleVoterIds)
     : [];
   const pendingSecretVoters = !isTeamApproval
-    ? room.players.filter((p) => (room.proposedTeam || []).includes(p.id) && !(p.id in currentVotes))
+    ? selectPendingVoters(room.players, currentVotes, eligibleVoterIds)
     : [];
   const pendingVoters = isTeamApproval ? pendingTeamApprovalVoters : pendingSecretVoters;
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -126,7 +135,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
                 border: "1px solid rgba(197, 160, 89, 0.2)", color: "#c5a059", fontSize: "14px",
                 marginBottom: "40px", display: 'inline-block'
               }}>
-                Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{Object.keys(room.voting.votes).length}</span> / {totalRequiredVotes}
+                Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{votesCastCount(currentVotes)}</span> / {totalRequiredVotes}
               </div>
 
               {pendingVoters.length > 0 && (
@@ -242,9 +251,9 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
           </div>
 
           <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "30px", fontFamily: "Cinzel", fontSize: "18px" }}>
-            <Tally count={Object.values(room.voting.votes).filter(v => v === "yes").length} color="#40c057" img={isTeamApproval ? "/green_seal.png" : "/green_card.png"} />
+            <Tally count={voteTally(currentVotes).yes} color="#40c057" img={isTeamApproval ? "/green_seal.png" : "/green_card.png"} />
             <div style={{ width: "1px", backgroundColor: "#333" }} />
-            <Tally count={Object.values(room.voting.votes).filter(v => v === "no").length} color="#ff7675" img={isTeamApproval ? "/red_seal.png" : "/red_card.png"} />
+            <Tally count={voteTally(currentVotes).no} color="#ff7675" img={isTeamApproval ? "/red_seal.png" : "/red_card.png"} />
           </div>
 
           {isGameMaster && (

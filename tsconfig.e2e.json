@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
+    "target": "ES2022",
+    // "DOM" here despite this being Node-side test code: callbacks passed to
+    // `page.addInitScript`/`context.addInitScript` are SERIALIZED and run
+    // inside the real browser Playwright controls, referencing `window`,
+    // `sessionStorage`, etc. — TypeScript needs the DOM lib to type-check
+    // the body of those callbacks, even though the file around them runs in
+    // Node.
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["playwright.config.ts", "e2e"]
+}
