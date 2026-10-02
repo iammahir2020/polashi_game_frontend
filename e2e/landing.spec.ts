@@ -11,12 +11,14 @@ test.beforeEach(async ({ page }) => {
 test('intro splash plays once, then opens the enlistment screen', async ({ page }) => {
   await page.goto('/')
 
-  const video = page.locator('video')
-  if (await video.count()) {
-    await expect(video).toHaveAttribute('poster', '/polashi_bg.webp')
-    await expect(video).toHaveAttribute('preload', 'metadata')
-    expect(await video.evaluate((el: HTMLVideoElement) => el.muted && el.playsInline)).toBe(true)
-  }
+  // A still background, no video: the wide scene on landscape screens at least
+  // 500px tall, the vertical one on portrait screens and sideways phones.
+  await expect(page.locator('video')).toHaveCount(0)
+  const background = page.locator('picture img')
+  await expect.poll(() => background.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
+  const { width, height } = page.viewportSize()!
+  const expected = width >= height && height >= 500 ? /\/polashi_bg_wide\.(webp|jpg)$/ : /\/polashi_bg\.(webp|jpg)$/
+  expect(await background.evaluate((img: HTMLImageElement) => img.currentSrc)).toMatch(expected)
 
   await page.getByRole('button', { name: 'ENTER POLASHI' }).click()
   await expect(page.getByPlaceholder('Enter Alias...')).toBeVisible()

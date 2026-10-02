@@ -10,7 +10,6 @@
 // scripts/fonts/ (all SIL OFL). Each text run gets one font file, which is why
 // the Latin title and the Bangla name are rendered separately and composited.
 
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
@@ -75,19 +74,30 @@ async function renderText(text, { font, size, fontfile, color = GOLD, weight = '
 }
 
 // --- Background --------------------------------------------------------------
-// The UI renders the title in HTML (GameHeader), so the background stays
-// textless.
+// The splash screen shows the portrait scene on portrait screens (phones) and
+// the wide share art on landscape ones. The wide version is made from the
+// full-size share art, not the 1200px og-image.jpg, so it stays sharp on
+// large monitors.
 async function buildBackground() {
   const source = path.join(ART, 'key-art-portrait.png');
   if (!exists(source)) {
     console.warn('! background: art-src/key-art-portrait.png missing, skipped');
+  } else {
+    console.log(`background  <- ${rel(source)}`);
+    const base = sharp(source).resize({ width: 1080, withoutEnlargement: true });
+    write('polashi_bg.webp', await encodeUnder(base, 'webp', SIZE_BUDGET, 80));
+    write('polashi_bg.jpg', await encodeUnder(base, 'jpeg', SIZE_BUDGET, 78));
+  }
+
+  const wide = path.join(ART, 'og-image.png');
+  if (!exists(wide)) {
+    console.warn('! wide background: art-src/og-image.png missing, skipped');
     return;
   }
-  console.log(`background  <- ${rel(source)}`);
-
-  const base = sharp(source).resize({ width: 1080, withoutEnlargement: true });
-  write('polashi_bg.webp', await encodeUnder(base, 'webp', SIZE_BUDGET, 80));
-  write('polashi_bg.jpg', await encodeUnder(base, 'jpeg', SIZE_BUDGET, 78));
+  console.log(`wide bg     <- ${rel(wide)}`);
+  const wideBase = sharp(wide).resize({ width: 1920, withoutEnlargement: true });
+  write('polashi_bg_wide.webp', await encodeUnder(wideBase, 'webp', SIZE_BUDGET, 80));
+  write('polashi_bg_wide.jpg', await encodeUnder(wideBase, 'jpeg', SIZE_BUDGET, 78));
 }
 
 // --- Open Graph image (1200x630) --------------------------------------------
@@ -250,55 +260,6 @@ async function buildGamePieces() {
   }
 }
 
-// --- Splash video (optional: needs ffmpeg) ------------------------------------
-// A slow push-in with two lightning flashes, 8 s loop, 720x1280, no audio.
-// With key-art-portrait-calm.png the flashes cut to the scene with lightning;
-// with only key-art-portrait.png they briefly brighten that one image.
-// Uses $FFMPEG_PATH or ffmpeg on PATH.
-function buildVideo() {
-  const bolt = path.join(ART, 'key-art-portrait.png');
-  const calmFile = path.join(ART, 'key-art-portrait-calm.png');
-  const singleImage = !exists(calmFile);
-  const calm = singleImage ? bolt : calmFile;
-  if (!exists(bolt)) {
-    console.warn('! video: portrait art missing, kept polashi_bg.mp4');
-    return;
-  }
-  const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
-  if (spawnSync(ffmpeg, ['-version']).status !== 0) {
-    console.warn('! video: ffmpeg not found (set FFMPEG_PATH), kept polashi_bg.mp4');
-    return;
-  }
-  console.log(`video       <- ${singleImage ? `${rel(bolt)} (flash by brightening)` : `${rel(calm)} + ${rel(bolt)}`}`);
-
-  const flash = "if(between(mod(T,4),1.2,1.42),1,if(between(mod(T,4),1.58,1.7),0.7,0))";
-  const filter = [
-    '[0]scale=864:1296,setsar=1[a]',
-    singleImage
-      ? '[1]scale=864:1296,setsar=1,eq=brightness=0.16:contrast=1.12:saturation=1.1[b]'
-      : '[1]scale=864:1296,setsar=1[b]',
-    `[a][b]blend=all_expr='A*(1-${flash})+B*${flash}'[m]`,
-    "[m]scale=w='trunc(864*(1+0.05*t/8)/2)*2':h=-2:eval=frame,crop=720:1280,fps=24,format=yuv420p[v]",
-  ].join(';');
-  const out = path.join(PUBLIC, 'polashi_bg.mp4');
-  const tmp = `${out}.tmp.mp4`;
-  const result = spawnSync(ffmpeg, [
-    '-y', '-loglevel', 'error',
-    '-loop', '1', '-framerate', '24', '-t', '8', '-i', calm,
-    '-loop', '1', '-framerate', '24', '-t', '8', '-i', bolt,
-    '-filter_complex', filter, '-map', '[v]', '-t', '8', '-an',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '30', '-movflags', '+faststart', tmp,
-  ], { stdio: 'inherit' });
-  if (result.status !== 0) {
-    console.warn('! video: ffmpeg failed, kept polashi_bg.mp4');
-    if (exists(tmp)) fs.rmSync(tmp);
-    return;
-  }
-  const before = fs.statSync(out).size;
-  fs.renameSync(tmp, out);
-  report.push({ name: 'polashi_bg.mp4', before, after: fs.statSync(out).size });
-}
-
 // --- Compress the remaining hand-made PNGs -----------------------------------
 // Only rewrites a file when the result is meaningfully smaller, so repeated runs
 // settle instead of re-quantizing the same image over and over.
@@ -322,11 +283,10 @@ async function run() {
   await buildGamePieces();
   await buildIcons();
   await compressPngs(new Set(report.map((entry) => entry.name)));
-  buildVideo();
 
   console.log('\nfile                     before       after');
   for (const { name, before, after } of report) {
-    const flag = after > SIZE_BUDGET && !name.endsWith('.mp4') ? '  (over 300 KB)' : '';
+    const flag = after > SIZE_BUDGET ? '  (over 300 KB)' : '';
     console.log(`${name.padEnd(24)} ${(before === null ? 'new' : kb(before)).padStart(10)}  ${kb(after).padStart(10)}${flag}`);
   }
 }
