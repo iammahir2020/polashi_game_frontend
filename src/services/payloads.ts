@@ -84,7 +84,6 @@ export function sanitizePlayer(v: unknown): Player | null {
     const value = optionalBool(v[flag]);
     if (value !== undefined) player[flag] = value;
   }
-  if (isFiniteNumber(v.lastCharacterId)) player.lastCharacterId = v.lastCharacterId;
   return player;
 }
 
@@ -120,7 +119,6 @@ export function sanitizeRoom(v: unknown): Room | null {
   const room: Room = {
     roomCode: text(v.roomCode, 16) ?? '',
     players,
-    turnIndex: isFiniteNumber(v.turnIndex) ? v.turnIndex : 0,
     currentRound: isFiniteNumber(v.currentRound) ? v.currentRound : (undefined as unknown as number),
     scoreGreen: isFiniteNumber(v.scoreGreen) ? v.scoreGreen : (undefined as unknown as number),
     scoreRed: isFiniteNumber(v.scoreRed) ? v.scoreRed : (undefined as unknown as number),
@@ -145,7 +143,6 @@ export function sanitizeRoom(v: unknown): Room | null {
   }
   const winner = text(v.winner, 60);
   if (winner !== undefined) room.winner = winner;
-  if (v.assassinationTargetId !== undefined) room.assassinationTargetId = nullableId(v.assassinationTargetId);
   if (Array.isArray(v.secretIntel)) {
     room.secretIntel = v.secretIntel
       .map((s) => text(s, 80))
@@ -160,7 +157,7 @@ export function sanitizeRoom(v: unknown): Room | null {
   return room;
 }
 
-export type CleanRoomJoined = RoomJoinedPayload & { reconnectToken?: string };
+export type CleanRoomJoined = RoomJoinedPayload;
 
 export function sanitizeRoomJoined(v: unknown): CleanRoomJoined | null {
   if (!isObj(v)) return null;
@@ -172,8 +169,6 @@ export function sanitizeRoomJoined(v: unknown): CleanRoomJoined | null {
     roomCode,
     playerId,
     room,
-    role: 'player',
-    isGameMaster: v.isGameMaster === true,
   };
   if (typeof v.reconnectToken === 'string' && v.reconnectToken.length <= 128) {
     joined.reconnectToken = v.reconnectToken;

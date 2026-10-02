@@ -66,7 +66,6 @@ return (
             {isObserver ? "Witness the conspiracy unfold" : "Tap to reveal your destiny"}
           </p>
         </div>
-        <div className="texture-overlay" />
       </div>
 
       {/* --- BACK: IDENTITY / SPECTATOR SIDE --- */}
@@ -83,8 +82,6 @@ return (
             src={isObserver ? "/Observer.png" : (isNawab ? "/Nawab.png" : "/EIC.png")}
             alt="Badge"
             style={{ width: "90px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
-            // Fallback for missing observer image
-            onError={(e) => { (e.target as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/702/702455.png' }}
           />
         </div>
 
@@ -187,7 +184,6 @@ const CardAnimations = () => (
     @keyframes floating { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     .shimmer-effect { position: absolute; top: 0; left: -150%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); transform: skewX(-20deg); animation: shimmer 3s infinite linear; }
     @keyframes shimmer { 0% { left: -150%; } 100% { left: 150%; } }
-    .texture-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.05; background-image: url("https://www.transparenttextures.com/patterns/dark-matter.png"); pointer-events: none; }
   `}</style>
 );
 

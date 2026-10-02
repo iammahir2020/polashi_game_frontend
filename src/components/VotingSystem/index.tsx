@@ -50,9 +50,11 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
   const currentVotes = room.voting?.votes ?? {};
   const hasVoted = Boolean(playerId && hasPlayerVoted(currentVotes, playerId));
   const isOnMission = playerId && room.proposedTeam?.includes(playerId);
-  const totalRequiredVotes = isTeamApproval ? room.players.length : (room.proposedTeam?.length || 0);
+  // The council is the battalion (activePlayerIds), as the server counts it:
+  // observers in the room don't vote, so they're neither counted nor awaited.
+  const totalRequiredVotes = isTeamApproval ? (room.activePlayerIds?.length ?? 0) : (room.proposedTeam?.length || 0);
   const eligibleVoterIds = isTeamApproval
-    ? room.players.map((p) => p.id)
+    ? (room.activePlayerIds ?? [])
     : (room.proposedTeam ?? []);
   const pendingTeamApprovalVoters = isTeamApproval
     ? selectPendingVoters(room.players, currentVotes, eligibleVoterIds)
@@ -182,25 +184,12 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
 
               {!hasVoted ? (
                 <div style={{ display: "flex", gap: "40px", justifyContent: "center" }}>
-                  {/* <VoteOption
-                    label={isTeamApproval ? "APPROVE" : "SUCCESS"}
-                    color="#40c057"
-                    img={isTeamApproval ? "/green_seal.png" : "/green_card.png"}
-                    onClick={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
+                  <ShuffledVoteOptions
+                    key={room.voting.type}
+                    isTeamApproval={isTeamApproval}
+                    onYes={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
+                    onNo={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
                   />
-                  
-                  <VoteOption
-                        label={isTeamApproval ? "REJECT" : "SABOTAGE"}
-                        color="#ff7675"
-                        img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
-                        onClick={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
-                      /> */}
-                      <ShuffledVoteOptions
-                        key={room.voting.type}
-                        isTeamApproval={isTeamApproval}
-                        onYes={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
-                        onNo={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
-                      />
                 </div>
               ) : (
                 <div style={{ animation: "pulseOpacity 2s infinite" }}>

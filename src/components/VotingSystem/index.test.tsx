@@ -92,3 +92,47 @@ describe('VotingSystem', () => {
     expect(handlers.handleNoVote).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Observers don't sit on the council.
+ *
+ * The council vote is cast by the battalion (`activePlayerIds`), which is
+ * also how the server counts it. The screen used to count every player in
+ * the room instead, so with an observer present it showed "0 / 6" and listed
+ * the observer under "Awaiting votes from" for the whole vote, even though
+ * they can't vote and the server resolves the vote without them.
+ */
+describe('VotingSystem: council vote with an observer in the room', () => {
+  const voters = [me, other, makePlayer({ name: 'Watts' })];
+  const observer = makePlayer({ name: 'Olu' });
+  const roomWithObserver = makeRoom({
+    players: [...voters, observer],
+    activePlayerIds: voters.map((p) => p.id),
+    gameStarted: true,
+    proposedTeam: [me.id, other.id],
+    voting: makeVotingState({ active: true, type: 'teamApproval', votes: {} }),
+  });
+
+  function renderCouncil() {
+    render(
+      <VotingSystem
+        room={roomWithObserver} playerId={me.id} isGameMaster={false} primaryBtn={{}}
+        handleYesVote={vi.fn()} handleNoVote={vi.fn()} handleClearVote={vi.fn()}
+        handleStartVote={vi.fn()} handleStartSecretVote={vi.fn()}
+      />,
+    );
+  }
+
+  it('counts only the battalion: 3 votes needed, not 4', () => {
+    renderCouncil();
+    // "Progress: 0 / 3". The numbers sit in separate text nodes, so match the
+    // whole line's text.
+    expect(screen.getByText((_, el) => el?.textContent === 'Progress: 0 / 3')).toBeInTheDocument();
+  });
+
+  it('never waits on the observer', () => {
+    renderCouncil();
+    expect(screen.getByText('Watts')).toBeInTheDocument(); // a voter who hasn't voted is listed
+    expect(screen.queryByText('Olu')).toBeNull();
+  });
+});

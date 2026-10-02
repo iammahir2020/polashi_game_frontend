@@ -2,11 +2,9 @@ export type Player = {
   id: string;
   name: string;
   online?: boolean;
-  socketId?: string;
   isGameMaster?: boolean;
   character?: CharacterType | null;
   isGeneral?: boolean;
-  lastCharacterId?: number | null;
   isObserver?: boolean;
 };
 
@@ -31,7 +29,6 @@ export type VotingState = {
 export type Room = {
   roomCode: string;
   players: Player[];
-  turnIndex: number;
   locked?: boolean;
   gameStarted?: boolean;
   disableSecretIntelligence?: boolean;
@@ -50,16 +47,16 @@ export type Room = {
   nextGuptochorId: string | null;  
   guptochorUsed: boolean;
   
-  assassinationTargetId?: string | null;
   activePlayerIds: string[];
 };
 
+// What the server sends you when you create, join or rejoin a room. The
+// reconnect token is your secret for reclaiming this seat later.
 export type RoomJoinedPayload = {
   roomCode: string;
   room: Room;
-  role: "player";
   playerId: string;
-  isGameMaster: boolean;
+  reconnectToken?: string;
 };
 
 export type CharacterType = {

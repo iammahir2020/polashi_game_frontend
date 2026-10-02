@@ -98,9 +98,7 @@ describe('GameDashboard', () => {
         latestCallbackGivenTo(socketService.onRoomJoined)({
           roomCode: 'ABCD',
           room,
-          role: 'player',
           playerId: me.id,
-          isGameMaster: true,
         });
       });
 
@@ -233,9 +231,7 @@ describe('GameDashboard', () => {
         latestCallbackGivenTo(socketService.onRoomJoined)({
           roomCode: 'ABCD',
           room,
-          role: 'player',
           playerId: me.id,
-          isGameMaster: true,
         });
       });
 
@@ -301,7 +297,7 @@ describe('GameDashboard on a wide screen', () => {
   function joinWith(room: ReturnType<typeof makeRoom>, playerId: string) {
     act(() => {
       latestCallbackGivenTo(socketService.onRoomJoined)({
-        roomCode: room.roomCode, room, role: 'player', playerId, isGameMaster: false,
+        roomCode: room.roomCode, room, playerId,
       });
     });
   }
@@ -395,7 +391,7 @@ describe('GameDashboard: the General picking a battalion', () => {
     render(<GameDashboard />);
     act(() => {
       latestCallbackGivenTo(socketService.onRoomJoined)({
-        roomCode: 'TEAM01', room: room(), role: 'player', playerId: general.id, isGameMaster: false,
+        roomCode: 'TEAM01', room: room(), playerId: general.id,
       });
     });
   }

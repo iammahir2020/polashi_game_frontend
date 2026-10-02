@@ -37,7 +37,7 @@ test sees the phone layout; `tests/matchMedia.ts` is a fake screen you can resiz
 `src/hooks/useLayout.test.ts` (breakpoints, resize, unsubscribe on unmount), the "on a wide screen"
 block at the end of `GameDashboard/index.test.tsx`, plus `VotingSystem`, `PlayerRoster`,
 `WarRoom/phase` and `WarRoom/WideHeader` tests. The 5-player capstone now plays through the desktop
-layout (Playwright's Desktop Chrome is 1280px wide). Current: `npm test` 299 passing, e2e 42/42.
+layout (Playwright's Desktop Chrome is 1280px wide). Current: `npm test` 303 passing, e2e 42/42.
 
 Last worked: 2026-10-03.
 
@@ -596,6 +596,7 @@ unchanged (37 pre-existing).
 | 2026-10-02 | (outside the course) | Security hardening fixed Steps.md #2, #3, #4, #6, #7, #8; those tests are green now. New tests for payload checks, name rules, rejoin storage, error boundary, CSP | Rename the old "FAILS" titles; resume Level 6 |
 | 2026-10-03 | (outside the course) | Tablet/desktop layout. New: `tests/matchMedia.ts` (fake resizable screen), tests for `useLayout`, the inline vote, the always-open roster, the war-room header and phase line, and the dashboard's wide arrangement (37 new). The capstone caught a real layering bug (the deciding verdict hid under Mir Jafor's screen) | Rename the old "FAILS" titles; resume Level 6 |
 | 2026-10-03 | (outside the course) | General team-picking race fixed. 5 tests at the end of `GameDashboard/index.test.tsx` show how to test a network race without a network: just don't deliver the server's reply between two clicks. 3 of them fail on the old code, proven by running them against it; the other 2 guard the fix's fallbacks (server catches up; unconfirmed proposal expires, via fake timers). 299 passing | Rename the old "FAILS" titles; resume Level 6 |
+| 2026-10-04 | (outside the course) | Code-review fixes. New tests: observers aren't counted in the council vote (`VotingSystem`), and nothing on the role card loads from another site (`IdentityCard`, checks rendered HTML because jsdom doesn't enforce the CSP). All 4 proven red on the old code first. Dead socket methods and stale type fields removed, so the mock in `tests/mockSocketService.ts` shrank too. 303 passing. Note: the build e2e projects flake ~1 in 3 runs on this machine (a random `page.goto` timeout), on unmodified `main` too: a load issue, not a test bug | Rename the old "FAILS" titles; resume Level 6 |
 
 ---
 
