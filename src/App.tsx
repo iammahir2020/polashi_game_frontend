@@ -1,6 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
-import { AuthProvider } from './components/login/AuthContext'
 import GameLoader from './components/Loader';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
@@ -50,23 +49,21 @@ function App() {
 
   // --- 2. THE MAIN GAME ---
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <RouteSeoManager />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Suspense fallback={<GameLoader message="Links Established." />}>
-                <GameDashboard />
-              </Suspense>
-            }
-          />
-          <Route path="/how-to-play" element={<HowToPlay />} />
-        </Routes>
-        <Analytics />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <RouteSeoManager />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Suspense fallback={<GameLoader message="Links Established." />}>
+              <GameDashboard />
+            </Suspense>
+          }
+        />
+        <Route path="/how-to-play" element={<HowToPlay />} />
+      </Routes>
+      <Analytics />
+    </BrowserRouter>
   );
 }
 
