@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import type { Room } from '../../types/game';
+import React, { useRef, useState } from 'react';
+import type { Room, VotingState } from '../../types/game';
 import { useOverlayA11y } from '../../hooks/useOverlayA11y';
 
 interface VotingSystemProps {
@@ -14,7 +14,16 @@ interface VotingSystemProps {
   primaryBtn: React.CSSProperties;
 }
 
-const VotingSystem: React.FC<VotingSystemProps> = ({
+type ActiveVotingProps = Omit<VotingSystemProps, 'room'> & {
+  room: Room & { voting: VotingState };
+};
+
+const VotingSystem: React.FC<VotingSystemProps> = ({ room, ...rest }) => {
+  if (!room?.voting) return null;
+  return <VotingSession room={{ ...room, voting: room.voting }} {...rest} />;
+};
+
+const VotingSession: React.FC<ActiveVotingProps> = ({
   room,
   playerId,
   isGameMaster,
@@ -25,8 +34,6 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   handleStartSecretVote,
   primaryBtn
 }) => {
-  if (!room?.voting) return null;
-
   const [pendingVote, setPendingVote] = useState<'yes' | 'no' | null>(null);
 
   const isTeamApproval = room.voting.type === "teamApproval";
@@ -59,28 +66,6 @@ const VotingSystem: React.FC<VotingSystemProps> = ({
   useOverlayA11y({ isActive: true, onClose: handleOverlayClose, containerRef: overlayRef });
   
 
-  // Inside your VotingSystem component
-const shuffledOptions = useMemo(() => {
-  const options = [
-    {
-      id: 'yes',
-      label: isTeamApproval ? "APPROVE" : "SUCCESS",
-      color: "#40c057",
-      img: isTeamApproval ? "/green_seal.png" : "/green_card.png",
-      action: () => isTeamApproval ? handleYesVote() : setPendingVote('yes')
-    },
-    {
-      id: 'no',
-      label: isTeamApproval ? "REJECT" : "SABOTAGE",
-      color: "#ff7675",
-      img: isTeamApproval ? "/red_seal.png" : "/red_card.png",
-      action: () => isTeamApproval ? handleNoVote() : setPendingVote('no')
-    }
-  ];
-
-  // Randomize the order
-  return options.sort(() => Math.random() - 0.5);
-}, [room.voting.active, isTeamApproval]); // Re-shuffles only when a new vote starts
 
   return (
     <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Voting session" tabIndex={-1} style={{
@@ -112,7 +97,7 @@ const shuffledOptions = useMemo(() => {
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
           {room.proposedTeam?.map((tid: string) => {
-            const player = room.players.find((p: any) => p.id === tid);
+            const player = room.players.find((p) => p.id === tid);
             return (
               <span key={tid} style={{
                 color: "#fff", fontSize: "18px", background: "rgba(197, 160, 89, 0.2)",
@@ -184,15 +169,12 @@ const shuffledOptions = useMemo(() => {
                         img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
                         onClick={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
                       /> */}
-                      {shuffledOptions.map((option) => (
-      <VoteOption
-        key={option.id}
-        label={option.label}
-        color={option.color}
-        img={option.img}
-        onClick={option.action}
-      />
-    ))}
+                      <ShuffledVoteOptions
+                        key={room.voting.type}
+                        isTeamApproval={isTeamApproval}
+                        onYes={() => isTeamApproval ? handleYesVote() : setPendingVote('yes')}
+                        onNo={() => isTeamApproval ? handleNoVote() : setPendingVote('no')}
+                      />
                 </div>
               ) : (
                 <div style={{ animation: "pulseOpacity 2s infinite" }}>
@@ -346,7 +328,9 @@ const shuffledOptions = useMemo(() => {
 
 // --- SMALL HELPER COMPONENTS ---
 
-const VoteOption = ({ label, color, img, onClick }: any) => (
+type VoteOptionProps = { label: string; color: string; img: string; onClick: () => void };
+
+const VoteOption = ({ label, color, img, onClick }: VoteOptionProps) => (
   <div style={{ textAlign: 'center' }}>
     <button onClick={onClick} className="vote-btn">
       <img src={img} alt={label} style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
@@ -355,7 +339,43 @@ const VoteOption = ({ label, color, img, onClick }: any) => (
   </div>
 );
 
-const Tally = ({ count, color, img }: any) => (
+type ShuffledVoteOptionsProps = {
+  isTeamApproval: boolean;
+  onYes: () => void;
+  onNo: () => void;
+};
+
+// The order is randomized so players can't read each other's choice from where
+// they tap. It is rolled once on mount, and this only mounts while a vote is open,
+// so every new vote gets a fresh order.
+const ShuffledVoteOptions = ({ isTeamApproval, onYes, onNo }: ShuffledVoteOptionsProps) => {
+  const [yesFirst] = useState(() => Math.random() < 0.5);
+
+  const yes = (
+    <VoteOption
+      key="yes"
+      label={isTeamApproval ? "APPROVE" : "SUCCESS"}
+      color="#40c057"
+      img={isTeamApproval ? "/green_seal.png" : "/green_card.png"}
+      onClick={onYes}
+    />
+  );
+  const no = (
+    <VoteOption
+      key="no"
+      label={isTeamApproval ? "REJECT" : "SABOTAGE"}
+      color="#ff7675"
+      img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
+      onClick={onNo}
+    />
+  );
+
+  return <>{yesFirst ? [yes, no] : [no, yes]}</>;
+};
+
+type TallyProps = { count: number; color: string; img: string };
+
+const Tally = ({ count, color, img }: TallyProps) => (
   <div style={{ color, display: 'flex', alignItems: 'center', gap: '8px' }}>
     <img src={img} style={{ width: '25px' }} />
     {count}

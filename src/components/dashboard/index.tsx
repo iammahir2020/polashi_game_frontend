@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFirebaseAuth } from '../../auth/useAuth';
 import { logout } from '../../auth/googleAuth';
-import { useAuth } from '../login/AuthContext';
+import { useAuth } from '../login/useAuth';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();

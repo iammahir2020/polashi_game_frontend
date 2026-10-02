@@ -96,7 +96,7 @@ export default function GameDashboard() {
   useEffect(() => {
     socketService.connect();
 
-    socketService.onRoomJoined((data: any) => {
+    socketService.onRoomJoined((data) => {
       setRoom(data.room);
       setRoomCode(data.roomCode);
       setPlayerId(data.playerId);
@@ -263,7 +263,7 @@ export default function GameDashboard() {
       // setTimeout(() => setIntelPopup(null), 8000); // Private info stays longer
     });
 
-    socketService.onNotification((data: any) => {
+    socketService.onNotification((data) => {
       if (data.requesterId === playerId) return;
 
       let displayMessage = data.message;

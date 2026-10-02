@@ -9,11 +9,11 @@ interface MirJaforPhaseProps {
 }
 
 const MirJaforPhase: React.FC<MirJaforPhaseProps> = ({ room, playerId, onAttemptAssassination }) => {
-  
-  if(room.gameStatus !== "MIR_JAFOR_TURN") return null;
-
+  const isActive = room.gameStatus === "MIR_JAFOR_TURN";
   const overlayRef = useRef<HTMLDivElement>(null);
-  useOverlayA11y({ isActive: true, containerRef: overlayRef });
+  useOverlayA11y({ isActive, containerRef: overlayRef });
+
+  if (!isActive) return null;
   
   const me = room.players.find(p => p.id === playerId);
   const isMirJafor = me?.character?.name === "মীর জাফর";

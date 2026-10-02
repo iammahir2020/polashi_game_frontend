@@ -23,11 +23,12 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
   isDismissed,
   onClose
 }) => {
-  // Only render if the game status is explicitly OVER
-  if (room.gameStatus !== "OVER" || isDismissed) return null;
-
+  const isVisible = room.gameStatus === "OVER" && !isDismissed;
   const overlayRef = useRef<HTMLDivElement>(null);
-  useOverlayA11y({ isActive: true, onClose, containerRef: overlayRef });
+  useOverlayA11y({ isActive: isVisible, onClose, containerRef: overlayRef });
+
+  // Only render if the game status is explicitly OVER
+  if (!isVisible) return null;
 
   const isGreenWin = room.winner?.includes('Green');
 

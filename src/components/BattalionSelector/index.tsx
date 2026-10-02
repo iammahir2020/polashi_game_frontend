@@ -1,10 +1,10 @@
 import React from 'react';
-import type { Room } from '../../types/game';
+import type { Player, Room } from '../../types/game';
 import { MISSION_CONFIGS } from '../../constants';
 
 interface BattalionSelectorProps {
   room: Room;
-  me: any;
+  me: Player | undefined;
   handleTogglePlayer: (id: string) => void;
   handleStartVote: () => void;
   isTurnComplete: boolean;
