@@ -224,8 +224,9 @@ async function buildGamePieces() {
     { source: 'seal-nawab.png', outputs: ['Nawab.png'] },
     { source: 'seal-eic.png', outputs: ['EIC.png'] },
     { source: 'seal-observer.png', outputs: ['Observer.png'], size: { width: 193, height: 189 } },
-    { source: 'token-approve.png', outputs: ['green_seal.png'] },
-    { source: 'token-reject.png', outputs: ['red_seal.png'] },
+    // Council vote: approve is the Nawab seal, reject the Company seal.
+    { source: 'seal-nawab.png', outputs: ['green_seal.png'] },
+    { source: 'seal-eic.png', outputs: ['red_seal.png'] },
     { source: 'banner-nawab.png', outputs: ['green_card.png'] },
     { source: 'banner-eic.png', outputs: ['red_card.png'] },
   ];

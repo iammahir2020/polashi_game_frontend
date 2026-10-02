@@ -9,14 +9,13 @@
 // with the same names into art-src/ and skip this step.
 //
 // Outputs:
-//   key-art-portrait.png        2:3 battlefield scene (background, video poster)
-//   key-art-portrait-calm.png   same scene without the lightning (video frames)
-//   key-art-wide.png            1.91:1 scene for the share image
-//   (the three key-art files only with --key-art: the live background and share
-//   image are hand-supplied art that this script must not overwrite)
+//   banner-nawab.png / banner-eic.png   mission vote cards (always drawn)
+//
+// With --vector only, because the live versions are hand-supplied illustrations
+// that this script must not overwrite (see art-src/README.md):
 //   seal-nawab.png / seal-eic.png / seal-observer.png   faction seals
-//   token-approve.png / token-reject.png                council vote tokens
-//   banner-nawab.png / banner-eic.png                   mission vote cards
+//   key-art-portrait.png / key-art-portrait-calm.png    2:3 battlefield scene
+//   key-art-wide.png                                    1.91:1 scene for the share image
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -183,19 +182,6 @@ function eyeEmblem() {
   };
 }
 
-// Eight-petal rosette, used on the neutral vote tokens.
-function rosetteEmblem() {
-  const petals = [];
-  for (let i = 0; i < 8; i++) {
-    petals.push(`<ellipse cx="0" cy="-0.42" rx="0.15" ry="0.3" transform="rotate(${i * 45})" fill="currentColor"/>`);
-    petals.push(`<ellipse cx="0" cy="-0.62" rx="0.06" ry="0.1" transform="rotate(${i * 45 + 22.5})" fill="currentColor"/>`);
-  }
-  return {
-    raised: `<g>${petals.join('')}<circle r="0.17" fill="currentColor"/></g>`,
-    engraved: `<g>${[...Array(8)].map((_, i) => `<path d="M0,-0.2 L0,-0.6" transform="rotate(${i * 45})" stroke="currentColor" stroke-width="0.025"/>`).join('')}<circle r="0.07" fill="currentColor"/></g>`,
-  };
-}
-
 // --- Seal borders (unit radius; the band between 0.64 and 0.78) ----------------
 
 function mughalBorder() {
@@ -303,55 +289,6 @@ async function drawSeal(name, wax, emblem, border, seed) {
   const size = 1024;
   const seal = waxSeal({ R: 430, wax, emblem, border, seed });
   await save(name, svgDoc(size, size, `<g transform="translate(${size / 2 - 10},${size / 2 - 16})">${seal.body}</g>`, seal.defs));
-}
-
-async function drawToken(name, { wax, broken }) {
-  const size = 1000;
-  const c = size / 2;
-  const ids = { paper: uid('paper'), tex: uid('tex'), soft: uid('soft'), left: uid('left'), right: uid('right') };
-  const seal = waxSeal({ R: 250, wax, emblem: rosetteEmblem, border: plainBorder, seed: broken ? 21 : 12, emblemScale: 0.58 });
-
-  const rays = [...Array(24)]
-    .map((_, i) => `<path d="M0,0 L-60,-470 L60,-470 Z" transform="rotate(${i * 15})" fill="${i % 2 ? '#c7a86a' : '#dcc28c'}"/>`)
-    .join('');
-
-  const ribbons = `
-    <path d="M-40,120 L-120,390 L-80,360 L-60,410 L10,140 Z" fill="${wax.dark}"/>
-    <path d="M40,120 L120,390 L80,360 L60,410 L-10,140 Z" fill="${wax.base}"/>`;
-
-  let sealMarkup;
-  if (broken) {
-    // Crack the seal in two along a jagged line and push the halves apart.
-    const crack = 'M-20,-320 L15,-200 L-25,-110 L20,-20 L-15,70 L25,170 L-10,320';
-    sealMarkup = `
-      <clipPath id="${ids.left}"><path d="${crack} L-400,320 L-400,-320 Z"/></clipPath>
-      <clipPath id="${ids.right}"><path d="${crack} L400,320 L400,-320 Z"/></clipPath>
-      <g transform="translate(-34,8) rotate(-7)"><g clip-path="url(#${ids.left})">${seal.body}</g></g>
-      <g transform="translate(36,-6) rotate(6)"><g clip-path="url(#${ids.right})">${seal.body}</g></g>
-      <path d="M-150,290 l18,-10 l6,18 Z M170,250 l14,4 l-8,14 Z M-200,180 l10,-12 l9,10 Z" fill="${wax.dark}"/>`;
-  } else {
-    sealMarkup = `${ribbons}${seal.body}`;
-  }
-
-  const defs = `${seal.defs}
-    <radialGradient id="${ids.paper}" cx="0.42" cy="0.38" r="0.7">
-      <stop offset="0" stop-color="#f1e2bd"/><stop offset="0.7" stop-color="#d7bc86"/><stop offset="1" stop-color="#a98a52"/>
-    </radialGradient>
-    ${textureFilter(ids.tex, 0.012, 0.4, broken ? 5 : 4)}
-    ${blurFilter(ids.soft, 6)}`;
-
-  const body = `<g transform="translate(${c},${c})">
-    <circle r="480" fill="#000" opacity="0.45" transform="translate(8,14)" filter="url(#${ids.soft})"/>
-    <g filter="url(#${ids.tex})">
-      <circle r="478" fill="url(#${ids.paper})"/>
-      <g opacity="0.28"><clipPath id="${ids.paper}c"><circle r="440"/></clipPath><g clip-path="url(#${ids.paper}c)">${rays}</g></g>
-      <circle r="466" fill="none" stroke="#7a5a22" stroke-width="22"/>
-      <circle r="466" fill="none" stroke="#e8cf8f" stroke-width="5" transform="translate(-3,-3)" opacity="0.8"/>
-      <circle r="440" fill="none" stroke="#8a6a2a" stroke-width="3"/>
-    </g>
-    ${sealMarkup}
-  </g>`;
-  await save(name, svgDoc(size, size, body, defs));
 }
 
 async function drawBanner(name, { cloth, clothLight, clothDark, emblem, border, seed }) {
@@ -762,21 +699,19 @@ function scene({ W, H, horizon, split, flagCenter, flagScale, figureScale, seed,
 async function run() {
   fs.mkdirSync(ART, { recursive: true });
 
-  await drawSeal('seal-nawab.png', WAX.nawab, elephantEmblem, mughalBorder, 3);
-  await drawSeal('seal-eic.png', WAX.eic, laurelEmblem, europeanBorder, 8);
-  await drawSeal('seal-observer.png', WAX.observer, eyeEmblem, plainBorder, 14);
-
-  await drawToken('token-approve.png', { wax: WAX.nawab, broken: false });
-  await drawToken('token-reject.png', { wax: WAX.eic, broken: true });
+  const redrawVector = process.argv.includes('--vector');
 
   await drawBanner('banner-nawab.png', { cloth: '#1d7a45', clothLight: '#2fa363', clothDark: '#0f4a2a', emblem: elephantEmblem, border: mughalBorder, seed: 31 });
   await drawBanner('banner-eic.png', { cloth: '#a51d2d', clothLight: '#d0384a', clothDark: '#5e0d18', emblem: laurelEmblem, border: europeanBorder, seed: 37 });
 
   const portrait = { W: 1200, H: 1800, horizon: 1800 * 0.6, split: 600, flagCenter: [600, 1800 * 0.27], flagScale: 1, figureScale: 1.55, seed: 1757 };
-  if (!process.argv.includes('--key-art')) {
-    console.log('key art skipped (art-src/ holds hand-supplied key art; pass --key-art to redraw it)');
+  if (!redrawVector) {
+    console.log('seals and key art skipped (hand-supplied; pass --vector to redraw the vector versions)');
     return;
   }
+  await drawSeal('seal-nawab.png', WAX.nawab, elephantEmblem, mughalBorder, 3);
+  await drawSeal('seal-eic.png', WAX.eic, laurelEmblem, europeanBorder, 8);
+  await drawSeal('seal-observer.png', WAX.observer, eyeEmblem, plainBorder, 14);
   await save('key-art-portrait.png', scene({ ...portrait, lightning: true }));
   await save('key-art-portrait-calm.png', scene({ ...portrait, lightning: false }));
 
