@@ -112,7 +112,7 @@ To play against a local backend, run polashi_game_backend (`npm start`, port 300
 | `npm run e2e:build` | Only the end-to-end tests that run against the production build, no backend needed |
 | `npm run typecheck` | `tsc -b --noEmit` |
 | `npm run lint` | ESLint |
-| `npm run art` | Draws the source art in `art-src/` from code |
+| `npm run art -- --vector` | Redraws the original vector art in `art-src/` from code (the live art is hand-supplied) |
 | `npm run assets` | Rebuilds the images and splash video in `public/` from `art-src/` (see [art-src/README.md](art-src/README.md)) |
 
 ## Testing
