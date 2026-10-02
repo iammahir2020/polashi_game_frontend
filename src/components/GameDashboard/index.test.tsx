@@ -364,3 +364,102 @@ describe('GameDashboard on a wide screen', () => {
     expect(screen.queryByRole('region', { name: 'Voting session' })).toBeNull();
   });
 });
+
+/**
+ * The General picking a battalion: quick clicks over a slow connection.
+ *
+ * The bug: each click on a name used to build the new team from the last
+ * team the SERVER had sent back. On a real network that reply takes a moment,
+ * so a General who clicked two names quickly sent [Siraj] and then, building
+ * on the still-empty server copy, [Clive]: the second click silently replaced
+ * the first. (It showed up in the end-to-end run against the deployed server,
+ * where Render's latency is real.)
+ *
+ * These tests reproduce "slow server" for free: they simply never deliver the
+ * server's reply between the two clicks, which is exactly the situation a
+ * fast double click creates on a real network.
+ */
+describe('GameDashboard: the General picking a battalion', () => {
+  const general = makePlayer({ name: 'Mir Madan', isGeneral: true });
+  const siraj = makePlayer({ name: 'Siraj' });
+  const clive = makePlayer({ name: 'Clive' });
+  const players = [general, siraj, clive, makePlayer({ name: 'Watts' }), makePlayer({ name: 'Jagat' })];
+
+  // Round 1 of a 5-player game: the battalion is 2 players.
+  const room = (proposedTeam: string[] = []) => makeRoom({
+    roomCode: 'TEAM01', players, activePlayerIds: players.map((p) => p.id),
+    gameStarted: true, currentRound: 1, proposedTeam,
+  });
+
+  function joinAsGeneral() {
+    render(<GameDashboard />);
+    act(() => {
+      latestCallbackGivenTo(socketService.onRoomJoined)({
+        roomCode: 'TEAM01', room: room(), role: 'player', playerId: general.id, isGameMaster: false,
+      });
+    });
+  }
+
+  // What the server would broadcast once it has applied a proposal.
+  function serverConfirms(team: string[]) {
+    act(() => latestCallbackGivenTo(socketService.onRoomUpdated)(room(team)));
+  }
+
+  // Every team this client sent, in order: the second argument of each
+  // `proposeTeam(roomCode, playerIds)` call.
+  const sentTeams = () => vi.mocked(socketService.proposeTeam).mock.calls.map((call) => call[1]);
+
+  it('keeps both picks when two names are clicked before the server replies', () => {
+    joinAsGeneral();
+    fireEvent.click(screen.getByRole('button', { name: 'Siraj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clive' }));
+
+    // Before the fix the second entry was [clive.id]: Siraj was lost.
+    expect(sentTeams()).toEqual([[siraj.id], [siraj.id, clive.id]]);
+  });
+
+  it('can also take a quick pick back before the server replies', () => {
+    joinAsGeneral();
+    fireEvent.click(screen.getByRole('button', { name: 'Siraj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siraj' }));
+
+    // The second click sees Siraj as already picked (from what was just sent)
+    // and removes him. Before the fix it added him a second time.
+    expect(sentTeams()).toEqual([[siraj.id], []]);
+  });
+
+  it('never sends more players than the mission takes', () => {
+    joinAsGeneral();
+    fireEvent.click(screen.getByRole('button', { name: 'Siraj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clive' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Watts' }));
+
+    // Round 1 takes 2. The third click is refused on this device, so the
+    // limit holds even though the server hasn't confirmed the first two yet.
+    expect(sentTeams()).toEqual([[siraj.id], [siraj.id, clive.id]]);
+  });
+
+  it('goes back to the server\'s team once it has caught up', () => {
+    joinAsGeneral();
+    fireEvent.click(screen.getByRole('button', { name: 'Siraj' }));
+    serverConfirms([siraj.id]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clive' }));
+    expect(sentTeams().at(-1)).toEqual([siraj.id, clive.id]);
+  });
+
+  it('stops trusting a proposal the server never confirmed, after a few seconds', () => {
+    // If the server ignored a proposal (say a vote had just begun), the
+    // device must not keep building on a team that never existed. Fake timers
+    // let the test jump 3 seconds ahead without actually waiting.
+    vi.useFakeTimers();
+    joinAsGeneral();
+    fireEvent.click(screen.getByRole('button', { name: 'Siraj' }));
+
+    act(() => { vi.advanceTimersByTime(3100); });
+    fireEvent.click(screen.getByRole('button', { name: 'Clive' }));
+
+    // Built on the server's team (still empty), not on the unconfirmed [Siraj].
+    expect(sentTeams().at(-1)).toEqual([clive.id]);
+  });
+});
