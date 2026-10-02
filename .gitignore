@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 # Generated at build time by scripts/generate-seo-files.mjs
 public/sitemap.xml
+
+# Playwright
+playwright-report
+test-results

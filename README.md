@@ -92,6 +92,7 @@ To play against a local backend, run polashi_game_backend and point `SOCKET_URL`
 | `npm run preview` | Serves the production build |
 | `npm test` | Runs the Vitest suite once |
 | `npm run test:watch` | Vitest in watch mode |
+| `npm run test:e2e` | Playwright end-to-end tests (builds first) |
 | `npm run typecheck` | `tsc -b --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run art` | Draws the source art in `art-src/` from code |
@@ -105,6 +106,17 @@ in `index.html` match `src/seo/seoConfig.ts`.
 
 ```sh
 npm test
+```
+
+End-to-end tests in `e2e/` use Playwright against the production build (`vite preview` on port
+4317, started automatically). They stub the socket.io connection, so they never reach the game
+server. They cover the intro splash, the enlistment form, the credit footer, head tags and JSON-LD,
+noindex on room links, the pre-rendered how-to-play page with JavaScript off, the sitemap, robots.txt,
+the manifest and every image the app references. Each test runs on a desktop and a mobile viewport.
+
+```sh
+npx playwright install chromium   # once
+npm run test:e2e
 ```
 
 ## Credits & disclaimer

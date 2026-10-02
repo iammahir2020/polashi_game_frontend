@@ -70,10 +70,11 @@ async function run() {
     console.log('prerender: added JSON-LD to dist/index.html');
 
     for (const page of renderPages()) {
-      const html = withHead(template, page).replace(
-        '<div id="root"></div>',
-        `<div id="root">${page.html}</div>`,
-      );
+      // The landing page's <noscript> summary would duplicate this page's own
+      // content (and add a second <h1>), so pre-rendered pages drop it.
+      const html = withHead(template, page)
+        .replace('<div id="root"></div>', `<div id="root">${page.html}</div>`)
+        .replace(/\s*<noscript>[\s\S]*?<\/noscript>/, '');
       const outDir = path.join(DIST, page.path.replace(/^\//, ''));
       fs.mkdirSync(outDir, { recursive: true });
       fs.writeFileSync(path.join(outDir, 'index.html'), html);

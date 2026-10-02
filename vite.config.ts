@@ -21,6 +21,23 @@ function googleSiteVerification(token: string | undefined): Plugin {
   }
 }
 
+// Mirrors the vercel.json rewrite so `vite preview` serves the pre-rendered
+// /how-to-play page instead of falling back to the SPA shell.
+function servePrerenderedPages(paths: string[]): Plugin {
+  return {
+    name: 'serve-prerendered-pages',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const [pathname, query] = (req.url ?? '').split('?')
+        if (paths.includes(pathname)) {
+          req.url = `${pathname}/index.html${query ? `?${query}` : ''}`
+        }
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
 
@@ -28,6 +45,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       googleSiteVerification(env.VITE_GOOGLE_SITE_VERIFICATION),
+      servePrerenderedPages(['/how-to-play']),
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'favicon-32.png', 'apple-touch-icon.png', 'robots.txt', 'Nawab.png', 'EIC.png'],
