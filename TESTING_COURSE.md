@@ -37,7 +37,7 @@ test sees the phone layout; `tests/matchMedia.ts` is a fake screen you can resiz
 `src/hooks/useLayout.test.ts` (breakpoints, resize, unsubscribe on unmount), the "on a wide screen"
 block at the end of `GameDashboard/index.test.tsx`, plus `VotingSystem`, `PlayerRoster`,
 `WarRoom/phase` and `WarRoom/WideHeader` tests. The 5-player capstone now plays through the desktop
-layout (Playwright's Desktop Chrome is 1280px wide). Current: `npm test` 294 passing, e2e 42/42.
+layout (Playwright's Desktop Chrome is 1280px wide). Current: `npm test` 299 passing, e2e 42/42.
 
 Last worked: 2026-10-03.
 
@@ -595,6 +595,7 @@ unchanged (37 pre-existing).
 | 2026-09-06 | **Level 5 fully done** | Set up temporary `e2e/broken-example.spec.ts` (subtle placeholder-text typo, confirmed it failed cleanly not hung, confirmed `--trace on` produces a real `trace.zip`) and handed the actual debugging off — `--ui` mode and the trace viewer are interactive GUI tools, not something to fake through text. Mahir found the mismatch and fixed it himself, deleted the practice file. Also fixed a stale progress-table bug while closing out: the top-of-file summary table still showed Level 3 as `[~]` and Level 4 as `[ ]` despite both being long done in the detailed sections — corrected all three (3, 4, 5) to `[x]`. Deliberately not starting Level 6 — Mahir has something else to do first | Whatever Mahir needs next; resume at Level 6 (GitHub Actions) afterward |
 | 2026-10-02 | (outside the course) | Security hardening fixed Steps.md #2, #3, #4, #6, #7, #8; those tests are green now. New tests for payload checks, name rules, rejoin storage, error boundary, CSP | Rename the old "FAILS" titles; resume Level 6 |
 | 2026-10-03 | (outside the course) | Tablet/desktop layout. New: `tests/matchMedia.ts` (fake resizable screen), tests for `useLayout`, the inline vote, the always-open roster, the war-room header and phase line, and the dashboard's wide arrangement (37 new). The capstone caught a real layering bug (the deciding verdict hid under Mir Jafor's screen) | Rename the old "FAILS" titles; resume Level 6 |
+| 2026-10-03 | (outside the course) | General team-picking race fixed. 5 tests at the end of `GameDashboard/index.test.tsx` show how to test a network race without a network: just don't deliver the server's reply between two clicks. 3 of them fail on the old code, proven by running them against it; the other 2 guard the fix's fallbacks (server catches up; unconfirmed proposal expires, via fake timers). 299 passing | Rename the old "FAILS" titles; resume Level 6 |
 
 ---
 

@@ -33,6 +33,14 @@ import Panel from "../WarRoom/Panel";
 import WideHeader from "../WarRoom/WideHeader";
 import { columnStyle, mutedTextStyle } from "../WarRoom/styles";
 
+// How long a General's just-sent team is trusted over the server's copy. Long
+// enough to cover a slow round trip to the server; short enough that if the
+// server ignored a proposal, the next click goes back to the server's team.
+const PENDING_TEAM_MS = 3000;
+
+const sameMembers = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((id) => b.includes(id));
+
 type DialogState = {
   kind: "notice" | "confirm";
   title: string;
@@ -79,6 +87,18 @@ export default function GameDashboard() {
   // Ignores a repeat of the same action within a short window (double clicks,
   // impatient taps). The server is what enforces the rules; this only stops
   // accidental duplicates such as re-rolling the General twice.
+  // The team this General last sent, while the server's copy is still on its
+  // way back. The server only ever echoes whole teams, so building each click
+  // on the server's (older) copy made quick clicks overwrite each other: pick
+  // two names fast and only the second stayed. Each click now builds on this.
+  const pendingTeamRef = useRef<{ team: string[]; sentAt: number } | null>(null);
+  // Once the server's team matches what was sent, the server's copy is the
+  // source of truth again.
+  useEffect(() => {
+    const pending = pendingTeamRef.current;
+    if (pending && sameMembers(pending.team, room?.proposedTeam ?? [])) pendingTeamRef.current = null;
+  }, [room?.proposedTeam]);
+
   const lastActionAtRef = useRef<Record<string, number>>({});
   const runOnce = useCallback((key: string, action: () => void, windowMs = 800) => {
     const now = Date.now();
@@ -527,8 +547,15 @@ export default function GameDashboard() {
     // 1. Guard against invalid states
     if (!room || !playerId || !room.gameStarted) return;
 
-    const currentTeam = room.proposedTeam || [];
+    const pending = pendingTeamRef.current;
+    const currentTeam = pending && Date.now() - pending.sentAt < PENDING_TEAM_MS
+      ? pending.team
+      : room.proposedTeam || [];
     const isSelected = currentTeam.includes(id);
+    const sendTeam = (team: string[]) => {
+      pendingTeamRef.current = { team, sentAt: Date.now() };
+      handleSetTeam(team);
+    };
 
     // 2. Identify the size of the active battalion (5-10)
     const activeCount = room.activePlayerIds?.length || 5;
@@ -546,12 +573,12 @@ export default function GameDashboard() {
     // 4. Handle selection logic
     if (isSelected) {
       const newTeam = currentTeam.filter(pId => pId !== id);
-      handleSetTeam(newTeam);
+      sendTeam(newTeam);
     } else {
       // Use the dynamic players requirement from our config
       if (currentTeam.length < currentReq.players) {
         const newTeam = [...currentTeam, id];
-        handleSetTeam(newTeam);
+        sendTeam(newTeam);
       }
     }
   };
