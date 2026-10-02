@@ -8,11 +8,9 @@
 // the same on every run. To use hand-made or generated art instead, drop PNGs
 // with the same names into art-src/ and skip this step.
 //
-// Outputs:
-//   banner-nawab.png / banner-eic.png   mission vote cards (always drawn)
-//
-// With --vector only, because the live versions are hand-supplied illustrations
-// that this script must not overwrite (see art-src/README.md):
+// Outputs, all with --vector only: the live versions are hand-supplied
+// illustrations that this script must not overwrite (see art-src/README.md).
+//   banner-nawab.png / banner-eic.png                   mission vote cards
 //   seal-nawab.png / seal-eic.png / seal-observer.png   faction seals
 //   key-art-portrait.png / key-art-portrait-calm.png    2:3 battlefield scene
 //   key-art-wide.png                                    1.91:1 scene for the share image
@@ -701,14 +699,13 @@ async function run() {
 
   const redrawVector = process.argv.includes('--vector');
 
-  await drawBanner('banner-nawab.png', { cloth: '#1d7a45', clothLight: '#2fa363', clothDark: '#0f4a2a', emblem: elephantEmblem, border: mughalBorder, seed: 31 });
-  await drawBanner('banner-eic.png', { cloth: '#a51d2d', clothLight: '#d0384a', clothDark: '#5e0d18', emblem: laurelEmblem, border: europeanBorder, seed: 37 });
-
   const portrait = { W: 1200, H: 1800, horizon: 1800 * 0.6, split: 600, flagCenter: [600, 1800 * 0.27], flagScale: 1, figureScale: 1.55, seed: 1757 };
   if (!redrawVector) {
-    console.log('seals and key art skipped (hand-supplied; pass --vector to redraw the vector versions)');
+    console.log('Nothing to draw: banners, seals and key art are hand-supplied. Pass --vector to redraw the vector versions.');
     return;
   }
+  await drawBanner('banner-nawab.png', { cloth: '#1d7a45', clothLight: '#2fa363', clothDark: '#0f4a2a', emblem: elephantEmblem, border: mughalBorder, seed: 31 });
+  await drawBanner('banner-eic.png', { cloth: '#a51d2d', clothLight: '#d0384a', clothDark: '#5e0d18', emblem: laurelEmblem, border: europeanBorder, seed: 37 });
   await drawSeal('seal-nawab.png', WAX.nawab, elephantEmblem, mughalBorder, 3);
   await drawSeal('seal-eic.png', WAX.eic, laurelEmblem, europeanBorder, 8);
   await drawSeal('seal-observer.png', WAX.observer, eyeEmblem, plainBorder, 14);
