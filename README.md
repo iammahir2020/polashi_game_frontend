@@ -94,7 +94,8 @@ To play against a local backend, run polashi_game_backend and point `SOCKET_URL`
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run typecheck` | `tsc -b --noEmit` |
 | `npm run lint` | ESLint |
-| `npm run assets` | Rebuilds the images in `public/` from `art-src/` (see [art-src/README.md](art-src/README.md)) |
+| `npm run art` | Draws the source art in `art-src/` from code |
+| `npm run assets` | Rebuilds the images and splash video in `public/` from `art-src/` (see [art-src/README.md](art-src/README.md)) |
 
 ## Testing
 

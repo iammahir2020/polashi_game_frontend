@@ -3,14 +3,14 @@
 //   npm run assets
 //
 // Re-runnable: outputs are always rebuilt from sources, never from earlier
-// outputs. When a source in art-src/ is missing, the step falls back to the
-// legacy art (or skips) and says so, so the script works before and after the
-// new art lands.
+// outputs. When a source in art-src/ is missing, that step is skipped and the
+// current file in public/ is kept. `npm run art` draws the sources.
 //
 // Text is rendered with Pango via sharp's `text` input, using the TTFs in
 // scripts/fonts/ (all SIL OFL). Each text run gets one font file, which is why
 // the Latin title and the Bangla name are rendered separately and composited.
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
@@ -76,14 +76,11 @@ async function renderText(text, { font, size, fontfile, color = GOLD, weight = '
 
 // --- Background --------------------------------------------------------------
 // The UI renders the title in HTML (GameHeader), so the background stays
-// textless. The legacy fallback already has a title painted into it.
+// textless.
 async function buildBackground() {
-  const source = firstExisting(
-    path.join(ART, 'key-art-portrait.png'),
-    path.join(ART, 'legacy', 'polashi_bg_high_res.png'),
-  );
-  if (!source) {
-    console.warn('! background: no source art found, skipped');
+  const source = path.join(ART, 'key-art-portrait.png');
+  if (!exists(source)) {
+    console.warn('! background: art-src/key-art-portrait.png missing, skipped');
     return;
   }
   console.log(`background  <- ${rel(source)}`);
@@ -96,29 +93,15 @@ async function buildBackground() {
 // --- Open Graph image (1200x630) --------------------------------------------
 async function buildOgImage() {
   const wide = path.join(ART, 'key-art-wide.png');
-  const legacy = path.join(ART, 'legacy', 'polashi_bg_high_res.png');
   const W = 1200;
   const H = 630;
 
-  let base;
-  if (exists(wide)) {
-    console.log(`og-image    <- ${rel(wide)}`);
-    base = sharp(wide).resize(W, H, { fit: 'cover' });
-  } else if (exists(legacy)) {
-    // Interim: crop the battlefield band out of the portrait art. This band
-    // sits between the seals (which carry the wrong "1814" date) and the
-    // painted-in title, so neither ends up in the share image.
-    console.log(`og-image    <- ${rel(legacy)} (battlefield crop; add art-src/key-art-wide.png to replace)`);
-    const meta = await sharp(legacy).metadata();
-    const cropHeight = Math.round((meta.width * H) / W);
-    const top = Math.round(meta.height * 0.45);
-    base = sharp(legacy)
-      .extract({ left: 0, top, width: meta.width, height: cropHeight })
-      .resize(W, H);
-  } else {
-    console.warn('! og-image: no source art found, skipped');
+  if (!exists(wide)) {
+    console.warn('! og-image: art-src/key-art-wide.png missing, skipped');
     return;
   }
+  console.log(`og-image    <- ${rel(wide)}`);
+  const base = sharp(wide).resize(W, H, { fit: 'cover' });
 
   // Darken the left side so the title stays readable on any art.
   const shade = Buffer.from(`
@@ -205,7 +188,7 @@ function toIco(pngs) {
 async function buildIcons() {
   const source = firstExisting(path.join(ART, 'seal-nawab.png'), path.join(PUBLIC, 'Nawab.png'));
   console.log(`icons       <- ${rel(source)}`);
-  // Read once into memory: Nawab.png may itself be rewritten by buildSeals().
+  // Read once into memory: Nawab.png may itself be rewritten by buildGamePieces().
   const input = fs.readFileSync(source);
   const opaque = { r: 10, g: 10, b: 10, alpha: 1 };
 
@@ -223,23 +206,30 @@ async function buildIcons() {
   write('pwa-512-maskable.png', await iconOnCanvas(input, 512, { scale: 0.66, background: opaque }));
 }
 
-// --- Faction seals (only when new seal art exists) ---------------------------
-async function buildSeals() {
+// --- Seals, vote tokens and mission cards ------------------------------------
+// Each output keeps its current size so no layout changes. Observer.png had no
+// file before, so it takes the faction seals' size.
+async function buildGamePieces() {
   const targets = [
-    { source: 'seal-nawab.png', outputs: ['green_seal.png', 'Nawab.png'] },
-    { source: 'seal-eic.png', outputs: ['red_seal.png', 'EIC.png'] },
+    { source: 'seal-nawab.png', outputs: ['Nawab.png'] },
+    { source: 'seal-eic.png', outputs: ['EIC.png'] },
+    { source: 'seal-observer.png', outputs: ['Observer.png'], size: { width: 193, height: 189 } },
+    { source: 'token-approve.png', outputs: ['green_seal.png'] },
+    { source: 'token-reject.png', outputs: ['red_seal.png'] },
+    { source: 'banner-nawab.png', outputs: ['green_card.png'] },
+    { source: 'banner-eic.png', outputs: ['red_card.png'] },
   ];
 
-  for (const { source, outputs } of targets) {
+  for (const { source, outputs, size } of targets) {
     const file = path.join(ART, source);
     if (!exists(file)) {
-      console.warn(`! seals: art-src/${source} missing, kept ${outputs.join(' / ')}`);
+      console.warn(`! pieces: art-src/${source} missing, kept ${outputs.join(' / ')}`);
       continue;
     }
-    console.log(`seals       <- ${rel(file)}`);
+    console.log(`pieces      <- ${rel(file)}`);
     for (const name of outputs) {
-      // Keep each file's current dimensions so no layout changes.
-      const { width, height } = await sharp(path.join(PUBLIC, name)).metadata();
+      const target = path.join(PUBLIC, name);
+      const { width, height } = size ?? (await sharp(target).metadata());
       const buffer = await sharp(file)
         .resize(width, height, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png({ compressionLevel: 9, palette: true, quality: 90 })
@@ -247,6 +237,49 @@ async function buildSeals() {
       write(name, buffer);
     }
   }
+}
+
+// --- Splash video (optional: needs ffmpeg) ------------------------------------
+// A slow push-in on the calm scene with two lightning flashes from the full
+// scene, 8 s loop, 720x1280, no audio. Uses $FFMPEG_PATH or ffmpeg on PATH.
+function buildVideo() {
+  const calm = path.join(ART, 'key-art-portrait-calm.png');
+  const bolt = path.join(ART, 'key-art-portrait.png');
+  if (!exists(calm) || !exists(bolt)) {
+    console.warn('! video: portrait art missing, kept polashi_bg.mp4');
+    return;
+  }
+  const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
+  if (spawnSync(ffmpeg, ['-version']).status !== 0) {
+    console.warn('! video: ffmpeg not found (set FFMPEG_PATH), kept polashi_bg.mp4');
+    return;
+  }
+  console.log(`video       <- ${rel(calm)} + ${rel(bolt)}`);
+
+  const flash = "if(between(mod(T,4),1.2,1.42),1,if(between(mod(T,4),1.58,1.7),0.7,0))";
+  const filter = [
+    '[0]scale=864:1296,setsar=1[a]',
+    '[1]scale=864:1296,setsar=1[b]',
+    `[a][b]blend=all_expr='A*(1-${flash})+B*${flash}'[m]`,
+    "[m]scale=w='trunc(864*(1+0.05*t/8)/2)*2':h=-2:eval=frame,crop=720:1280,fps=24,format=yuv420p[v]",
+  ].join(';');
+  const out = path.join(PUBLIC, 'polashi_bg.mp4');
+  const tmp = `${out}.tmp.mp4`;
+  const result = spawnSync(ffmpeg, [
+    '-y', '-loglevel', 'error',
+    '-loop', '1', '-framerate', '24', '-t', '8', '-i', calm,
+    '-loop', '1', '-framerate', '24', '-t', '8', '-i', bolt,
+    '-filter_complex', filter, '-map', '[v]', '-t', '8', '-an',
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '30', '-movflags', '+faststart', tmp,
+  ], { stdio: 'inherit' });
+  if (result.status !== 0) {
+    console.warn('! video: ffmpeg failed, kept polashi_bg.mp4');
+    if (exists(tmp)) fs.rmSync(tmp);
+    return;
+  }
+  const before = fs.statSync(out).size;
+  fs.renameSync(tmp, out);
+  report.push({ name: 'polashi_bg.mp4', before, after: fs.statSync(out).size });
 }
 
 // --- Compress the remaining hand-made PNGs -----------------------------------
@@ -269,13 +302,14 @@ async function compressPngs(skip) {
 async function run() {
   await buildBackground();
   await buildOgImage();
-  await buildSeals();
+  await buildGamePieces();
   await buildIcons();
   await compressPngs(new Set(report.map((entry) => entry.name)));
+  buildVideo();
 
   console.log('\nfile                     before       after');
   for (const { name, before, after } of report) {
-    const flag = after > SIZE_BUDGET ? '  (over 300 KB)' : '';
+    const flag = after > SIZE_BUDGET && !name.endsWith('.mp4') ? '  (over 300 KB)' : '';
     console.log(`${name.padEnd(24)} ${(before === null ? 'new' : kb(before)).padStart(10)}  ${kb(after).padStart(10)}${flag}`);
   }
 }
