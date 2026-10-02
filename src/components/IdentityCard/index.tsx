@@ -17,7 +17,7 @@ if (!gameStarted) return null;
 
 // New Change: Detect if player is an observer (game started but no character assigned to them)
 const isObserver = !character;
-const isNawab = character ? (character.team === "Nawabs" || character.team.includes("Nawabs")) : false;
+const isNawab = typeof character?.team === "string" && character.team.includes("Nawabs");
 
 return (
   <div
@@ -91,7 +91,7 @@ return (
         </h1>
 
         <div style={{...teamBadgeStyle, background: isObserver ? "#c5a059" : "rgba(0,0,0,0.8)", color: isObserver ? "black" : "#c5a059"}}>
-          {isObserver ? "SPECTATOR" : character?.team.toUpperCase()}
+          {isObserver ? "SPECTATOR" : character?.team?.toUpperCase()}
         </div>
 
         <p style={{...descriptionStyle, color: isObserver ? "#aaa" : "rgba(0,0,0,0.8)"}}>
