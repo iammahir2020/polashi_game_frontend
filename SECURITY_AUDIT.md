@@ -18,7 +18,7 @@ hardening step that only improves UX and resilience.
 | C3 | `attemptAssassination` has no checks and broadcasts the raw room: anyone can end any game at any time and see all roles | Critical | backend `server.js:704-720` | Needs backend |
 | C4 | Malformed events crash the whole server (unguarded destructuring and `room.players` on missing rooms) | Critical | backend `server.js:253`, `:280`, `:704-707` and most handlers | Needs backend |
 | C5 | `castVote` accepts any `playerId` string, so one client can stuff votes and decide council and mission results | Critical | backend `server.js:447-457` | Needs backend |
-| H1 | Mission (success/sabotage) votes are broadcast per player while the vote runs | High | backend `server.js:223` (`...room`), client `types/game.ts:18-23` | Needs backend (contract change) |
+| H1 | Mission (success/sabotage) votes are broadcast per player, during and after the vote | High | backend `server.js:223` (`...room`), client `types/game.ts:18-28` | Needs backend (no contract change) |
 | H2 | Privileged actions with no or bypassable checks: `startVote`, `proposeTeam`, `leaveRoom` (removes anyone), `startGame` payload, `investigatePlayer` | High | backend `server.js:427`, `:634`, `:664`, `:542`, `:352` | Needs backend |
 | H3 | A crafted player name (object, huge string) white-screens every client in the room; no payload validation, no error boundary | High | client `GameDashboard/index.tsx:99-138`, `PlayerRoster/index.tsx:309`, `main.tsx` | Fix in frontend + backend |
 | H4 | No CSP, no clickjacking protection, no `nosniff`/`Referrer-Policy`/`Permissions-Policy` | High | `vercel.json` (live headers checked) | Fix in frontend |
@@ -126,10 +126,13 @@ For mission votes, the team membership check passes with real ids, which C1 make
 reaches every client during a mission vote. Anyone can see who sabotaged. The UI shows only
 counts, but the data is in the Network tab.
 
-**Fix (backend, contract change).** During `missionOutcome`, send `votedIds: string[]` and, after
-the vote closes, only `{ yes, no }` counts. Council votes can stay per player after the vote closes,
-since they're public in this game. The frontend reads `voting.votes` in `VotingSystem/voteSelectors.ts`
-and would switch to the new fields when the backend ships them.
+**Fix (backend, no contract change).** The client already supports this: `VotingState.votes` accepts `true`
+as a "has voted, choice hidden" placeholder (`types/game.ts:20-26`), and `voteSelectors.ts` reads votes only
+through helpers. During an active `missionOutcome` vote, send `votes[playerId] = true` for each voter. After it
+closes, don't send per-player choices either, because that still reveals who sabotaged: send the choices under
+shuffled anonymous keys (`{ v1: "no", v2: "yes", ... }`). `voteTally` only counts values, so the result
+screen keeps working. Council (`teamApproval`) votes can stay per player once closed, since they're public in
+this game. While open, redact them the same way if you don't want people to see the votes coming in.
 
 ### H2. Privileged actions without real checks
 
@@ -334,10 +337,13 @@ Security fixes for server.js (Socket.IO game server). Keep event names unchanged
    createRoom/joinRoom/reconnectPlayer, and attemptAssassination (which currently emits the raw
    room). Strip players[].socketId. Characters only for self, observers, or gameStatus OVER.
 
-3. Hide mission votes (high, contract change). In the personalized view:
-   - missionOutcome while active: voting.votes -> omit; add voting.votedIds (string[]).
-   - after close: voting.tally = { yes, no }; keep per-player votes only for teamApproval.
-   Tell me the final shape so the frontend can switch.
+3. Hide mission votes (high, no contract change; the frontend already supports this).
+   In the personalized view, for voting.type === "missionOutcome":
+   - while active: votes[playerId] = true for each player who has voted (never "yes"/"no").
+   - after close: replace keys with shuffled anonymous ones ({ v1: "no", v2: "yes", ... }) so the
+     tally works but no choice maps to a player. Also stop logging per-player mission choices
+     (GameLogger councilVotes) if those logs are ever exposed.
+   For teamApproval, per-player values are fine once the vote closes.
 
 4. Payload validation (critical: crashes). Validate every event payload with zod at the top of each
    handler (strings with max lengths, arrays with max sizes, enums). Wrap handlers so exceptions are
