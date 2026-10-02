@@ -63,3 +63,44 @@ test('manifest and every referenced image are served', async ({ request }) => {
     expect(response.status(), src).toBe(200)
   }
 })
+
+test('security headers from vercel.json are served', async ({ request }) => {
+  const response = await request.get('/');
+  const headers = response.headers();
+  expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(headers['content-security-policy']).toContain("script-src 'self'");
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+  expect(headers['permissions-policy']).toContain('camera=()');
+});
+
+test.describe('the content security policy does not block the app', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubGameServer(page);
+    await page.addInitScript(() => {
+      const w = window as typeof window & { __cspViolations?: string[] };
+      w.__cspViolations = [];
+      document.addEventListener('securitypolicyviolation', (e) => {
+        w.__cspViolations!.push(`${e.violatedDirective} ${e.blockedURI}`);
+      });
+    });
+  });
+
+  const violations = (page: import('@playwright/test').Page) =>
+    page.evaluate(() => (window as typeof window & { __cspViolations?: string[] }).__cspViolations ?? []);
+
+  test('splash, video poster, fonts, enlistment screen and socket', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'ENTER POLASHI' }).click();
+    await expect(page.getByPlaceholder('Enter Alias...')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('how-to-play page', async ({ page }) => {
+    await page.goto('/how-to-play');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Polashi');
+    expect(await violations(page)).toEqual([]);
+  });
+});
