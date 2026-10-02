@@ -110,7 +110,11 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
       <button
         onClick={() => {
           if (isGameOver) return;
-          isPreGame ? setIsPickingCharacters(true) : handleAssignGeneral();
+          if (isPreGame) {
+            setIsPickingCharacters(true);
+          } else {
+            handleAssignGeneral();
+          }
         }}
         disabled={!!(isInvalid && isPreGame) || isGameOver}
         style={{

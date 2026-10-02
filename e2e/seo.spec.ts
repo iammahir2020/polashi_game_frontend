@@ -39,7 +39,7 @@ test.describe('SEO metadata', () => {
     // derive it: that file reads `import.meta.env` at the top level, which
     // Vite provides at build time but plain Node does not — the import
     // would throw before a single assertion ran.)
-    await expect(page).toHaveTitle('The Battle of Polashi (Polashi (পলাশী))');
+    await expect(page).toHaveTitle('The Battle of Polashi (পলাশী) – Online Social Deduction Game');
   });
 
   test('sets an absolute canonical link', async ({ page }) => {
@@ -64,11 +64,14 @@ test.describe('SEO metadata', () => {
     // own they wouldn't catch `RouteSeoManager` being deleted from
     // `App.tsx` entirely. This one would.
     const jsonLdScripts = page.locator('script[data-seo-jsonld="true"]');
-    await expect(jsonLdScripts).toHaveCount(3);
+    // (The production build also gets these pre-rendered into index.html by
+    // scripts/prerender.mjs, with the same data-seo-jsonld marker, so this
+    // check is only conclusive against the dev server this suite runs on.)
+    await expect(jsonLdScripts).toHaveCount(2);
 
     const types = await jsonLdScripts.evaluateAll((nodes) =>
       nodes.map((node) => JSON.parse(node.textContent ?? '{}')['@type']),
     );
-    expect(types).toEqual(['WebSite', 'VideoGame', 'Organization']);
+    expect(types).toEqual(['WebSite', 'VideoGame']);
   });
 });

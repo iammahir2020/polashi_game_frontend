@@ -3,7 +3,7 @@ import '../../style/login.css';
 import { signInWithGoogle } from '../../auth/googleAuth';
 import { useFirebaseAuth } from '../../auth/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuth } from './useAuth';
 
 // SVG Icons for Google and Facebook
 const GoogleIcon = () => (

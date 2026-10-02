@@ -45,8 +45,8 @@ const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with C
           muted
           loop
           playsInline
-          preload="none"
-          poster="/Nawab.png"
+          preload="metadata"
+          poster="/polashi_bg.webp"
           style={{
             position: "absolute", top: "50%", left: "50%",
             minWidth: "110%", minHeight: "110%",

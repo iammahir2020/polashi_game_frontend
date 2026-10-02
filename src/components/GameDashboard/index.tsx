@@ -21,6 +21,7 @@ import GameHeader from "../GameHeader";
 import IntelPopup from "../IntepPopup";
 import MirJaforPhase from "../MirJaforPhase";
 import ObserverScreen from "../ObserverScreen";
+import CreditFooter from "../CreditFooter";
 import { uiButtonGhost, uiButtonGold } from "../../style/ui";
 
 type DialogState = {
@@ -95,7 +96,7 @@ export default function GameDashboard() {
   useEffect(() => {
     socketService.connect();
 
-    socketService.onRoomJoined((data: any) => {
+    socketService.onRoomJoined((data) => {
       setRoom(data.room);
       setRoomCode(data.roomCode);
       setPlayerId(data.playerId);
@@ -262,7 +263,7 @@ export default function GameDashboard() {
       // setTimeout(() => setIntelPopup(null), 8000); // Private info stays longer
     });
 
-    socketService.onNotification((data: any) => {
+    socketService.onNotification((data) => {
       if (data.requesterId === playerId) return;
 
       let displayMessage = data.message;
@@ -812,6 +813,9 @@ export default function GameDashboard() {
           )}
         </>
       )}
+
+      {/* Credits on the landing and lobby screens only, never over the board */}
+      {!room?.gameStarted && <CreditFooter />}
 
       {errorToast && (
         <div

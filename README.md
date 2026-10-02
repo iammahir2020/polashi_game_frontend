@@ -1,73 +1,135 @@
-# React + TypeScript + Vite
+# The Battle of Polashi (পলাশী)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A real-time multiplayer web adaptation of *Polashi*, a social deduction board game published by
+Playground Inc. (Bangladesh). This is an unofficial, fan-made project: I did not design the game,
+I built the online version of it.
 
-Currently, two official plugins are available:
+Live: https://the-great-polashi-game.vercel.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![The Battle of Polashi](public/og-image.jpg)
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Rooms and lobby.** One player opens a room and becomes its game master. Others join with the
+  room code or an invite link (`/?room=CODE`). The game master can lock the room, remove players,
+  choose which characters are in play and toggle secret intelligence. Supports 5 to 10 players.
+- **Hidden roles.** Each player is dealt a character on the Nawab or East India Company side. The
+  server sends every client its own view of the room, so a player's browser only receives their own
+  character and the intel that character is allowed to see.
+- **Server-authoritative game state.** Clients send intents (propose a team, cast a vote, investigate)
+  and render whatever room state the server broadcasts. The server checks who is allowed to act,
+  counts votes and decides round results.
+- **Round flow.** A General proposes a battalion, the council approves or rejects it in an open vote,
+  then the battalion votes success or sabotage in secret. Team sizes and sabotage thresholds per
+  round are in [src/constants.ts](src/constants.ts).
+- **Guptochor.** From round 3, one player may secretly check another player's side. That player holds
+  the Guptochor next.
+- **Mir Jafor endgame.** If the Nawabs win three rounds, Mir Jafor gets one guess at who Mir Madan is.
+  A correct guess hands the win to the East India Company.
+- **Reconnects.** Room code and player id are kept in `localStorage`, so a refreshed or dropped client
+  rejoins its seat.
+- **PWA.** Installable, with a service worker (vite-plugin-pwa) that caches the app shell. Playing still
+  needs a connection to the game server.
+- **SEO.** Per-route title, description, Open Graph tags and JSON-LD; a pre-rendered `/how-to-play`
+  page; sitemap generated at build time.
 
-## Expanding the ESLint configuration
+## Tech stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19, TypeScript, Vite 7, React Router
+- socket.io-client for real-time sync
+- vite-plugin-pwa
+- Vitest and React Testing Library
+- sharp for the image pipeline
+- Vercel hosting and Vercel Analytics
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Architecture
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+browser (this repo)  <-- socket.io -->  game server (polashi_game_backend)
+  React UI renders the room                Express + socket.io
+  state it receives                        rooms held in memory
+                                           game logs written to Firestore
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The backend lives in a separate repository:
+https://github.com/iammahir2020/polashi_game_backend
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- [src/services/socket.ts](src/services/socket.ts) wraps every socket event the client sends or
+  listens for. The server URL is set at the top of that file.
+- [src/components/GameDashboard/index.tsx](src/components/GameDashboard/index.tsx) holds the client
+  state and switches between the lobby, the board and the overlays.
+- [src/seo/](src/seo/) holds the metadata for each public route.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+The `src/auth/`, `src/lib/firebase.ts` and login components are an earlier Firebase sign-in flow that
+is no longer used; the game has no accounts.
+
+## Local setup
+
+Requires Node 20.19 or newer (Vite 7).
+
+```sh
+npm install
+npm run dev
 ```
+
+Optional environment variables (put them in `.env.local`):
+
+| Name | Purpose |
+|---|---|
+| `VITE_SITE_URL` | Canonical site URL used in meta tags, JSON-LD and the sitemap |
+| `VITE_SITE_SAME_AS` | Comma-separated profile URLs for JSON-LD `sameAs` |
+| `VITE_GOOGLE_SITE_VERIFICATION` | Google Search Console token; adds the verification meta tag to the build |
+
+To play against a local backend, run polashi_game_backend and point `SOCKET_URL` in
+`src/services/socket.ts` at it.
+
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Generates sitemap and robots.txt, type-checks, builds, then pre-renders `/how-to-play` |
+| `npm run preview` | Serves the production build |
+| `npm test` | Runs the Vitest suite once |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run e2e` | All Playwright end-to-end tests (some need a local backend on :3000) |
+| `npm run e2e:build` | Only the end-to-end tests that run against the production build, no backend needed |
+| `npm run typecheck` | `tsc -b --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run art` | Draws the source art in `art-src/` from code |
+| `npm run assets` | Rebuilds the images and splash video in `public/` from `art-src/` (see [art-src/README.md](art-src/README.md)) |
+
+## Testing
+
+Unit and component tests sit next to their source as `*.test.ts(x)` and run in jsdom. They cover the
+credit footer, the how-to-play page, the SEO metadata and JSON-LD, and a check that the static tags
+in `index.html` match `src/seo/seoConfig.ts`.
+
+```sh
+npm test
+```
+
+End-to-end tests in `e2e/` use Playwright, in two suites. The multiplayer specs (`app`,
+`create-room`, `reconnect`, `capstone`, `seo`) run against `npm run dev` with `VITE_SOCKET_URL`
+pointed at a local backend on port 3000; see [TESTING.md](TESTING.md). The build specs
+(`landing`, `static`) run against the production build (`vite preview` on port 4317, started
+automatically) and stub the socket.io connection, so they never reach the game server. The build specs cover the intro splash, the enlistment form, the credit footer, head tags and JSON-LD,
+noindex on room links, the pre-rendered how-to-play page with JavaScript off, the sitemap, robots.txt,
+the manifest and every image the app references. Each test runs on a desktop and a mobile viewport.
+
+```sh
+npx playwright install chromium   # once
+npm run e2e:build                 # no backend needed
+npm run e2e                       # everything, with the backend running
+```
+
+## Credits & disclaimer
+
+Unofficial fan-made digital adaptation of *Polashi* by Playground Inc. Not affiliated with or
+endorsed by Playground Inc. No Playground Inc. artwork, logos or rulebook text are used.
+[Get the physical game](https://www.rokomari.com/product/293046/polashi-a-social-deduction-board-game-5-to-10-players-age-12plus).
+
+The game mechanics derive from *The Resistance: Avalon* by Don Eskridge.
+
+Fonts in `scripts/fonts/` (Cinzel, EB Garamond, Noto Serif Bengali) are used under the SIL Open
+Font License; the license files are alongside them.

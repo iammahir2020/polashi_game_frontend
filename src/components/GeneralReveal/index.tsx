@@ -13,10 +13,10 @@ interface GeneralRevealProps {
 }
 
 const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose }) => {
-  if (!generalReveal?.active) return null;
-
   const overlayRef = useRef<HTMLDivElement>(null);
   useOverlayA11y({ isActive: !!generalReveal?.active, onClose, containerRef: overlayRef });
+
+  if (!generalReveal?.active) return null;
 
   return (
     <div

@@ -5,14 +5,18 @@
  * thing standing between a mistyped URL and a page with no <title>. Four lines is
  * exactly the size of thing people skip testing.
  *
- * Read it first. Note that `ROUTE_SEO` currently has ONE entry, '/', so today
- * every path except '/' takes the fallback branch. That will stop being true the
- * moment a second route is added — which is precisely why the test is worth
- * having now.
+ * Read it first. `ROUTE_SEO` started with ONE entry, '/'; '/how-to-play' has
+ * since been added, which is exactly the day 5b below stopped being trivial.
+ *
+ * Since then the fallback also marks unknown paths `noindex` (only public pages
+ * in routes.ts should be indexed), so it returns a noindex COPY of the root
+ * entry rather than the root entry itself.
  */
 
 import { describe, it, expect } from 'vitest';
-import { resolveRouteSeo, ROUTE_SEO } from './routeSeo';
+import { baseSchemas, NOINDEX_ROBOTS, resolveRouteSeo, ROUTE_SEO } from './routeSeo';
+import { SITEMAP_ROUTES } from './routes';
+import { SITE_DESCRIPTION, SITE_TITLE } from './seoConfig';
 
 // HINT: you'll want `resolveRouteSeo` and `ROUTE_SEO` from './routeSeo'.
 
@@ -28,16 +32,16 @@ describe('resolveRouteSeo', () => {
 
   const routes = ['/signup','/results','','/user/1/info','/playerinfo?user=1']
   
-  // HINT: the assertion is about *identity* — the fallback returns the very same
-  // object, so `toBe(ROUTE_SEO['/'])` is right and `toEqual` would be a weaker
-  // check that also passes for a lookalike copy. This is the one place in the
-  // course so far where `toBe` on an object is what you want. (Re-read the
-  // toBe/toEqual table in TESTING.md if that sentence didn't land.)
+  // NOTE: this used to assert *identity* with `toBe(ROUTE_SEO['/'])`. The
+  // fallback now returns a copy with `robots: noindex` added, so `toEqual` on
+  // the expected shape is the right check, and `not.toBe` proves it really is
+  // a copy and not the shared root object mutated in place.
   it.each(routes)(
     'falls back to the root entry for an unknown path, for route %s',
   (route)=>{
     const result = resolveRouteSeo(route)
-    expect(result).toBe(ROUTE_SEO['/'])
+    expect(result).toEqual({ ...ROUTE_SEO['/'], robots: NOINDEX_ROBOTS })
+    expect(result).not.toBe(ROUTE_SEO['/'])
   });
 
   // EXERCISE 5b
@@ -48,8 +52,81 @@ describe('resolveRouteSeo', () => {
   // HINT: with only one route defined, there is exactly one input that proves
   // this. That feels almost too small to be worth a test; write it anyway and
   // notice how it stops being trivial the day a second route appears.
-  it('returns the matching entry for a known path, only route "/" ',()=>{
-    const result = resolveRouteSeo('/')
-    expect(result).toBe(ROUTE_SEO['/'])
+  it.each(['/', '/how-to-play'] as const)('returns the matching entry for a known path, route %s', (route) => {
+    const result = resolveRouteSeo(route)
+    expect(result).toBe(ROUTE_SEO[route])
+  });
+});
+
+describe('resolveRouteSeo indexing', () => {
+  it('keeps every public route indexable', () => {
+    for (const { path } of SITEMAP_ROUTES) {
+      expect(resolveRouteSeo(path).robots).toBeUndefined();
+    }
+  });
+
+  it('marks room invite links noindex', () => {
+    expect(resolveRouteSeo('/', '?room=ABCD').robots).toBe(NOINDEX_ROBOTS);
+  });
+
+  it('marks unknown paths noindex', () => {
+    expect(resolveRouteSeo('/not-a-page').robots).toBe(NOINDEX_ROBOTS);
+  });
+
+  it('ignores unrelated query strings', () => {
+    expect(resolveRouteSeo('/', '?utm_source=share').robots).toBeUndefined();
+  });
+});
+
+describe('copy', () => {
+  it('keeps the title near 60 characters', () => {
+    expect(SITE_TITLE.length).toBeLessThanOrEqual(65);
+    expect(SITE_TITLE).toContain('পলাশী');
+  });
+
+  it('keeps the description near 150 characters and credits Playground Inc.', () => {
+    expect(SITE_DESCRIPTION.length).toBeLessThanOrEqual(160);
+    expect(SITE_DESCRIPTION).toContain('5–10');
+    expect(SITE_DESCRIPTION).toContain('Playground Inc.');
+  });
+});
+
+describe('structured data', () => {
+  const docs = baseSchemas('/');
+  const byType = (type: string) => docs.find((doc) => doc['@type'] === type);
+
+  it('emits a WebSite and a VideoGame, both with a schema.org context', () => {
+    expect(docs.map((doc) => doc['@type'])).toEqual(['WebSite', 'VideoGame']);
+    for (const doc of docs) {
+      expect(doc['@context']).toBe('https://schema.org');
+    }
+  });
+
+  it('survives a JSON round trip unchanged', () => {
+    expect(JSON.parse(JSON.stringify(docs))).toEqual(docs);
+  });
+
+  it('describes the game', () => {
+    expect(byType('VideoGame')).toMatchObject({
+      name: 'The Battle of Polashi',
+      alternateName: 'পলাশী',
+      description: SITE_DESCRIPTION,
+      url: expect.stringMatching(/^https?:\/\//),
+      image: expect.stringMatching(/\/og-image\.jpg$/),
+      genre: 'Social deduction',
+      numberOfPlayers: { '@type': 'QuantitativeValue', minValue: 5, maxValue: 10 },
+      gamePlatform: 'Web browser',
+      inLanguage: ['en', 'bn'],
+      applicationCategory: 'Game',
+      offers: { '@type': 'Offer', price: '0' },
+    });
+  });
+
+  it('credits the board game it is based on', () => {
+    expect(byType('VideoGame')?.isBasedOn).toEqual({
+      '@type': 'Game',
+      name: 'Polashi',
+      publisher: { '@type': 'Organization', name: 'Playground Inc.' },
+    });
   });
 });

@@ -96,7 +96,7 @@ class SocketService {
     this.socket.emit("clearVote", { roomCode, requesterId: playerId });
   }
 
-  makeMove(roomCode: string, playerId: string, move: any) {
+  makeMove(roomCode: string, playerId: string, move: unknown) {
     this.socket.emit("makeMove", {
       roomCode,
       playerId,
@@ -200,7 +200,9 @@ class SocketService {
     this.socket.on("kicked", cb);
   }
 
-  onNotification(callback: (data: { message: string, type: string }) => void) {
+  onNotification(
+    callback: (data: { message: string; type: string; requesterId?: string; targetId?: string }) => void,
+  ) {
     this.socket.on("notification", callback);
   }
 

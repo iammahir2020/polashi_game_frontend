@@ -1,10 +1,11 @@
 import type { AppRoute } from './routes';
 import {
   DEFAULT_IMAGE,
-  SITE_ALT_NAME,
+  SITE_BANGLA_NAME,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITE_SAME_AS,
+  SITE_TITLE,
   toAbsoluteUrl,
 } from './seoConfig';
 import type { JsonLdDocument } from './types';
@@ -17,12 +18,24 @@ export type RouteSeoEntry = {
   jsonLd?: JsonLdDocument[];
 };
 
-const baseSchemas = (path: string): JsonLdDocument[] => [
+export const NOINDEX_ROBOTS = 'noindex, nofollow';
+
+// The physical board game this site adapts. Credited, not claimed.
+const BASED_ON_GAME: JsonLdDocument = {
+  '@type': 'Game',
+  name: 'Polashi',
+  publisher: {
+    '@type': 'Organization',
+    name: 'Playground Inc.',
+  },
+};
+
+export const baseSchemas = (path: string): JsonLdDocument[] => [
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_NAME,
-    alternateName: SITE_ALT_NAME,
+    alternateName: SITE_BANGLA_NAME,
     url: toAbsoluteUrl('/'),
     inLanguage: ['en', 'bn'],
     ...(SITE_SAME_AS.length > 0 ? { sameAs: SITE_SAME_AS } : {}),
@@ -31,19 +44,19 @@ const baseSchemas = (path: string): JsonLdDocument[] => [
     '@context': 'https://schema.org',
     '@type': 'VideoGame',
     name: SITE_NAME,
-    alternateName: SITE_ALT_NAME,
-    url: toAbsoluteUrl(path),
+    alternateName: SITE_BANGLA_NAME,
     description: SITE_DESCRIPTION,
-    publisher: {
-      '@type': 'Organization',
-      name: SITE_NAME,
-      url: toAbsoluteUrl('/'),
-    },
-    genre: ['Social Deduction', 'Strategy'],
+    url: toAbsoluteUrl(path),
     image: toAbsoluteUrl(DEFAULT_IMAGE),
+    genre: 'Social deduction',
+    numberOfPlayers: {
+      '@type': 'QuantitativeValue',
+      minValue: 5,
+      maxValue: 10,
+    },
+    gamePlatform: 'Web browser',
+    inLanguage: ['en', 'bn'],
     applicationCategory: 'Game',
-    keywords: ['Polashi', 'Palaashi', 'social deduction', 'strategy game'],
-    gamePlatform: ['Web Browser'],
     playMode: 'MultiPlayer',
     isAccessibleForFree: true,
     offers: {
@@ -51,38 +64,42 @@ const baseSchemas = (path: string): JsonLdDocument[] => [
       price: '0',
       priceCurrency: 'USD',
       availability: 'https://schema.org/InStock',
-      url: toAbsoluteUrl(path),
+      url: toAbsoluteUrl('/'),
     },
-    potentialAction: {
-      '@type': 'PlayAction',
-      target: toAbsoluteUrl(path),
-    },
-    operatingSystem: 'Web',
-    ...(SITE_SAME_AS.length > 0 ? { sameAs: SITE_SAME_AS } : {}),
-  },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: SITE_NAME,
-    url: toAbsoluteUrl('/'),
-    logo: toAbsoluteUrl(DEFAULT_IMAGE),
+    isBasedOn: BASED_ON_GAME,
     ...(SITE_SAME_AS.length > 0 ? { sameAs: SITE_SAME_AS } : {}),
   },
 ];
 
 export const ROUTE_SEO: Record<AppRoute, RouteSeoEntry> = {
   '/': {
-    title: `${SITE_NAME} (${SITE_ALT_NAME})`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     image: DEFAULT_IMAGE,
     jsonLd: baseSchemas('/'),
   },
+  '/how-to-play': {
+    title: 'How to Play Polashi (পলাশী) – Rules, Teams and Roles',
+    description:
+      'How to play The Battle of Polashi online: 5–10 players, Nawab vs East India Company, five rounds of council and secret votes, and the Mir Jafor endgame.',
+    image: DEFAULT_IMAGE,
+    jsonLd: baseSchemas('/how-to-play'),
+  },
 };
 
-export function resolveRouteSeo(pathname: string): RouteSeoEntry {
-  if (pathname in ROUTE_SEO) {
-    return ROUTE_SEO[pathname as AppRoute];
+// Room invite links (/?room=CODE) are private session URLs: never index them.
+export function isPrivateSessionUrl(search: string): boolean {
+  return new URLSearchParams(search).has('room');
+}
+
+export function resolveRouteSeo(pathname: string, search = ''): RouteSeoEntry {
+  const isPublicRoute = pathname in ROUTE_SEO;
+  const entry = isPublicRoute ? ROUTE_SEO[pathname as AppRoute] : ROUTE_SEO['/'];
+
+  // Only the public routes listed in routes.ts are indexable.
+  if (!isPublicRoute || isPrivateSessionUrl(search)) {
+    return { ...entry, robots: NOINDEX_ROBOTS };
   }
 
-  return ROUTE_SEO['/'];
+  return entry;
 }

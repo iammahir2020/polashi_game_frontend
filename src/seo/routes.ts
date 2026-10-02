@@ -19,6 +19,11 @@ export const SITEMAP_ROUTES = [
 		changefreq: 'weekly',
 		priority: 1.0,
 	},
+	{
+		path: '/how-to-play',
+		changefreq: 'monthly',
+		priority: 0.8,
+	},
 ] as const satisfies readonly SitemapRoute[];
 
 export type AppRoute = (typeof SITEMAP_ROUTES)[number]['path'];
