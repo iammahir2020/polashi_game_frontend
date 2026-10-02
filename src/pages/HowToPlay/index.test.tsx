@@ -43,4 +43,12 @@ describe('HowToPlay', () => {
     expect(screen.queryByRole('link', { name: /how to play/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Play now' })).toHaveAttribute('href', '/');
   });
+
+  it('says what is stored and that nothing needs a real name', () => {
+    render(<HowToPlay />);
+    const privacy = screen.getByRole('heading', { level: 2, name: 'Privacy' }).closest('section')!;
+    expect(privacy).toHaveTextContent('no accounts');
+    expect(privacy).toHaveTextContent('sets no cookies');
+    expect(privacy).toHaveTextContent('saves a record for statistics');
+  });
 });

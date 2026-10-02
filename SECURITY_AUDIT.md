@@ -9,6 +9,54 @@ their own Socket.IO connection to send any event with any payload. Nothing the f
 enforce a rule, so every item below is marked as either a real fix (server or hosting) or a client
 hardening step that only improves UX and resilience.
 
+## Remediation status (2026-10-02)
+
+Fixed on `chore/security-hardening` in both repositories (frontend and `polashi_game_backend`), each
+branched from its `main`. Game rules and flow are unchanged: the backend's full-game tests play both
+endings, and the frontend's multiplayer e2e specs (including the 5-player capstone) pass against the
+new server.
+
+| # | Status | Where |
+|---|---|---|
+| C1 Player ids as credentials | Fixed | Backend: actor = socket session; secret per-seat `reconnectToken`. Frontend: stores and sends the token |
+| C2 `roomJoined` leaks roles | Fixed | Backend: every outgoing room goes through `roomViewer` (`game/room.js`) |
+| C3 Unchecked assassination | Fixed | Backend: Mir Jafor only, `MIR_JAFOR_TURN` only, active target only |
+| C4 Crash on malformed events | Fixed | Backend: zod schema per event, wrapped handlers, prototype-free rooms map |
+| C5 Vote stuffing | Fixed | Backend: one vote per eligible socket player, `choice` validated |
+| H1 Mission votes visible | Fixed | Backend: `true` while open, anonymous keys once closed (no client change needed) |
+| H2 Unchecked privileged actions | Fixed | Backend: checks match the UI exactly (see table in H2 below) |
+| H3 Crafted name blanks every screen | Fixed | Frontend: `src/services/payloads.ts`, error boundary; backend: name rules |
+| H4 Missing security headers | Fixed | Frontend: `vercel.json` (CSP enforced, tested with zero violations in e2e) |
+| H5 Vulnerable client deps | Fixed | Frontend: 0 production vulnerabilities; backend: 0 critical/high |
+| M1 No rate limits / memory caps | Fixed | Backend: per-socket token bucket, `MAX_ROOMS` (1000), idle sweep, 16 KB messages. Frontend: double-click guard |
+| M2 Name / code spoofing | Fixed | Both: NFKC, invisible and bidi characters stripped, 24 chars; backend also de-duplicates names |
+| M3 Dead Firebase code | Fixed | Frontend: removed with the `firebase` package |
+| M4 CORS `*` default | Fixed | Backend: allowlist default, `Origin` check on the WebSocket upgrade |
+| M5 Analytics endpoints | Fixed | Backend: `/test` removed, `/all-players` needs `ADMIN_TOKEN` |
+| M6 Observers see roles | Accepted | By design |
+| L1 Console logs | Fixed | Frontend: dev only |
+| L2 Reconnect | Fixed | Frontend: 30 s max backoff with jitter, one rejoin per connection, lifecycle listeners registered once (Steps.md #6) |
+| L3 Service worker / `dev-dist` | Fixed | Frontend: `navigateFallbackDenylist`, `dev-dist/` untracked |
+| L4 Double-fired actions | Fixed | Frontend: short repeat guard on host and vote actions |
+| L5 `?room=` parameter | Fixed | Frontend: cleaned to letters and digits, 12 max |
+| L6 Google Fonts | Accepted | Allowed in the CSP |
+| L7 Room codes | Fixed | Backend: `crypto.randomInt`, collision check |
+
+Also fixed along the way: Steps.md #2, #3, #4, #7 and #8 (the five intentionally red unit tests now
+pass), and abandoned rooms no longer accumulate in server memory until a restart.
+
+Still open, needing a decision or access I don't have:
+- `firebase-admin` 13 -> 14 (major) clears 7 moderate backend advisories in a transitive `uuid`;
+  the affected code path isn't used.
+- `vitest` 3 -> 5 (major, dev only) clears 2 moderate advisories.
+- Firebase / Google Cloud console checklist (below), plus a retention policy (Firestore TTL) for
+  `game_logs`, which hold player aliases and votes.
+- Render environment: set `CLIENT_URL` to the site URL and, if you use the player list endpoint,
+  `ADMIN_TOKEN`.
+- Deploy order: frontend first, then backend (see the backend README).
+
+---
+
 ## Summary
 
 | # | Finding | Severity | Where | Status |
@@ -318,7 +366,8 @@ Not changed: game rules, mission tables, socket event names and payload shapes. 
 
 ## Backend follow-ups
 
-Paste this into a Claude Code session in `polashi_game_backend`:
+Done on the backend's `chore/security-hardening` branch, except items 10's major
+`firebase-admin` upgrade and 11 (sign-in was removed instead). Kept for reference:
 
 ```
 Security fixes for server.js (Socket.IO game server). Keep event names unchanged unless noted.
