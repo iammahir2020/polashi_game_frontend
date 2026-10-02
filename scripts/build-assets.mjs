@@ -92,9 +92,19 @@ async function buildBackground() {
 
 // --- Open Graph image (1200x630) --------------------------------------------
 async function buildOgImage() {
+  const finished = path.join(ART, 'og-image.png');
   const wide = path.join(ART, 'key-art-wide.png');
   const W = 1200;
   const H = 630;
+
+  // A finished share image (title already painted in) is used as it is,
+  // only resized and compressed; no second title on top.
+  if (exists(finished)) {
+    console.log(`og-image    <- ${rel(finished)} (finished art, no overlay)`);
+    const base = sharp(finished).resize(W, H, { fit: 'cover', position: 'attention' });
+    write('og-image.jpg', await encodeUnder(base, 'jpeg', SIZE_BUDGET, 82));
+    return;
+  }
 
   if (!exists(wide)) {
     console.warn('! og-image: art-src/key-art-wide.png missing, skipped');
@@ -240,12 +250,16 @@ async function buildGamePieces() {
 }
 
 // --- Splash video (optional: needs ffmpeg) ------------------------------------
-// A slow push-in on the calm scene with two lightning flashes from the full
-// scene, 8 s loop, 720x1280, no audio. Uses $FFMPEG_PATH or ffmpeg on PATH.
+// A slow push-in with two lightning flashes, 8 s loop, 720x1280, no audio.
+// With key-art-portrait-calm.png the flashes cut to the scene with lightning;
+// with only key-art-portrait.png they briefly brighten that one image.
+// Uses $FFMPEG_PATH or ffmpeg on PATH.
 function buildVideo() {
-  const calm = path.join(ART, 'key-art-portrait-calm.png');
   const bolt = path.join(ART, 'key-art-portrait.png');
-  if (!exists(calm) || !exists(bolt)) {
+  const calmFile = path.join(ART, 'key-art-portrait-calm.png');
+  const singleImage = !exists(calmFile);
+  const calm = singleImage ? bolt : calmFile;
+  if (!exists(bolt)) {
     console.warn('! video: portrait art missing, kept polashi_bg.mp4');
     return;
   }
@@ -254,12 +268,14 @@ function buildVideo() {
     console.warn('! video: ffmpeg not found (set FFMPEG_PATH), kept polashi_bg.mp4');
     return;
   }
-  console.log(`video       <- ${rel(calm)} + ${rel(bolt)}`);
+  console.log(`video       <- ${singleImage ? `${rel(bolt)} (flash by brightening)` : `${rel(calm)} + ${rel(bolt)}`}`);
 
   const flash = "if(between(mod(T,4),1.2,1.42),1,if(between(mod(T,4),1.58,1.7),0.7,0))";
   const filter = [
     '[0]scale=864:1296,setsar=1[a]',
-    '[1]scale=864:1296,setsar=1[b]',
+    singleImage
+      ? '[1]scale=864:1296,setsar=1,eq=brightness=0.16:contrast=1.12:saturation=1.1[b]'
+      : '[1]scale=864:1296,setsar=1[b]',
     `[a][b]blend=all_expr='A*(1-${flash})+B*${flash}'[m]`,
     "[m]scale=w='trunc(864*(1+0.05*t/8)/2)*2':h=-2:eval=frame,crop=720:1280,fps=24,format=yuv420p[v]",
   ].join(';');

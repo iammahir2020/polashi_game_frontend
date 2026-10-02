@@ -12,6 +12,8 @@
 //   key-art-portrait.png        2:3 battlefield scene (background, video poster)
 //   key-art-portrait-calm.png   same scene without the lightning (video frames)
 //   key-art-wide.png            1.91:1 scene for the share image
+//   (the three key-art files only with --key-art: the live background and share
+//   image are hand-supplied art that this script must not overwrite)
 //   seal-nawab.png / seal-eic.png / seal-observer.png   faction seals
 //   token-approve.png / token-reject.png                council vote tokens
 //   banner-nawab.png / banner-eic.png                   mission vote cards
@@ -771,6 +773,10 @@ async function run() {
   await drawBanner('banner-eic.png', { cloth: '#a51d2d', clothLight: '#d0384a', clothDark: '#5e0d18', emblem: laurelEmblem, border: europeanBorder, seed: 37 });
 
   const portrait = { W: 1200, H: 1800, horizon: 1800 * 0.6, split: 600, flagCenter: [600, 1800 * 0.27], flagScale: 1, figureScale: 1.55, seed: 1757 };
+  if (!process.argv.includes('--key-art')) {
+    console.log('key art skipped (art-src/ holds hand-supplied key art; pass --key-art to redraw it)');
+    return;
+  }
   await save('key-art-portrait.png', scene({ ...portrait, lightning: true }));
   await save('key-art-portrait-calm.png', scene({ ...portrait, lightning: false }));
 
