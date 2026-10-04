@@ -11,15 +11,14 @@ Live: https://the-great-polashi-game.vercel.app
 ## How it started
 
 My friends, colleagues and I got hooked on *Polashi*. We started with the physical board game and
-were soon spending hours on it, often whole evenings. Two things kept getting in the way: someone
+were soon spending hours on it. Two things kept getting in the way: someone
 always had to bring the box, and we could only play when we were all in the same room.
 
 So we asked what it would take to move the game online: no box to carry, and everyone could join
 over the internet from wherever they were. I started building it, and it grew one piece at a time
 into what's here now: one person opens a room, and everyone plays from their own phone or laptop.
 
-It began as a way for our group to keep playing. If you enjoy it, [buy the board game](https://www.rokomari.com/product/293046/polashi-a-social-deduction-board-game-5-to-10-players-age-12plus) too: the
-original is better around a table.
+It began as a way for our group to keep playing. If you enjoy it, [buy the board game](https://www.rokomari.com/product/293046/polashi-a-social-deduction-board-game-5-to-10-players-age-12plus) too.
 
 ## Features
 
