@@ -11,6 +11,10 @@ test.describe('how-to-play without JavaScript (what crawlers get)', () => {
     await expect(page.locator('body')).toContainText('5 to 10 players')
     await expect(page.locator('body')).toContainText('Mir Jafor')
     await expect(page.locator('body')).toContainText('Not affiliated with or endorsed by Playground Inc.')
+    // The walkthrough is a plain list here, every step with its screenshot.
+    await expect(page.getByRole('heading', { level: 2, name: 'Step by step' })).toBeVisible()
+    await expect(page.locator('img[src^="/walkthrough/"]')).toHaveCount(17)
+    await expect(page.getByRole('button', { name: /Next/ })).toHaveCount(0)
     await expect(page).toHaveTitle(/How to Play Polashi/)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/how-to-play$/)
     expect(await jsonLdTypes(page)).toContain('VideoGame')
@@ -21,6 +25,18 @@ test.describe('how-to-play without JavaScript (what crawlers get)', () => {
     await expect(page.locator('noscript')).toHaveCount(1)
     expect(await page.locator('noscript').innerHTML()).toContain('5 to 10 players')
   })
+})
+
+test('the how-to-play walkthrough is a slideshow with JavaScript', async ({ page }) => {
+  await stubGameServer(page)
+  await page.goto('/how-to-play')
+  const slideshow = page.getByRole('region', { name: 'Walkthrough' })
+  await expect(slideshow.getByText('1 / 17')).toBeVisible()
+  await slideshow.getByRole('button', { name: /Next/ }).click()
+  await expect(slideshow.getByText('2 / 17')).toBeVisible()
+  // The screenshot actually loads (a broken path would leave naturalWidth at 0).
+  const img = slideshow.getByRole('img')
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth)).toBeGreaterThan(0)
 })
 
 test('how-to-play skips the intro splash', async ({ page }) => {

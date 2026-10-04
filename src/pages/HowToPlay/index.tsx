@@ -1,5 +1,6 @@
 import React from 'react';
 import CreditFooter from '../../components/CreditFooter';
+import Walkthrough from './Walkthrough';
 import { MISSION_CONFIGS, TEAM_DISTRIBUTIONS } from '../../constants';
 
 // Static, crawlable explainer. Rendered to HTML at build time by
@@ -33,6 +34,15 @@ const HowToPlay: React.FC = () => {
           It runs in the browser: one player opens a room, shares the room code or invite link, and
           everyone joins from their own phone or computer. Nobody needs an account.
         </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h2 style={headingStyle}>Step by step</h2>
+        <p>
+          A whole game from start to finish, as it looks on screen. The control to press is
+          outlined in gold.
+        </p>
+        <Walkthrough />
       </section>
 
       <section style={sectionStyle}>

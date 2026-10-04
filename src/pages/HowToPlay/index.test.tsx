@@ -4,11 +4,12 @@ import HowToPlay from '.';
 import { MISSION_CONFIGS, TEAM_DISTRIBUTIONS } from '../../constants';
 
 describe('HowToPlay', () => {
-  it('covers the game, the teams, a round, the endgame and the credits', () => {
+  it('covers the game, a walkthrough, the teams, a round, the endgame and the credits', () => {
     render(<HowToPlay />);
 
     for (const heading of [
       'What it is',
+      'Step by step',
       'The two sides',
       'How a round works',
       'Winning, and the Mir Jafor endgame',

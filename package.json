@@ -15,6 +15,7 @@
     "e2e:build": "playwright test --project=build-desktop --project=build-mobile",
     "art": "node scripts/draw-art.mjs",
     "assets": "node scripts/build-assets.mjs",
+    "walkthrough:shots": "node scripts/walkthrough-shots.mjs",
     "seo:generate": "node scripts/generate-seo-files.mjs",
     "build": "npm run seo:generate && tsc -b && vite build && node scripts/prerender.mjs",
     "lint": "eslint .",
