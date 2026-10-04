@@ -51,5 +51,6 @@ describe('HowToPlay', () => {
     expect(privacy).toHaveTextContent('no accounts');
     expect(privacy).toHaveTextContent('sets no cookies');
     expect(privacy).toHaveTextContent('saves a record for statistics');
+    expect(privacy).toHaveTextContent('mahiralkamal.mak@gmail.com');
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CreditFooter from '.';
-import { PHYSICAL_GAME_URL } from './links';
+import { CONTACT_EMAIL, PHYSICAL_GAME_URL } from './links';
 
 describe('CreditFooter', () => {
   it('states that this is an unofficial adaptation, not endorsed by Playground Inc.', () => {
@@ -21,6 +21,23 @@ describe('CreditFooter', () => {
     expect(link).toHaveAttribute('href', PHYSICAL_GAME_URL);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('shows the copyright notice for the digital version', () => {
+    render(<CreditFooter />);
+
+    expect(screen.getByRole('contentinfo')).toHaveTextContent(
+      'Digital version © 2026 Mahir Al Kamal. All rights reserved.',
+    );
+  });
+
+  it('gives a contact email as a mailto link', () => {
+    render(<CreditFooter />);
+
+    expect(screen.getByRole('link', { name: CONTACT_EMAIL })).toHaveAttribute(
+      'href',
+      `mailto:${CONTACT_EMAIL}`,
+    );
   });
 
   it('links to the how-to-play page by default', () => {

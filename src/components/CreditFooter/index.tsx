@@ -1,5 +1,5 @@
 import React from 'react';
-import { PHYSICAL_GAME_URL } from './links';
+import { CONTACT_EMAIL, COPYRIGHT_NOTICE, PHYSICAL_GAME_URL } from './links';
 
 interface CreditFooterProps {
   showHowToPlay?: boolean;
@@ -13,6 +13,12 @@ const CreditFooter: React.FC<CreditFooterProps> = ({ showHowToPlay = true }) => 
         endorsed by Playground Inc.{' '}
         <a href={PHYSICAL_GAME_URL} target="_blank" rel="noopener noreferrer" style={linkStyle}>
           Get the physical game →
+        </a>
+      </p>
+      <p style={{ margin: '6px 0 0' }}>
+        {COPYRIGHT_NOTICE} Contact:{' '}
+        <a href={`mailto:${CONTACT_EMAIL}`} style={linkStyle}>
+          {CONTACT_EMAIL}
         </a>
       </p>
       {showHowToPlay && (
