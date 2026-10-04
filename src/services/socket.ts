@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import type { CharacterType, Room } from "../types/game";
-import { loadSession } from "./sessionStore";
+import { getPlayerKey, loadSession } from "./sessionStore";
 import {
   sanitizeCharacterList,
   sanitizeErrorMessage,
@@ -97,7 +97,7 @@ class SocketService {
   }
 
   createRoom(name: string) {
-    this.socket.emit("createRoom", { name });
+    this.socket.emit("createRoom", { name, playerKey: getPlayerKey() });
   }
 
   onCharacterList(callback: (list: CharacterType[]) => void) {
@@ -109,7 +109,7 @@ class SocketService {
   }
 
   joinRoom(roomCode: string, name: string) {
-    this.socket.emit("joinRoom", { roomCode, name });
+    this.socket.emit("joinRoom", { roomCode, name, playerKey: getPlayerKey() });
   }
 
   // Reclaims a seat. The server requires the secret token it gave this player.

@@ -6,6 +6,7 @@ const KEYS = {
   roomCode: 'roomCode',
   playerId: 'playerId',
   reconnectToken: 'reconnectToken',
+  playerKey: 'playerKey',
 } as const;
 
 export type StoredSession = {
@@ -55,6 +56,33 @@ export function saveSession(roomCode: string, playerId: string, reconnectToken?:
   // An older server sends no token: keep the one we have for this seat, but
   // never carry a token over to a different seat.
   else if (!sameSeat) remove(KEYS.reconnectToken);
+}
+
+// A random id for this device, made once and kept for good (clearSession
+// leaves it alone). The server stores it with each game so a player's games
+// can be grouped later. It is not a secret and proves nothing about who you are.
+let memoryPlayerKey: string | null = null;
+
+function randomUuid(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  // crypto.randomUUID only exists on https and localhost; build a v4 UUID by hand elsewhere.
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const hex = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function getPlayerKey(): string {
+  const stored = read(KEYS.playerKey);
+  if (stored && UUID.test(stored)) return stored;
+  // With storage blocked, keep one key for as long as the page is open.
+  const key = memoryPlayerKey ?? randomUuid();
+  memoryPlayerKey = key;
+  write(KEYS.playerKey, key);
+  return key;
 }
 
 // Forget the seat entirely: after leaving, being kicked, or the room closing.
