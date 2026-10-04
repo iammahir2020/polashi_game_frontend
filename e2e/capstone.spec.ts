@@ -30,7 +30,7 @@
  * WHY WHO'S "GENERAL" AND WHO'S "MIR JAFOR" ARE DISCOVERED, NOT ASSUMED
  * Both are assigned randomly server-side. The test doesn't guess — it polls
  * all five pages for whichever one is currently showing the relevant UI
- * ("Assemble Your Battalion" for the General; "Identify **Mir Madan**" for
+ * ("Assemble Your Battalion" for the General; "Identify Mir Madan" for
  * Mir Jafor) and acts through that page specifically. This is the same
  * "discover, don't assume" principle Level 4's `GameDashboard` tests used for
  * captured socket callbacks, applied to a UI signal instead.
@@ -192,7 +192,7 @@ test('five players create a room, start a game, and reach a final result', async
   const mirJafor = await findPageWithText(
     fivePlayerPages,
     PLAYER_NAMES,
-    /Identify \*\*Mir Madan\*\*/,
+    /Identify Mir Madan/,
   );
   expect(mirJafor, 'exactly one page should show the assassination target picker').not.toBeNull();
 

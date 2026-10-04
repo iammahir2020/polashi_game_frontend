@@ -31,7 +31,7 @@ const MirJaforPhase: React.FC<MirJaforPhaseProps> = ({ room, playerId, onAttempt
         <>
           <p style={{ color: '#ccc', maxWidth: '400px', marginBottom: '30px' }}>
             The Nawabs are celebrating, but you can still hand Bengal to the Company. 
-            Identify **Mir Madan** to succeed.
+            Identify <strong style={{ color: '#fff' }}>Mir Madan</strong> to succeed.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
             {room.players.filter(p => p.id !== playerId).map(player => (
