@@ -1,6 +1,7 @@
 import React from 'react';
 import CreditFooter from '../../components/CreditFooter';
 import Walkthrough from './Walkthrough';
+import { CONTACT_EMAIL } from '../../components/CreditFooter/links';
 import { MISSION_CONFIGS, TEAM_DISTRIBUTIONS } from '../../constants';
 
 // Static, crawlable explainer. Rendered to HTML at build time by
@@ -190,6 +191,10 @@ const HowToPlay: React.FC = () => {
         <p>
           Page views are counted with Vercel Web Analytics, which is anonymous and uses no
           cookies.
+        </p>
+        <p>
+          Questions, or want your records removed? Email{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: '#c5a059' }}>{CONTACT_EMAIL}</a>.
         </p>
       </section>
 

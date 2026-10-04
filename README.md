@@ -173,8 +173,13 @@ a Postgres database: room code, device key, aliases, roles and sides, every prop
 player's approval vote, each mission's votes and result, Guptochor checks, connection drops, and
 how the game ended. Records and aliases are kept with no set end date. Page views are counted by
 Vercel Web Analytics, which is cookieless. The same summary is on the How to play page.
+Questions or removal requests: mahiralkamal.mak@gmail.com.
 
 ## Credits & disclaimer
+
+Digital version © 2026 Mahir Al Kamal. All rights reserved. This covers the code, design and
+original artwork of this online version, not the game: *Polashi*, its rules and its name belong to
+Playground Inc. Contact: mahiralkamal.mak@gmail.com.
 
 Unofficial fan-made digital adaptation of *Polashi* by Playground Inc. Not affiliated with or
 endorsed by Playground Inc. No Playground Inc. artwork, logos or rulebook text are used.
