@@ -166,13 +166,16 @@ const HowToPlay: React.FC = () => {
         </p>
         <p>
           Your browser keeps the room code, your player id and a rejoin key so a reload puts you
-          back in your seat. Leaving the room, being removed or the room closing deletes them.
+          back in your seat. Leaving the room, being removed or the room closing deletes them. It
+          also keeps a random device key, which stays after you leave so your games on this device
+          can be grouped. It isn&apos;t linked to your name or any account.
         </p>
         <p>
           While a game runs, the server holds the room in memory and deletes it once everyone has
           gone. When a game starts it saves a record for statistics: the room code, each
-          player&apos;s alias, role and side, each round&apos;s General, team, votes and result,
-          and the winner.
+          player&apos;s alias, device key, role and side, every proposed team with each
+          player&apos;s vote on it, each mission&apos;s votes and result, Guptochor checks,
+          dropped connections, and how the game ended. Records are kept with no set end date.
         </p>
         <p>
           Page views are counted with Vercel Web Analytics, which is anonymous and uses no

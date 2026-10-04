@@ -28,6 +28,10 @@ Live: https://the-great-polashi-game.vercel.app
   A correct guess hands the win to the East India Company.
 - **Reconnects.** Room code, player id and the seat's secret rejoin token are kept in `localStorage`,
   so a refreshed or dropped client rejoins its seat. Only the token's owner can reclaim a seat.
+- **Device key.** A random id made once per browser (`getPlayerKey` in
+  [src/services/sessionStore.ts](src/services/sessionStore.ts)) and sent on `createRoom` and
+  `joinRoom`, so the server's game logs can group one device's games. It survives leaving a room,
+  isn't a secret, and proves nothing about who someone is.
 - **PWA.** Installable, with a service worker (vite-plugin-pwa) that caches the app shell. Playing still
   needs a connection to the game server.
 - **SEO.** Per-route title, description, Open Graph tags and JSON-LD; a pre-rendered `/how-to-play`
@@ -48,7 +52,7 @@ Live: https://the-great-polashi-game.vercel.app
 browser (this repo)  <-- socket.io -->  game server (polashi_game_backend)
   React UI renders the room                Express + socket.io
   state it receives                        rooms held in memory
-                                           game logs written to Firestore
+                                           game logs written to Postgres (Supabase)
 ```
 
 The backend lives in a separate repository:
@@ -143,16 +147,20 @@ npm run e2e                       # everything, with the backend running
 
 ## Deploying
 
-Deploy this frontend before a backend that issues rejoin tokens: this version stores and sends the
-token, and also works with an older server that doesn't. The other way round, a player on an old
-tab who reloads mid-game is asked to join again.
+This frontend and the game server can be deployed in either order. An older server ignores the
+device key, and the current one drops a malformed key rather than refusing the player. Since the
+rejoin-token change, a player on a tab older than that who reloads mid-game is asked to join
+again.
 
 ## Privacy
 
 No accounts, no sign-in, no cookies. The browser stores the room code, player id and rejoin token
-for the current seat and deletes them on leaving. The server logs each game for statistics (room
-code, aliases, roles and sides, each round's General, team, votes and result, winner). Page views
-are counted by Vercel Web Analytics, which is cookieless. The same summary is on the How to play page.
+for the current seat and deletes them on leaving. It also keeps a random device key, which stays
+after leaving so one device's games can be grouped. The server logs each game for statistics in
+a Postgres database: room code, device key, aliases, roles and sides, every proposed team with each
+player's approval vote, each mission's votes and result, Guptochor checks, connection drops, and
+how the game ended. Records and aliases are kept with no set end date. Page views are counted by
+Vercel Web Analytics, which is cookieless. The same summary is on the How to play page.
 
 ## Credits & disclaimer
 

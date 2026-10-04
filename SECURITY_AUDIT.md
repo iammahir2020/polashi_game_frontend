@@ -46,11 +46,14 @@ Also fixed along the way: Steps.md #2, #3, #4, #7 and #8 (the five intentionally
 pass), and abandoned rooms no longer accumulate in server memory until a restart.
 
 Still open, needing a decision or access I don't have:
-- `firebase-admin` 13 -> 14 (major) clears 7 moderate backend advisories in a transitive `uuid`;
-  the affected code path isn't used.
+- ~~`firebase-admin` 13 -> 14 (major) clears 7 moderate backend advisories in a transitive `uuid`;
+  the affected code path isn't used.~~ Resolved 2026-10-04: the backend no longer uses Firebase.
 - `vitest` 3 -> 5 (major, dev only) clears 2 moderate advisories.
-- Firebase / Google Cloud console checklist (below), plus a retention policy (Firestore TTL) for
-  `game_logs`, which hold player aliases and votes.
+- ~~Firebase / Google Cloud console checklist (below), plus a retention policy (Firestore TTL) for
+  `game_logs`, which hold player aliases and votes.~~ Superseded 2026-10-04: game logs moved to
+  Postgres on Supabase (backend `postgres-migration.md`), in a schema the Supabase Data API doesn't
+  serve, with row-level security and a server role that cannot delete. Aliases are kept
+  indefinitely by decision. The Firestore project is due for deletion around 2026-11-04.
 - Render environment: set `CLIENT_URL` to the site URL and, if you use the player list endpoint,
   `ADMIN_TOKEN`.
 - Deploy order: frontend first, then backend (see the backend README).

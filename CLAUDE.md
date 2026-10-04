@@ -11,8 +11,10 @@ React 19 + TypeScript + Vite, `socket.io-client`, PWA. **Frontend only** — the
 repo at `../palassy-backend` (Express + socket.io, rooms held in memory).
 
 Key files:
-- `src/components/GameDashboard/index.tsx` — 906 lines, holds essentially all app state
+- `src/components/GameDashboard/index.tsx` — 1184 lines, holds essentially all app state
 - `src/services/socket.ts` — singleton wrapper over every socket event
+- `src/services/sessionStore.ts` — localStorage: the seat (room code, player id, rejoin token) and
+  the per-device `playerKey` sent with `createRoom`/`joinRoom` for the backend's Postgres game logs
 - `src/constants.ts` — mission configs and team distributions (the game rules)
 - `src/types/game.ts` — the `Room` / `Player` / `VotingState` shapes
 
