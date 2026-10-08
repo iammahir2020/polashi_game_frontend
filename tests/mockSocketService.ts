@@ -75,6 +75,7 @@ export function makeMockSocketService() {
     onGuptochorResult: vi.fn(),
     onNotification: vi.fn(),
     onRoomDissolved: vi.fn(),
+    onServerUpdating: vi.fn(),
 
     offAll: vi.fn(),
     offCharacterList: vi.fn(),

@@ -39,7 +39,20 @@ block at the end of `GameDashboard/index.test.tsx`, plus `VotingSystem`, `Player
 `WarRoom/phase` and `WarRoom/WideHeader` tests. The 5-player capstone now plays through the desktop
 layout (Playwright's Desktop Chrome is 1280px wide). Current: `npm test` 303 passing, e2e 42/42.
 
-Last worked: 2026-10-03.
+**Update 2026-10-09 (games survive a deploy, branch `feat/server-updating-rejoin`):** the backend can
+now save rooms (`persist-rooms.md` in the backend repo), and answers a rejoin it can't serve yet with
+`serverUpdating`. Two new blocks at the end of `GameDashboard/index.test.tsx` are worth reading:
+"serverUpdating" (a retry loop tested with fake timers: exact retry timing, cancelling a pending
+retry, giving up after 30) and "roomDissolved" (the new "Room Closed" modal; introduces
+`vi.stubGlobal('location', ...)` to observe a page navigation jsdom can't perform). All 10 were run
+against the old dashboard first and fail there. Current: `npm test` 333 passing, e2e 44/44. Two
+local-setup gotchas hit this session: Windows had reserved port 4317 (range 4279–4378), which the
+build specs' preview server needs (`net stop winnat && net start winnat` as admin frees it); and the
+backend's `.env` sets `CLIENT_URL` to production only, so a local backend for e2e must be started
+with `CLIENT_URL= DATABASE_URL= node server.js` or every websocket handshake from `localhost:5173`
+is refused (create-room and the capstone then fail with no visible error).
+
+Last worked: 2026-10-09.
 
 ---
 
@@ -597,6 +610,7 @@ unchanged (37 pre-existing).
 | 2026-10-03 | (outside the course) | Tablet/desktop layout. New: `tests/matchMedia.ts` (fake resizable screen), tests for `useLayout`, the inline vote, the always-open roster, the war-room header and phase line, and the dashboard's wide arrangement (37 new). The capstone caught a real layering bug (the deciding verdict hid under Mir Jafor's screen) | Rename the old "FAILS" titles; resume Level 6 |
 | 2026-10-03 | (outside the course) | General team-picking race fixed. 5 tests at the end of `GameDashboard/index.test.tsx` show how to test a network race without a network: just don't deliver the server's reply between two clicks. 3 of them fail on the old code, proven by running them against it; the other 2 guard the fix's fallbacks (server catches up; unconfirmed proposal expires, via fake timers). 299 passing | Rename the old "FAILS" titles; resume Level 6 |
 | 2026-10-04 | (outside the course) | Code-review fixes. New tests: observers aren't counted in the council vote (`VotingSystem`), and nothing on the role card loads from another site (`IdentityCard`, checks rendered HTML because jsdom doesn't enforce the CSP). All 4 proven red on the old code first. Dead socket methods and stale type fields removed, so the mock in `tests/mockSocketService.ts` shrank too. 303 passing. Note: the build e2e projects flake ~1 in 3 runs on this machine (a random `page.goto` timeout), on unmodified `main` too: a load issue, not a test bug | Rename the old "FAILS" titles; resume Level 6 |
+| 2026-10-09 | (outside the course) | Rooms survive a deploy (backend saves them to Postgres). Frontend: `serverUpdating` keeps the seat and retries; a "Room Closed" modal when the host closes the room. 15 new tests (payload clamping, retry loop on fake timers, the modal with a stubbed `window.location`); all 10 dashboard ones proven red on the old code. 333 passing, e2e 44/44 (after freeing a Windows port reservation; see "You are here") | Rename the old "FAILS" titles; resume Level 6 |
 
 ---
 

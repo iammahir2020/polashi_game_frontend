@@ -41,6 +41,13 @@ const PENDING_TEAM_MS = 3000;
 const sameMembers = (a: string[], b: string[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
+// How many "serverUpdating" answers in a row are retried (about a minute at
+// the server's 2-second pace) before the player is told to refresh later.
+const MAX_SERVER_UPDATING_RETRIES = 30;
+
+// How long the "Room Closed" modal stays up before going home on its own.
+const ROOM_CLOSED_REDIRECT_MS = 5000;
+
 type DialogState = {
   kind: "notice" | "confirm";
   title: string;
@@ -61,6 +68,10 @@ export default function GameDashboard() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState<"code" | "link" | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(() => !!loadSession().roomCode);
+  // True while the server answers our rejoin with "serverUpdating": it has our
+  // room, but a deploy is still moving it between servers. Kept apart from
+  // isReconnecting, whose 5-second give-up timer must not hide this wait.
+  const [isServerUpdating, setIsServerUpdating] = useState(false);
   const [currentGeneral, setCurrentGeneral] = useState<Player | null>(null);
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -79,9 +90,16 @@ export default function GameDashboard() {
   // can't clear the state of a newer action (Steps.md #7 and #8).
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The next rejoin attempt while the server is updating, and how many have
+  // been made. Reset whenever the server gives a real answer.
+  const updatingRetryRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; attempts: number }>({
+    timer: null,
+    attempts: 0,
+  });
   useEffect(() => () => {
     if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    if (updatingRetryRef.current.timer) clearTimeout(updatingRetryRef.current.timer);
   }, []);
 
   // Ignores a repeat of the same action within a short window (double clicks,
@@ -147,7 +165,47 @@ export default function GameDashboard() {
   useEffect(() => {
     socketService.connect();
 
+    // Any real answer from the server ends a "server updating" wait.
+    const stopWaitingForServer = () => {
+      const retry = updatingRetryRef.current;
+      if (retry.timer) clearTimeout(retry.timer);
+      retry.timer = null;
+      retry.attempts = 0;
+      setIsServerUpdating(false);
+    };
+
+    // A deploy is moving our room to a new server. The seat is still ours, so
+    // the session is kept and the rejoin is sent again after the wait the
+    // server asked for. After about a minute of this something is wrong, so
+    // the player is told to refresh later, and the session is still kept.
+    socketService.onServerUpdating(({ retryInMs }) => {
+      const retry = updatingRetryRef.current;
+      if (retry.timer) clearTimeout(retry.timer);
+      retry.attempts += 1;
+      if (retry.attempts > MAX_SERVER_UPDATING_RETRIES) {
+        stopWaitingForServer();
+        setIsReconnecting(false);
+        setDialogState({
+          kind: "notice",
+          title: "Server Still Updating",
+          message: "Your seat is saved. Refresh the page in a minute to rejoin your game.",
+        });
+        return;
+      }
+      setIsServerUpdating(true);
+      retry.timer = setTimeout(() => {
+        retry.timer = null;
+        const { roomCode: savedRoom, playerId: savedPlayer } = loadSession();
+        // While disconnected there's nothing to send: the socket service
+        // rejoins by itself as soon as the connection is back.
+        if (savedRoom && savedPlayer && socketService.socket.connected) {
+          socketService.reconnect(savedRoom, savedPlayer);
+        }
+      }, retryInMs);
+    });
+
     socketService.onRoomJoined((data) => {
+      stopWaitingForServer();
       setRoom(data.room);
       setRoomCode(data.roomCode);
       setPlayerId(data.playerId);
@@ -172,6 +230,7 @@ export default function GameDashboard() {
     });
 
     socketService.onError((msg) => {
+      stopWaitingForServer();
       setError(msg);
       setErrorToast(msg);
       setIsReconnecting(false);
@@ -275,24 +334,50 @@ export default function GameDashboard() {
   //   return () => socketService.offRoomDissolved();
   // }, []);
 
+  // The room is gone: the Game Master closed it, or a rejoin found it already
+  // closed. The seat is useless now, so it's cleared, and a modal says what
+  // happened before going back to the home screen, after a few seconds or as
+  // soon as the player taps "OK". (It used to jump home after 1.5 s with no
+  // explanation, which looked like the page had just reset.)
+  const homeRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    socketService.onRoomDissolved(() => {
-      // 1. Clear Local Storage
+    const goHome = () => {
+      if (homeRedirectTimerRef.current) clearTimeout(homeRedirectTimerRef.current);
+      homeRedirectTimerRef.current = null;
+      window.location.href = "/";
+    };
+
+    socketService.onRoomDissolved(({ reason }) => {
       clearSession();
-  
-      // 2. Clear Local State to force the "Join/Create" UI to show
+
+      // Any "server updating" wait is over: the server has answered.
+      const retry = updatingRetryRef.current;
+      if (retry.timer) clearTimeout(retry.timer);
+      retry.timer = null;
+      retry.attempts = 0;
+      setIsServerUpdating(false);
+      setIsReconnecting(false);
+
       setRoom(null);
       setRoomCode("");
       setPlayerId(null);
-      setError("The Game Master has dissolved the HQ.");
-  
-      // 3. Optional: Redirect or Reload
-      setTimeout(() => {
-        window.location.href = "/"; // Hard redirect to home
-      }, 1500);
+      setDialogState({
+        kind: "notice",
+        title: "Room Closed",
+        message: reason === "closed_by_host"
+          ? "The Game Master has closed this room. Returning you to the home screen..."
+          : "This room is no longer available. Returning you to the home screen...",
+        onConfirm: goHome,
+      });
+
+      if (homeRedirectTimerRef.current) clearTimeout(homeRedirectTimerRef.current);
+      homeRedirectTimerRef.current = setTimeout(goHome, ROOM_CLOSED_REDIRECT_MS);
     });
-  
-    return () => socketService.offRoomDissolved();
+
+    return () => {
+      socketService.offRoomDissolved();
+      if (homeRedirectTimerRef.current) clearTimeout(homeRedirectTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -653,6 +738,12 @@ export default function GameDashboard() {
     cursor: "pointer",
     marginBottom: "10px"
   };
+
+  if (isServerUpdating) {
+    return (
+      <GameLoader message={"The server is updating. Reconnecting you to your game..."} />
+    );
+  }
 
   if (isReconnecting) {
     return (
