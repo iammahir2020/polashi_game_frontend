@@ -30,6 +30,7 @@ import GameDashboard from './index';
 import { socketService } from '../../services/socket'; // resolves to the mock above
 import { makePlayer, makeRoom, makeVotingState } from '../../../tests/factories';
 import { installMatchMedia } from '../../../tests/matchMedia';
+import { loadSession, saveSession } from '../../services/sessionStore';
 
 /**
  * `GameDashboard` doesn't call `socketService.getRoom()` and use a result —
@@ -457,5 +458,275 @@ describe('GameDashboard: the General picking a battalion', () => {
 
     // Built on the server's team (still empty), not on the unconfirmed [Siraj].
     expect(sentTeams().at(-1)).toEqual([clive.id]);
+  });
+});
+
+/**
+ * "serverUpdating": what a player sees while a deploy moves their room to a
+ * new server.
+ *
+ * WHY THIS EXISTS
+ * With saved rooms turned on (the backend's PERSIST_ROOMS), a deploy no longer
+ * ends every game. The old server saves each room and hands it on, and the
+ * clients reconnect to the new one. For a few seconds, though, the room can be
+ * out of reach: the old server may still hold it, or the database may be slow
+ * to answer. Rather than say "Room not found" (which would wipe the player's
+ * saved seat, see the `onError` handler in GameDashboard), the server replies
+ * `serverUpdating` with a `retryInMs`, and the client must ask again later.
+ *
+ * WHAT THESE TESTS PIN DOWN
+ *  - the seat survives the wait (the session in localStorage is untouched);
+ *  - the rejoin is re-sent after exactly the wait the server asked for;
+ *  - the existing 5-second "give up reconnecting" timer doesn't hide the wait;
+ *  - a real answer (roomJoined, or an error) ends the wait and cancels the
+ *    pending retry, so no stray rejoin is sent afterwards;
+ *  - nothing is sent while the socket is disconnected (the socket service
+ *    rejoins by itself on "connect", so a second copy would be a duplicate);
+ *  - after about a minute of this the player is told to refresh, seat kept.
+ *
+ * All of it runs on fake timers: the retry is a setTimeout, and the test
+ * decides exactly when time moves.
+ */
+describe('a deploy in progress: "serverUpdating"', () => {
+  // The mock's `socket.connected` is a plain field (false by default). The real
+  // type treats it as socket.io's live flag; this cast is the test reaching in
+  // to flip it, as a real connection coming up or dropping would.
+  const setConnected = (value: boolean) => {
+    (socketService.socket as { connected: boolean }).connected = value;
+  };
+
+  // The player had a seat before the deploy: that's what makes the dashboard
+  // send a rejoin on mount, and what the server answers "serverUpdating" to.
+  const mountWithSavedSeat = () => {
+    saveSession('ABC123', 'p1', 'secret-token');
+    setConnected(true);
+    render(<GameDashboard />);
+  };
+
+  const serverSaysUpdating = (retryInMs = 2000) => {
+    act(() => {
+      latestCallbackGivenTo(socketService.onServerUpdating)({ retryInMs });
+    });
+  };
+
+  const updatingScreen = () => screen.queryByText('The server is updating. Reconnecting you to your game...');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    setConnected(false);
+  });
+
+  it('keeps the seat, shows the updating screen and asks again after the wait', () => {
+    mountWithSavedSeat();
+    // The rejoin GameDashboard sends on mount.
+    expect(socketService.reconnect).toHaveBeenCalledTimes(1);
+
+    serverSaysUpdating(2000);
+
+    expect(updatingScreen()).toBeInTheDocument();
+    // The whole point: the seat (and its secret token) is still saved.
+    expect(loadSession()).toMatchObject({ roomCode: 'ABC123', playerId: 'p1', reconnectToken: 'secret-token' });
+
+    // One millisecond early, nothing yet...
+    act(() => { vi.advanceTimersByTime(1999); });
+    expect(socketService.reconnect).toHaveBeenCalledTimes(1);
+
+    // ...and right on time, the same seat is asked for again.
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(socketService.reconnect).toHaveBeenCalledTimes(2);
+    expect(socketService.reconnect).toHaveBeenLastCalledWith('ABC123', 'p1');
+  });
+
+  it('stays on the updating screen past the usual 5-second reconnect timeout', () => {
+    // GameDashboard gives up on its plain "Re-establishing Intelligence
+    // Links..." screen after 5 s. If the updating wait shared that flag, the
+    // player would drop to the join form mid-deploy, seat or not.
+    mountWithSavedSeat();
+    serverSaysUpdating(2000);
+
+    // Keep the server answering "updating" on every retry for 6 seconds.
+    for (let i = 0; i < 3; i++) {
+      act(() => { vi.advanceTimersByTime(2000); });
+      serverSaysUpdating(2000);
+    }
+
+    expect(updatingScreen()).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Enter Alias...')).toBeNull();
+  });
+
+  it('a roomJoined ends the wait and cancels the retry that was pending', () => {
+    mountWithSavedSeat();
+    serverSaysUpdating(2000);
+
+    const me = makePlayer({ id: 'p1', name: 'Alice' });
+    act(() => {
+      latestCallbackGivenTo(socketService.onRoomJoined)({
+        roomCode: 'ABC123',
+        playerId: 'p1',
+        reconnectToken: 'secret-token',
+        room: makeRoom({ roomCode: 'ABC123', players: [me], activePlayerIds: [me.id] }),
+      });
+    });
+
+    expect(updatingScreen()).toBeNull();
+    expect(screen.getByText('ABC123')).toBeInTheDocument();
+
+    // The retry scheduled before the room came back must never fire.
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(socketService.reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('an error from the server also ends the wait', () => {
+    // For example "Room no longer exists": the server did answer, just not
+    // with a room. Showing the updating screen forever would hide that.
+    mountWithSavedSeat();
+    serverSaysUpdating(2000);
+
+    act(() => {
+      latestCallbackGivenTo(socketService.onError)('Room no longer exists');
+    });
+
+    expect(updatingScreen()).toBeNull();
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(socketService.reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends nothing while disconnected: the socket service rejoins on its own', () => {
+    mountWithSavedSeat();
+    serverSaysUpdating(2000);
+    // The connection drops during the wait (the old server shutting down).
+    setConnected(false);
+
+    act(() => { vi.advanceTimersByTime(2000); });
+
+    // No second rejoin from the dashboard. When the connection comes back,
+    // socket.ts's own "connect" handler sends it.
+    expect(socketService.reconnect).toHaveBeenCalledTimes(1);
+    expect(updatingScreen()).toBeInTheDocument();
+  });
+
+  it('after about a minute of waiting, tells the player to refresh and still keeps the seat', () => {
+    mountWithSavedSeat();
+
+    // 30 "updating" answers are retried (about a minute at 2 s each)...
+    for (let i = 0; i < 30; i++) {
+      serverSaysUpdating(2000);
+      act(() => { vi.advanceTimersByTime(2000); });
+    }
+    expect(updatingScreen()).toBeInTheDocument();
+    expect(socketService.reconnect).toHaveBeenCalledTimes(31); // mount + 30 retries
+
+    // ...and the 31st means something is wrong: stop, and say so.
+    serverSaysUpdating(2000);
+
+    expect(updatingScreen()).toBeNull();
+    expect(screen.getByText('Server Still Updating')).toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(socketService.reconnect).toHaveBeenCalledTimes(31);
+    // A refresh later rejoins with this, so it must survive giving up.
+    expect(loadSession()).toMatchObject({ roomCode: 'ABC123', playerId: 'p1' });
+  });
+});
+
+/**
+ * "roomDissolved": the room is gone, and the player is told so before being
+ * sent home.
+ *
+ * WHY THIS EXISTS
+ * When the Game Master closed the room, everyone else's screen used to jump
+ * back to the home page 1.5 s later with no explanation, which looked like the
+ * page had glitched. Now the server says WHY (`{ reason: "closed_by_host" }`),
+ * and the dashboard shows a "Room Closed" modal, then goes home after 5 s, or
+ * at once when the player taps OK.
+ *
+ * TWO NEW TOOLS HERE
+ *  - `vi.stubGlobal('location', ...)` swaps `window.location` for a plain
+ *    object. jsdom can't really navigate (it would log "Not implemented:
+ *    navigation"), and with a plain object the test can simply read back the
+ *    `href` the code set. `vi.unstubAllGlobals()` puts the real one back.
+ *  - Fake timers again, to check the redirect happens at 5 s and not before.
+ */
+describe('the room is closed: "roomDissolved"', () => {
+  let fakeLocation: { href: string };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    fakeLocation = { href: 'http://localhost/' };
+    vi.stubGlobal('location', fakeLocation);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // A member sitting in a lobby, with their seat saved, as before the close.
+  const sitInRoom = () => {
+    saveSession('ABC123', 'p2', 'secret-token');
+    render(<GameDashboard />);
+    const host = makePlayer({ id: 'p1', name: 'Siraj', isGameMaster: true });
+    const me = makePlayer({ id: 'p2', name: 'Mohanlal' });
+    act(() => {
+      latestCallbackGivenTo(socketService.onRoomJoined)({
+        roomCode: 'ABC123',
+        playerId: 'p2',
+        reconnectToken: 'secret-token',
+        room: makeRoom({ roomCode: 'ABC123', players: [host, me], activePlayerIds: [host.id, me.id] }),
+      });
+    });
+  };
+
+  const roomDissolved = (reason: 'closed_by_host' | 'room_gone') => {
+    act(() => {
+      latestCallbackGivenTo(socketService.onRoomDissolved)({ reason });
+    });
+  };
+
+  it('tells the other players the Game Master closed the room, and forgets the seat', () => {
+    sitInRoom();
+    roomDissolved('closed_by_host');
+
+    // The modal is a real dialog (role="dialog", labelled by its title), so it
+    // can be found the way a screen reader would find it.
+    const dialog = screen.getByRole('dialog', { name: 'Room Closed' });
+    expect(dialog).toHaveTextContent('The Game Master has closed this room. Returning you to the home screen...');
+
+    // The room is gone for good, so rejoining it later would only fail.
+    expect(loadSession().roomCode).toBeFalsy();
+  });
+
+  it('goes home by itself after 5 seconds', () => {
+    sitInRoom();
+    roomDissolved('closed_by_host');
+
+    act(() => { vi.advanceTimersByTime(4999); });
+    expect(fakeLocation.href).toBe('http://localhost/'); // still here: time to read the modal
+
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(fakeLocation.href).toBe('/');
+  });
+
+  it('goes home at once when the player taps OK', () => {
+    sitInRoom();
+    roomDissolved('closed_by_host');
+
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+
+    expect(fakeLocation.href).toBe('/');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('says so plainly when a rejoin finds the room already gone', () => {
+    // E.g. coming back to a tab after the room was closed or expired. Nobody
+    // just "closed it on you", so the wording doesn't claim that.
+    saveSession('ABC123', 'p2', 'secret-token');
+    render(<GameDashboard />);
+    roomDissolved('room_gone');
+
+    expect(screen.getByRole('dialog', { name: 'Room Closed' })).toHaveTextContent(
+      'This room is no longer available. Returning you to the home screen...',
+    );
   });
 });

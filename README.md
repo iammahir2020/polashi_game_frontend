@@ -40,6 +40,10 @@ It began as a way for our group to keep playing. If you enjoy it, [buy the board
   A correct guess hands the win to the East India Company.
 - **Reconnects.** Room code, player id and the seat's secret rejoin token are kept in `localStorage`,
   so a refreshed or dropped client rejoins its seat. Only the token's owner can reclaim a seat.
+  While a server deploy is moving rooms (the server answers `serverUpdating`), the seat is kept and
+  the rejoin is retried every couple of seconds for up to a minute.
+- **Room closed.** When the Game Master closes the room, everyone else sees a "Room Closed" notice
+  and is returned to the home screen after 5 seconds.
 - **Device key.** A random id made once per browser (`getPlayerKey` in
   [src/services/sessionStore.ts](src/services/sessionStore.ts)) and sent on `createRoom` and
   `joinRoom`, so the server's game logs can group one device's games. It survives leaving a room,
@@ -159,7 +163,11 @@ npm run e2e                       # everything, with the backend running
 
 ## Deploying
 
-This frontend and the game server can be deployed in either order. An older server ignores the
+This frontend and the game server can be deployed in either order, but deploy this frontend before
+turning on the server's `PERSIST_ROOMS`: an older frontend doesn't know `serverUpdating`, so during
+the few seconds a room is moving between servers it shows an error instead of waiting. An older
+server sends `roomDissolved` without a reason, which shows the neutral "no longer available"
+wording. An older server ignores the
 device key, and the current one drops a malformed key rather than refusing the player. Since the
 rejoin-token change, a player on a tab older than that who reloads mid-game is asked to join
 again.

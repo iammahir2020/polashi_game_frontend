@@ -9,7 +9,10 @@ import {
   sanitizeNotification,
   sanitizeRoom,
   sanitizeRoomJoined,
+  sanitizeRoomDissolved,
+  sanitizeServerUpdating,
   type CleanRoomJoined,
+  type RoomDissolvedReason,
 } from "./payloads";
 
 // `||` on purpose, not `??`: an EMPTY string (e.g. `VITE_SOCKET_URL=` left
@@ -47,6 +50,7 @@ const GAME_EVENTS = [
   "triggerGeneralAnimation",
   "guptochorResult",
   "notification",
+  "serverUpdating",
 ] as const;
 
 class SocketService {
@@ -223,8 +227,15 @@ class SocketService {
     this.socket.on("roomJoined", guarded("roomJoined", sanitizeRoomJoined, cb));
   }
 
-  onRoomDissolved(cb: () => void) {
-    this.socket.on("roomDissolved", cb);
+  // The server has this player's room but can't hand it over yet (a deploy is
+  // moving rooms between servers). The seat is still theirs: wait
+  // `retryInMs`, then ask again with reconnect().
+  onServerUpdating(cb: (data: { retryInMs: number }) => void) {
+    this.socket.on("serverUpdating", (raw: unknown) => cb(sanitizeServerUpdating(raw)));
+  }
+
+  onRoomDissolved(cb: (data: { reason: RoomDissolvedReason }) => void) {
+    this.socket.on("roomDissolved", (raw: unknown) => cb(sanitizeRoomDissolved(raw)));
   }
 
   onRoomUpdated(cb: (room: Room) => void) {

@@ -16,6 +16,8 @@ import { describe, it, expect } from 'vitest';
 import {
   sanitizeCharacterList,
   sanitizeErrorMessage,
+  sanitizeRoomDissolved,
+  sanitizeServerUpdating,
   sanitizeGeneralAnimation,
   sanitizeGuptochorResult,
   sanitizeNotification,
@@ -153,6 +155,28 @@ describe('the smaller events', () => {
     expect(sanitizeErrorMessage('Room not found')).toBe('Room not found');
     expect(sanitizeErrorMessage({ message: 'x' })).toBe('Something went wrong.');
     expect(sanitizeErrorMessage('x'.repeat(5_000)).length).toBe(300);
+  });
+
+  it('"serverUpdating" always yields a usable wait, clamped to between 0.5 and 10 seconds', () => {
+    // The client sleeps for this long and then asks again, so a broken value
+    // must neither hammer the server (0, negative) nor strand the player (an
+    // hour). A missing or junk field falls back to the server's usual 2 s.
+    expect(sanitizeServerUpdating({ retryInMs: 2000 })).toEqual({ retryInMs: 2000 });
+    expect(sanitizeServerUpdating({ retryInMs: 0 })).toEqual({ retryInMs: 500 });
+    expect(sanitizeServerUpdating({ retryInMs: -5 })).toEqual({ retryInMs: 500 });
+    expect(sanitizeServerUpdating({ retryInMs: 3_600_000 })).toEqual({ retryInMs: 10_000 });
+    expect(sanitizeServerUpdating({ retryInMs: '2000' })).toEqual({ retryInMs: 2000 });
+    expect(sanitizeServerUpdating({ retryInMs: NaN })).toEqual({ retryInMs: 2000 });
+    expect(sanitizeServerUpdating(null)).toEqual({ retryInMs: 2000 });
+  });
+
+  it('"roomDissolved" says whether the host closed the room; anything else counts as gone', () => {
+    // Only the exact reason earns the "the Game Master closed it" wording. An
+    // older server sends no payload at all, and junk is treated the same way.
+    expect(sanitizeRoomDissolved({ reason: 'closed_by_host' })).toEqual({ reason: 'closed_by_host' });
+    expect(sanitizeRoomDissolved({ reason: 'room_gone' })).toEqual({ reason: 'room_gone' });
+    expect(sanitizeRoomDissolved(undefined)).toEqual({ reason: 'room_gone' });
+    expect(sanitizeRoomDissolved({ reason: 'something new' })).toEqual({ reason: 'room_gone' });
   });
 
   it('a Guptochor result needs a name and an alliance', () => {

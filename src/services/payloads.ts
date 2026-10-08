@@ -188,6 +188,26 @@ export function sanitizeErrorMessage(v: unknown): string {
   return text(v, 300) || 'Something went wrong.';
 }
 
+// "roomDissolved": why the room went away. "closed_by_host" when the Game
+// Master closed it; anything else (a rejoin to a room that's already gone, or
+// an older server sending no reason) is "room_gone".
+export type RoomDissolvedReason = "closed_by_host" | "room_gone";
+
+export function sanitizeRoomDissolved(v: unknown): { reason: RoomDissolvedReason } {
+  return { reason: isObj(v) && v.reason === "closed_by_host" ? "closed_by_host" : "room_gone" };
+}
+
+// "serverUpdating": the server has our room but can't hand it over yet (a
+// deploy is moving it between servers). Its only field is how long to wait
+// before asking again, kept between half a second and ten seconds so a broken
+// value can neither hammer the server nor leave a player waiting for minutes.
+export const SERVER_UPDATING_DEFAULT_RETRY_MS = 2000;
+
+export function sanitizeServerUpdating(v: unknown): { retryInMs: number } {
+  const ms = isObj(v) && isFiniteNumber(v.retryInMs) ? v.retryInMs : SERVER_UPDATING_DEFAULT_RETRY_MS;
+  return { retryInMs: Math.min(10_000, Math.max(500, ms)) };
+}
+
 export function sanitizeGuptochorResult(v: unknown): { targetName: string; alliance: string } | null {
   if (!isObj(v)) return null;
   const targetName = text(v.targetName, LIMITS.name);
