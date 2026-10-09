@@ -3,6 +3,7 @@ import type { Room } from '../../types/game';
 import IdentityCard from '../IdentityCard';
 import { useOverlayA11y } from '../../hooks/useOverlayA11y';
 import { uiButtonGold } from '../../style/ui';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GameResultOverlayProps {
   room: Room;
@@ -23,6 +24,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
   isDismissed,
   onClose
 }) => {
+  const { t, winner } = useI18n();
   const isVisible = room.gameStatus === "OVER" && !isDismissed;
   const overlayRef = useRef<HTMLDivElement>(null);
   useOverlayA11y({ isActive: isVisible, onClose, containerRef: overlayRef });
@@ -33,7 +35,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
   const isGreenWin = room.winner?.includes('Green');
 
   return (
-    <div ref={overlayRef} className="victory-overlay" role="dialog" aria-modal="true" aria-label="Game result" tabIndex={-1} style={{
+    <div ref={overlayRef} className="victory-overlay" role="dialog" aria-modal="true" aria-label={t('result.aria')} tabIndex={-1} style={{
       position: 'fixed', 
       top: 0, 
       left: 0, 
@@ -51,7 +53,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
     }}>
       <button
         onClick={onClose}
-        aria-label="Close result"
+        aria-label={t('result.closeAria')}
         style={{
           ...uiButtonGold,
           position: 'absolute',
@@ -63,7 +65,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
           letterSpacing: '0.6px'
         }}
       >
-        CLOSE
+        {t('result.close')}
       </button>
 
       {/* Visual flair: Victory/Defeat Header */}
@@ -74,7 +76,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
         textShadow: `0 0 20px ${isGreenWin ? 'rgba(76, 175, 80, 0.5)' : 'rgba(244, 67, 54, 0.5)'}`,
         letterSpacing: '5px'
       }}>
-        {room.winner === "Nawabs (Green)" ? "Green Wins" : "Red Wins"}
+        {room.winner === "Nawabs (Green)" ? t('result.greenWins') : t('result.redWins')}
       </h1>
 
       <h2 style={{ 
@@ -85,7 +87,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
         maxWidth: '80%',
         fontFamily: "'EB Garamond', serif"
       }}>
-        {room.winner} controls Bengal.
+        {t('result.controls', { winner: winner(room.winner) })}
       </h2>
 
       <div style={{
@@ -103,7 +105,7 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
     letterSpacing: '2px',
     marginBottom: '15px' 
   }}>
-    YOUR FINAL IDENTITY
+    {t('result.finalIdentity')}
   </p>
 
   {/* Reusing IdentityCard for the final reveal */}
@@ -130,11 +132,11 @@ const GameResultOverlay: React.FC<GameResultOverlayProps> = ({
             boxShadow: '0 0 20px rgba(197, 160, 89, 0.3)'
           }}
         >
-          PREPARE NEW CAMPAIGN
+          {t('result.newCampaign')}
         </button>
       ) : (
         <p style={{ color: '#888', fontStyle: 'italic' }}>
-          Waiting for the Master to reset the command center...
+          {t('result.waiting')}
         </p>
       )}
     </div>

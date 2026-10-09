@@ -7,7 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
 //    `vite preview`, with the socket stubbed, so they need no backend and also
 //    cover the pre-rendered page, generated sitemap and built head tags.
 // `npm run e2e:build` runs only the second suite.
-const BUILD_SPECS = ['**/landing.spec.ts', '**/static.spec.ts'];
+const BUILD_SPECS = ['**/landing.spec.ts', '**/static.spec.ts', '**/language.spec.ts'];
 // Not the vite preview default (4173), so another project's preview server is never reused by mistake.
 const BUILD_PORT = 4317;
 

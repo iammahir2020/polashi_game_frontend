@@ -1,5 +1,8 @@
 import type { Player, Room } from "../../types/game";
 import { MISSION_CONFIGS } from "../../constants";
+import { makeI18n, type I18n } from "../../i18n/core";
+
+const ENGLISH = makeI18n("en", () => {});
 
 export interface PhaseInput {
   room: Room;
@@ -11,25 +14,25 @@ export interface PhaseInput {
 }
 
 // What the table is waiting for, in one line. Display only: it reads the same
-// room state the rest of the screen already shows.
-export function phaseMessage({
-  room, me, currentGeneral, isGameMaster, awaitingNewGeneral, isTurnComplete,
-}: PhaseInput): string {
-  if (room.gameStatus === "OVER") return room.winner ? `The campaign is over. ${room.winner} prevail.` : "The campaign is over.";
-  if (room.gameStatus === "MIR_JAFOR_TURN") return "The final betrayal: Mir Jafor is choosing a target.";
+// room state the rest of the screen already shows. In English unless given
+// the current language's `useI18n()`.
+export function phaseMessage(
+  { room, me, currentGeneral, isGameMaster, awaitingNewGeneral, isTurnComplete }: PhaseInput,
+  { t, winner }: Pick<I18n, "t" | "winner"> = ENGLISH,
+): string {
+  if (room.gameStatus === "OVER") return room.winner ? t("phase.overWinner", { winner: winner(room.winner) }) : t("phase.over");
+  if (room.gameStatus === "MIR_JAFOR_TURN") return t("phase.mirJafor");
   if (room.voting?.active) {
-    return room.voting.type === "teamApproval"
-      ? "The council is voting on the proposed battalion."
-      : "The battalion is on its mission. Its members vote in secret.";
+    return room.voting.type === "teamApproval" ? t("phase.councilVoting") : t("phase.missionVoting");
   }
-  if (room.voting) return "The verdict is in.";
-  if (awaitingNewGeneral) return isTurnComplete ? "Your turn is done, waiting for new general" : "Waiting for new general";
+  if (room.voting) return t("phase.verdict");
+  if (awaitingNewGeneral) return isTurnComplete ? t("phase.turnDone") : t("phase.waitingNewGeneral");
   if (!currentGeneral) {
-    return isGameMaster ? "Appoint a General to lead this mission." : "Waiting for the host to appoint a General.";
+    return isGameMaster ? t("phase.appointGeneral") : t("phase.waitingForHost");
   }
   const needed = MISSION_CONFIGS[room.activePlayerIds?.length || 5]?.[(room.currentRound || 1) - 1]?.players;
-  if (me?.id === currentGeneral.id) return "You are the General. Choose your battalion.";
+  if (me?.id === currentGeneral.id) return t("phase.youAreGeneral");
   return needed
-    ? `${currentGeneral.name} is choosing a battalion of ${needed}.`
-    : `${currentGeneral.name} is choosing a battalion.`;
+    ? t("phase.generalChoosingCount", { name: currentGeneral.name, count: needed })
+    : t("phase.generalChoosing", { name: currentGeneral.name });
 }

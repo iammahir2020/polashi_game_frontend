@@ -1,6 +1,8 @@
 import React from "react";
 import type { Room } from "../../types/game";
 import { GOLD, GOLD_SOFT, panelStyle } from "./styles";
+import { useI18n } from "../../i18n/useI18n";
+import LanguageToggle from "../../i18n/LanguageToggle";
 
 interface WideHeaderProps {
   newConnection: "ok" | "error" | string;
@@ -30,6 +32,7 @@ const WideHeader: React.FC<WideHeaderProps> = ({
   leaveRoom,
   dense = false,
 }) => {
+  const { t, lang } = useI18n();
   const gap = dense ? "14px" : "22px";
   const me = room?.players.find((p) => p.id === playerId);
 
@@ -48,9 +51,10 @@ const WideHeader: React.FC<WideHeaderProps> = ({
       <div style={{ display: "flex", alignItems: "center", gap: "14px", minWidth: 0 }}>
         <img src="/Nawab.png" alt="" width={40} height={40} style={{ width: "40px", height: "40px", flexShrink: 0 }} />
         <h1 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: GOLD, lineHeight: 1.15 }}>
-          <span style={{ display: "block", fontSize: "11px", letterSpacing: "4px", opacity: 0.8 }}>THE BATTLE OF</span>
-          <span style={{ fontSize: dense ? "18px" : "22px", letterSpacing: dense ? "2px" : "3px", textShadow: "0 0 15px rgba(197, 160, 89, 0.25)" }}>
-            POLASHI <span style={{ fontFamily: "'Noto Serif Bengali', serif" }}>(পলাশী)</span>
+          <span style={{ display: "block", fontSize: "11px", letterSpacing: "4px", opacity: 0.8, textTransform: "uppercase" }}>{t("title.kicker")}</span>
+          <span style={{ fontSize: dense ? "18px" : "22px", letterSpacing: dense ? "2px" : "3px", textShadow: "0 0 15px rgba(197, 160, 89, 0.25)", textTransform: "uppercase" }}>
+            {t("title.name")}
+            {lang === "en" && <> <span lang="bn" style={{ fontFamily: "'Noto Serif Bengali', serif" }}>(পলাশী)</span></>}
           </span>
         </h1>
       </div>
@@ -58,22 +62,22 @@ const WideHeader: React.FC<WideHeaderProps> = ({
       {room && (
         <div style={{ display: "flex", alignItems: "center", gap, flexWrap: "wrap" }}>
           <div>
-            <div style={labelStyle}>Operative</div>
+            <div style={labelStyle}>{t("header.operative")}</div>
             <div style={{ color: "#fff", fontFamily: "'Cinzel', serif", fontSize: "15px", letterSpacing: "1px" }}>
-              {me?.name ?? "Unknown"}
+              {me?.name ?? t("player.unknown")}
             </div>
           </div>
 
           <div>
-            <div style={labelStyle}>HQ Code</div>
+            <div style={labelStyle}>{t("header.hqCode")}</div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ color: GOLD, fontFamily: "'Cinzel', serif", fontSize: "20px", fontWeight: 700, letterSpacing: "4px" }}>
+              <span data-latin style={{ color: GOLD, fontFamily: "'Cinzel', serif", fontSize: "20px", fontWeight: 700, letterSpacing: "4px" }}>
                 {roomCode}
               </span>
               <button
                 onClick={() => handleCopy("code")}
-                aria-label="Copy HQ code"
-                title="Copy HQ code"
+                aria-label={t("header.copyCode")}
+                title={t("header.copyCode")}
                 style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: "4px" }}
               >
                 {copiedStatus === "code" ? "✅" : "📋"}
@@ -96,14 +100,14 @@ const WideHeader: React.FC<WideHeaderProps> = ({
               cursor: "pointer",
             }}
           >
-            {copiedStatus === "link" ? "LINK COPIED" : "INVITE ALLIES"}
+            {copiedStatus === "link" ? t("invite.copied") : t("invite.button")}
           </button>
 
           <span
-            title={room.locked ? "Room locked" : "Room open"}
+            title={room.locked ? t("room.lockedTitle") : t("room.openTitle")}
             style={{ fontSize: "12px", letterSpacing: "1px", color: room.locked ? "#ff922b" : "#00b894" }}
           >
-            {room.locked ? "🔒" : "🔓"}{dense ? "" : room.locked ? " LOCKED" : " OPEN"}
+            {room.locked ? "🔒" : "🔓"}{dense ? "" : ` ${room.locked ? t("room.locked") : t("room.open")}`}
           </span>
         </div>
       )}
@@ -117,9 +121,10 @@ const WideHeader: React.FC<WideHeaderProps> = ({
             border: "1px solid #333", textTransform: "uppercase", letterSpacing: "1px",
           }}
         >
-          <Status label="Internet" isOk={newConnection === "ok"} iconOnly={dense} />
-          <Status label="Server" isOk={isConnectedToSocket} iconOnly={dense} />
+          <Status label={t("status.internet")} isOk={newConnection === "ok"} iconOnly={dense} />
+          <Status label={t("status.server")} isOk={isConnectedToSocket} iconOnly={dense} />
         </div>
+        <LanguageToggle style={{ fontFamily: "'EB Garamond', serif" }} />
         {room && (
           <button
             onClick={leaveRoom}
@@ -129,7 +134,7 @@ const WideHeader: React.FC<WideHeaderProps> = ({
               letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer",
             }}
           >
-            Abandon Post
+            {t("header.abandon")}
           </button>
         )}
       </div>
@@ -145,12 +150,16 @@ const labelStyle: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
-const Status = ({ label, isOk, iconOnly }: { label: string; isOk: boolean; iconOnly?: boolean }) => (
-  <span title={`${label}: ${isOk ? "connected" : "disconnected"}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-    {iconOnly ? <span style={visuallyHidden}>{label}</span> : label}
-    <span role="img" aria-label={isOk ? "connected" : "disconnected"} style={{ fontSize: "14px", color: isOk ? "#2f9e44" : "#e03131" }}>●</span>
-  </span>
-);
+const Status = ({ label, isOk, iconOnly }: { label: string; isOk: boolean; iconOnly?: boolean }) => {
+  const { t } = useI18n();
+  const state = isOk ? t("status.connected") : t("status.disconnected");
+  return (
+    <span title={`${label}: ${state}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+      {iconOnly ? <span style={visuallyHidden}>{label}</span> : label}
+      <span role="img" aria-label={state} style={{ fontSize: "14px", color: isOk ? "#2f9e44" : "#e03131" }}>●</span>
+    </span>
+  );
+};
 
 const visuallyHidden: React.CSSProperties = {
   position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px",

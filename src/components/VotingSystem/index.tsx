@@ -7,6 +7,7 @@ import {
   voteTally,
   votesCastCount,
 } from './voteSelectors';
+import { useI18n } from '../../i18n/useI18n';
 
 interface VotingSystemProps {
   room: Room | null;
@@ -44,6 +45,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
   primaryBtn,
   inline = false
 }) => {
+  const { t, rich } = useI18n();
   const [pendingVote, setPendingVote] = useState<'yes' | 'no' | null>(null);
 
   const isTeamApproval = room.voting.type === "teamApproval";
@@ -94,9 +96,9 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
   const space = (overlay: string, inlineValue: string) => (inline ? inlineValue : overlay);
 
   const containerProps = inline
-    ? { role: "region", "aria-label": "Voting session", style: inlineContainerStyle }
+    ? { role: "region", "aria-label": t('vote.aria'), style: inlineContainerStyle }
     : {
-        role: "dialog", "aria-modal": true, "aria-label": "Voting session", tabIndex: -1,
+        role: "dialog", "aria-modal": true, "aria-label": t('vote.aria'), tabIndex: -1,
         style: overlayContainerStyle,
       };
 
@@ -105,15 +107,15 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
       {/* 1. HEADER SECTION */}
       <div style={{ marginBottom: space("30px", "12px") }}>
         <div style={{ color: "#c5a059", fontSize: "12px", letterSpacing: "4px", textTransform: "uppercase", marginBottom: "8px" }}>
-          {isTeamApproval ? "Royal Court" : "Battlefield"}
+          {isTeamApproval ? t('vote.royalCourt') : t('vote.battlefield')}
         </div>
         <h2 style={{
           color: "#fff", fontFamily: "'Cinzel', serif", fontSize: "32px", margin: 0,
           textShadow: "0 0 15px rgba(197, 160, 89, 0.3)"
         }}>
           {room.voting.active
-            ? (isTeamApproval ? "Council Deliberation" : "Cast Secret Vote")
-            : "The Final Verdict"}
+            ? (isTeamApproval ? t('vote.councilTitle') : t('vote.secretTitle'))
+            : t('vote.verdictTitle')}
         </h2>
         <div style={{ width: "100px", height: "1px", background: "linear-gradient(to right, transparent, #c5a059, transparent)", margin: "15px auto" }} />
       </div>
@@ -121,7 +123,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
       {/* 2. TEAM BATTALION DISPLAY */}
       <div style={{ margin: space("20px 0", "4px 0 12px") }}>
         <p style={{ color: "#666", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase" }}>
-          Proposed Battalion:
+          {t('vote.proposed')}
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
           {room.proposedTeam?.map((tid: string) => {
@@ -145,8 +147,8 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
             <>
               <p style={{ color: "#888", fontFamily: "'EB Garamond', serif", fontSize: "18px", fontStyle: "italic", marginBottom: space("30px", "14px") }}>
                 {isTeamApproval
-                  ? "The assembly awaits your decision. Choose wisely."
-                  : "The fate of the mission rests in your hands. Act in secret."}
+                  ? t('vote.councilPrompt')
+                  : t('vote.missionPrompt')}
               </p>
 
               <div style={{
@@ -154,13 +156,13 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
                 border: "1px solid rgba(197, 160, 89, 0.2)", color: "#c5a059", fontSize: "14px",
                 marginBottom: space("40px", "18px"), display: 'inline-block'
               }}>
-                Progress: <span style={{ color: "#fff", fontWeight: "bold" }}>{votesCastCount(currentVotes)}</span> / {totalRequiredVotes}
+                {rich('vote.progress', { cast: votesCastCount(currentVotes), total: totalRequiredVotes }, { color: "#fff", fontWeight: "bold" })}
               </div>
 
               {pendingVoters.length > 0 && (
                 <div style={{ marginBottom: space("24px", "16px"), maxWidth: "680px" }}>
                   <p style={{ color: "#9a9a9a", fontSize: "11px", letterSpacing: "1.6px", textTransform: "uppercase", marginBottom: "10px" }}>
-                    Awaiting Votes From
+                    {t('vote.awaiting')}
                   </p>
                   <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
                     {pendingVoters.map((p) => (
@@ -193,8 +195,8 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
                 </div>
               ) : (
                 <div style={{ animation: "pulseOpacity 2s infinite" }}>
-                  <p style={{ color: "#c5a059", fontSize: "20px", fontFamily: "Cinzel" }}>Decision Recorded</p>
-                  <p style={{ color: "#666", fontSize: "14px" }}>Awaiting remaining members...</p>
+                  <p style={{ color: "#c5a059", fontSize: "20px", fontFamily: "Cinzel" }}>{t('vote.recorded')}</p>
+                  <p style={{ color: "#666", fontSize: "14px" }}>{t('vote.awaitingRest')}</p>
                 </div>
               )}
             </>
@@ -204,7 +206,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
               {!isTeamApproval && pendingSecretVoters.length > 0 && (
                 <div style={{ marginBottom: "20px", maxWidth: "680px" }}>
                   <p style={{ color: "#9a9a9a", fontSize: "11px", letterSpacing: "1.6px", textTransform: "uppercase", marginBottom: "10px" }}>
-                    Awaiting Secret Votes From
+                    {t('vote.awaitingSecret')}
                   </p>
                   <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
                     {pendingSecretVoters.map((p) => (
@@ -227,10 +229,10 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
               )}
 
               <p style={{ color: "#c5a059", fontSize: "22px", fontFamily: "Cinzel", letterSpacing: "2px" }}>
-                Mission in Progress...
+                {t('vote.inProgress')}
               </p>
               <p style={{ color: "#666", fontSize: "16px", fontStyle: "italic" }}>
-                The battalion is operating behind enemy lines. Await the outcome.
+                {t('vote.inProgressHint')}
               </p>
             </div>
           )}
@@ -250,8 +252,8 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
             </div>
             <div className="verdict-text" style={{ color: room.voting.result === "Yes" ? "#40c057" : "#ff7675" }}>
               {isTeamApproval
-                ? (room.voting.result === "Yes" ? "APPROVED" : "REJECTED")
-                : (room.voting.result === "Yes" ? "MISSION SUCCESS" : "MISSION FAILED")}
+                ? (room.voting.result === "Yes" ? t('vote.approved') : t('vote.rejected'))
+                : (room.voting.result === "Yes" ? t('vote.missionSuccess') : t('vote.missionFailed'))}
             </div>
             <div className="shadow-fx" />
           </div>
@@ -264,10 +266,10 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
 
           {isGameMaster && (
             <div style={{ display: "flex", gap: "15px", justifyContent: "center", flexWrap: "wrap" }}>
-              <button onClick={handleStartVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>Take Vote Again</button>
-              <button onClick={handleClearVote} style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #888", padding: "8px 25px" }}>Dismiss</button>
+              <button onClick={handleStartVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>{t('vote.again')}</button>
+              <button onClick={handleClearVote} style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #888", padding: "8px 25px" }}>{t('vote.dismiss')}</button>
               {room.voting.result === "Yes" && isTeamApproval && (
-                <button onClick={handleStartSecretVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>Take Secret Vote</button>
+                <button onClick={handleStartSecretVote} style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "8px 25px" }}>{t('vote.takeSecret')}</button>
               )}
             </div>
           )}
@@ -276,7 +278,7 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
 
       {isGameMaster && room.voting.active && (
         <div style={{ marginTop: space("40px", "22px") }}>
-          <button onClick={handleClearVote} className="cancel-btn">🚫 Cancel Voting Session</button>
+          <button onClick={handleClearVote} className="cancel-btn">{t('vote.cancel')}</button>
         </div>
       )}
 
@@ -288,20 +290,20 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
         }}>
           <h2 style={{ color: "#fff", fontFamily: "Cinzel", marginBottom: "30px", letterSpacing: "2px" }}>
-            Confirm Your Choice
+            {t('vote.confirmTitle')}
           </h2>
 
           <div style={{ marginBottom: "40px", textAlign: "center" }}>
             <img
               src={pendingVote === 'yes' ? "/green_card.png" : "/red_card.png"}
               style={{ width: "200px", filter: "drop-shadow(0 0 30px rgba(197, 160, 89, 0.4))" }}
-              alt="Selected Card"
+              alt={t('vote.selectedCard')}
             />
             <p style={{
               color: pendingVote === 'yes' ? "#40c057" : "#ff7675",
               fontSize: "24px", fontWeight: "bold", marginTop: "20px"
             }}>
-              {pendingVote === 'yes' ? "SUCCESS" : "SABOTAGE"}
+              {pendingVote === 'yes' ? t('vote.success') : t('vote.sabotage')}
             </p>
           </div>
 
@@ -324,13 +326,13 @@ const VotingSession: React.FC<ActiveVotingProps> = ({
               }}
               style={{ ...primaryBtn, backgroundColor: "#c5a059", color: "#000", padding: "12px 40px", whiteSpace: "nowrap" }}
             >
-              CONFIRM
+              {t('vote.confirm')}
             </button>
             <button
               onClick={() => setPendingVote(null)}
               style={{ ...primaryBtn, backgroundColor: "transparent", color: "#888", border: "1px solid #444", padding: "12px 40px", whiteSpace: "nowrap" }}
             >
-              GO BACK
+              {t('vote.goBack')}
             </button>
           </div>
         </div>
@@ -379,12 +381,13 @@ type ShuffledVoteOptionsProps = {
 // they tap. It is rolled once on mount, and this only mounts while a vote is open,
 // so every new vote gets a fresh order.
 const ShuffledVoteOptions = ({ isTeamApproval, onYes, onNo }: ShuffledVoteOptionsProps) => {
+  const { t } = useI18n();
   const [yesFirst] = useState(() => Math.random() < 0.5);
 
   const yes = (
     <VoteOption
       key="yes"
-      label={isTeamApproval ? "APPROVE" : "SUCCESS"}
+      label={isTeamApproval ? t('vote.approve') : t('vote.success')}
       color="#40c057"
       img={isTeamApproval ? "/green_seal.png" : "/green_card.png"}
       onClick={onYes}
@@ -393,7 +396,7 @@ const ShuffledVoteOptions = ({ isTeamApproval, onYes, onNo }: ShuffledVoteOption
   const no = (
     <VoteOption
       key="no"
-      label={isTeamApproval ? "REJECT" : "SABOTAGE"}
+      label={isTeamApproval ? t('vote.reject') : t('vote.sabotage')}
       color="#ff7675"
       img={isTeamApproval ? "/red_seal.png" : "/red_card.png"}
       onClick={onNo}
@@ -405,12 +408,15 @@ const ShuffledVoteOptions = ({ isTeamApproval, onYes, onNo }: ShuffledVoteOption
 
 type TallyProps = { count: number; color: string; img: string };
 
-const Tally = ({ count, color, img }: TallyProps) => (
-  <div style={{ color, display: 'flex', alignItems: 'center', gap: '8px' }}>
-    <img src={img} style={{ width: '25px' }} />
-    {count}
-  </div>
-);
+const Tally = ({ count, color, img }: TallyProps) => {
+  const { num } = useI18n();
+  return (
+    <div style={{ color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <img src={img} style={{ width: '25px' }} />
+      {num(count)}
+    </div>
+  );
+};
 
 const VotingStyles = () => (
   <style>{`

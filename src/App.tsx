@@ -5,6 +5,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import RouteSeoManager from './seo/RouteSeoManager';
 import HowToPlay from './pages/HowToPlay';
+import { useI18n } from './i18n/useI18n';
 
 // The game (and socket.io with it) loads only when the game route is opened.
 const GameDashboard = lazy(() => import('./components/GameDashboard'));
@@ -13,6 +14,7 @@ const GameDashboard = lazy(() => import('./components/GameDashboard'));
 const STATIC_PATHS = ['/how-to-play'];
 
 function App() {
+  const { t } = useI18n();
   // Check if this is the first load of this session
   const [isBooting, setIsBooting] = useState(() => {
     return !sessionStorage.getItem('intro_played');
@@ -40,7 +42,7 @@ function App() {
   if (!hasProceeded) {
     return (
       <GameLoader 
-        message={isBooting ? "Establishing Intelligence Links..." : "Links Established."}
+        message={isBooting ? t('loader.booting') : t('loader.ready')}
         showButton={!isBooting} 
         onProceed={handleEnterGame}
       />
@@ -55,7 +57,7 @@ function App() {
         <Route
           path="/"
           element={
-            <Suspense fallback={<GameLoader message="Links Established." />}>
+            <Suspense fallback={<GameLoader message={t('loader.ready')} />}>
               <GameDashboard />
             </Suspense>
           }

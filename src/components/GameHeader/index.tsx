@@ -1,4 +1,6 @@
 import React from 'react';
+import { useI18n } from '../../i18n/useI18n';
+import LanguageToggle from '../../i18n/LanguageToggle';
 
 interface GameHeaderProps {
   newConnection: "ok" | "error" | string;
@@ -6,6 +8,7 @@ interface GameHeaderProps {
 }
 
 const GameHeader: React.FC<GameHeaderProps> = ({ newConnection, isConnectedToSocket }) => {
+  const { t, lang } = useI18n();
   return (
     <header style={{
       textAlign: "center",
@@ -22,7 +25,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({ newConnection, isConnectedToSoc
         textTransform: 'uppercase',
         opacity: 0.8
       }}>
-        The Battle of
+        {t('title.kicker')}
       </h1>
       
       <h1 style={{ 
@@ -33,7 +36,8 @@ const GameHeader: React.FC<GameHeaderProps> = ({ newConnection, isConnectedToSoc
         textTransform: 'uppercase',
         textShadow: "0 0 15px rgba(197, 160, 89, 0.2)"
       }}>
-        Polashi <span style={{ fontFamily: "'Noto Serif Bengali', serif" }}>(পলাশী)</span>
+        {t('title.name')}
+        {lang === 'en' && <> <span lang="bn" style={{ fontFamily: "'Noto Serif Bengali', serif" }}>(পলাশী)</span></>}
       </h1>
 
       <div style={{
@@ -49,9 +53,13 @@ const GameHeader: React.FC<GameHeaderProps> = ({ newConnection, isConnectedToSoc
         textTransform: 'uppercase',
         letterSpacing: '1px'
       }}>
-        <StatusItem label="Internet" isOk={newConnection === "ok"} />
+        <StatusItem label={t('status.internet')} isOk={newConnection === "ok"} />
         <div style={{ width: '1px', backgroundColor: '#444' }} />
-        <StatusItem label="Server" isOk={isConnectedToSocket} />
+        <StatusItem label={t('status.server')} isOk={isConnectedToSocket} />
+      </div>
+
+      <div style={{ marginTop: "10px", fontFamily: "'EB Garamond', serif" }}>
+        <LanguageToggle />
       </div>
     </header>
   );

@@ -3,6 +3,7 @@ import RoundTracker from "../RoundTracker";
 import Panel from "./Panel";
 import { GOLD, GOLD_SOFT, mutedTextStyle } from "./styles";
 import { phaseMessage, type PhaseInput } from "./phase";
+import { useI18n } from "../../i18n/useI18n";
 
 type CampaignPanelProps = PhaseInput;
 
@@ -10,15 +11,17 @@ type CampaignPanelProps = PhaseInput;
 // what's happening now.
 const CampaignPanel: React.FC<CampaignPanelProps> = (props) => {
   const { room, currentGeneral } = props;
+  const i18n = useI18n();
+  const { t, rich } = i18n;
 
   return (
-    <Panel title={`Mission ${Math.min(room.currentRound || 1, 5)} of 5`}>
+    <Panel title={t("campaign.title", { round: Math.min(room.currentRound || 1, 5) })}>
       <RoundTracker room={room} />
 
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "18px", fontFamily: "'Cinzel', serif", margin: "4px 0 16px" }}>
-        <Score label="Nawabs" value={room.scoreGreen ?? 0} color="#40c057" />
+        <Score label={t("campaign.nawabs")} value={i18n.num(room.scoreGreen ?? 0)} color="#40c057" />
         <span aria-hidden="true" style={{ color: "#555" }}>—</span>
-        <Score label="Company" value={room.scoreRed ?? 0} color="#ff7675" />
+        <Score label={t("campaign.company")} value={i18n.num(room.scoreRed ?? 0)} color="#ff7675" />
       </div>
 
       <div
@@ -29,17 +32,17 @@ const CampaignPanel: React.FC<CampaignPanelProps> = (props) => {
         }}
       >
         <div style={{ color: GOLD_SOFT, fontSize: "14px", letterSpacing: "0.4px" }}>
-          Current General: <strong style={{ color: GOLD }}>{currentGeneral?.name ?? "None appointed"}</strong>
+          {rich("general.current", { name: currentGeneral?.name ?? t("general.noneAppointed") }, { color: GOLD })}
         </div>
         <p role="status" style={{ ...mutedTextStyle, fontStyle: "italic", fontSize: "15px" }}>
-          {phaseMessage(props)}
+          {phaseMessage(props, i18n)}
         </p>
       </div>
     </Panel>
   );
 };
 
-const Score = ({ label, value, color }: { label: string; value: number; color: string }) => (
+const Score = ({ label, value, color }: { label: string; value: string; color: string }) => (
   <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
     <span style={{ fontSize: "12px", letterSpacing: "2px", color: "#999", textTransform: "uppercase" }}>{label}</span>
     <span style={{ fontSize: "26px", fontWeight: 700, color }}>{value}</span>

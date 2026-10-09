@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { SHOT_SIZE, WALKTHROUGH, shotUrl, type WalkthroughStep } from './walkthroughSteps';
+import { SHOT_SIZE, shotUrl, walkthroughFor, type WalkthroughStep } from './walkthroughSteps';
+import { useI18n } from '../../i18n/useI18n';
+import { withEmphasis } from '../../i18n/core';
 
 // Phone screenshots up to this width, desktop ones above it.
 const PHONE_QUERY = '(max-width: 640px)';
@@ -15,10 +17,12 @@ const SWIPE_PX = 40;
 const Walkthrough: React.FC<{ interactive?: boolean }> = ({
   interactive = typeof window !== 'undefined',
 }) => {
+  const { lang } = useI18n();
+  const steps = walkthroughFor(lang);
   if (!interactive) {
     return (
       <ol style={listStyle}>
-        {WALKTHROUGH.map((step, index) => (
+        {steps.map((step, index) => (
           <li key={step.id} style={{ marginBottom: '28px' }}>
             <Shot step={step} lazy={index > 0} />
             <Caption step={step} index={index} />
@@ -31,19 +35,21 @@ const Walkthrough: React.FC<{ interactive?: boolean }> = ({
 };
 
 const Slideshow: React.FC = () => {
+  const { t, num, lang } = useI18n();
+  const steps = walkthroughFor(lang);
   const [index, setIndex] = useState(0);
   const touchX = useRef<number | null>(null);
-  const step = WALKTHROUGH[index];
-  const last = WALKTHROUGH.length - 1;
+  const step = steps[index];
+  const last = steps.length - 1;
   const go = (next: number) => setIndex(Math.max(0, Math.min(last, next)));
 
   // Fetch the neighbouring screenshots in the background so the next click is instant.
   useEffect(() => {
     const size = window.matchMedia?.(PHONE_QUERY).matches ? 'phone' : 'desktop';
-    for (const neighbour of [WALKTHROUGH[index + 1], WALKTHROUGH[index - 1]]) {
-      if (neighbour) new Image().src = shotUrl(neighbour.id, size);
+    for (const neighbour of [steps[index + 1], steps[index - 1]]) {
+      if (neighbour) new Image().src = shotUrl(neighbour.id, size, lang);
     }
-  }, [index]);
+  }, [index, steps, lang]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowRight') go(index + 1);
@@ -56,7 +62,7 @@ const Slideshow: React.FC = () => {
     <div
       role="region"
       aria-roledescription="carousel"
-      aria-label="Walkthrough"
+      aria-label={t('walk.aria')}
       tabIndex={0}
       onKeyDown={onKeyDown}
       onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
@@ -69,26 +75,26 @@ const Slideshow: React.FC = () => {
       }}
       style={slideshowStyle}
     >
-      <div role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${WALKTHROUGH.length}`}>
+      <div role="group" aria-roledescription="slide" aria-label={t('walk.slideOf', { index: index + 1, total: steps.length })}>
         <Shot step={step} lazy={false} />
       </div>
 
       <div style={controlsStyle}>
         <button type="button" onClick={() => go(index - 1)} disabled={index === 0} style={navButtonStyle(index === 0)}>
-          ← Previous
+          {t('walk.previous')}
         </button>
-        <span style={counterStyle}>{index + 1} / {WALKTHROUGH.length}</span>
+        <span style={counterStyle}>{num(index + 1)} / {num(steps.length)}</span>
         <button type="button" onClick={() => go(index + 1)} disabled={index === last} style={navButtonStyle(index === last)}>
-          Next →
+          {t('walk.next')}
         </button>
       </div>
 
       <div style={dotsStyle}>
-        {WALKTHROUGH.map((s, i) => (
+        {steps.map((s, i) => (
           <button
             key={s.id}
             type="button"
-            aria-label={`Step ${i + 1}: ${s.title}`}
+            aria-label={t('walk.dotLabel', { index: i + 1, title: s.title })}
             aria-current={i === index ? 'step' : undefined}
             onClick={() => go(i)}
             style={dotButtonStyle}
@@ -106,16 +112,18 @@ const Slideshow: React.FC = () => {
 };
 
 // A screenshot: the phone one on narrow screens, the desktop one otherwise.
-const Shot: React.FC<{ step: WalkthroughStep; lazy: boolean }> = ({ step, lazy }) => (
+const Shot: React.FC<{ step: WalkthroughStep; lazy: boolean }> = ({ step, lazy }) => {
+  const { lang } = useI18n();
+  return (
   <picture>
     <source
       media={PHONE_QUERY}
-      srcSet={shotUrl(step.id, 'phone')}
+      srcSet={shotUrl(step.id, 'phone', lang)}
       width={SHOT_SIZE.phone.width}
       height={SHOT_SIZE.phone.height}
     />
     <img
-      src={shotUrl(step.id, 'desktop')}
+      src={shotUrl(step.id, 'desktop', lang)}
       width={SHOT_SIZE.desktop.width}
       height={SHOT_SIZE.desktop.height}
       alt={step.alt}
@@ -124,22 +132,21 @@ const Shot: React.FC<{ step: WalkthroughStep; lazy: boolean }> = ({ step, lazy }
       style={imageStyle}
     />
   </picture>
-);
+  );
+};
 
-const Caption: React.FC<{ step: WalkthroughStep; index: number }> = ({ step, index }) => (
+const Caption: React.FC<{ step: WalkthroughStep; index: number }> = ({ step, index }) => {
+  const { t } = useI18n();
+  return (
   <div style={captionStyle}>
     <h3 style={stepTitleStyle}>
-      <span style={stepNumberStyle}>Step {index + 1}.</span> {step.title}
+      <span style={stepNumberStyle}>{t('walk.stepNumber', { index: index + 1 })}</span> {step.title}
     </h3>
     <p style={whoStyle}>{step.who}</p>
-    <p style={{ margin: 0 }}>{withBold(step.text)}</p>
+    <p style={{ margin: 0 }}>{withEmphasis(step.text, { color: '#e7d6ad' })}</p>
   </div>
-);
-
-// Turns `**text**` into <strong>text</strong>.
-function withBold(text: string): React.ReactNode[] {
-  return text.split(/\*\*(.+?)\*\*/).map((part, i) => (i % 2 ? <strong key={i} style={{ color: '#e7d6ad' }}>{part}</strong> : part));
-}
+  );
+};
 
 const listStyle: React.CSSProperties = {
   listStyle: 'none',

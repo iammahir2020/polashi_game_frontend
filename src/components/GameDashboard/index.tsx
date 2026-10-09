@@ -20,7 +20,7 @@ import GameLauncher from "../GameLauncher";
 import PlayerRoster from "../PlayerRoster";
 import BattalionSelector from "../BattalionSelector";
 import GameHeader from "../GameHeader";
-import IntelPopup from "../IntepPopup";
+import IntelPopup, { type IntelPopupState } from "../IntepPopup";
 import MirJaforPhase from "../MirJaforPhase";
 import ObserverScreen from "../ObserverScreen";
 import CreditFooter from "../CreditFooter";
@@ -32,6 +32,8 @@ import LandingHero from "../WarRoom/LandingHero";
 import Panel from "../WarRoom/Panel";
 import WideHeader from "../WarRoom/WideHeader";
 import { columnStyle, mutedTextStyle } from "../WarRoom/styles";
+import { useI18n } from "../../i18n/useI18n";
+import { isServerError, serverMessage, type Message } from "../../i18n/core";
 
 // How long a General's just-sent team is trusted over the server's copy. Long
 // enough to cover a slow round trip to the server; short enough that if the
@@ -48,14 +50,17 @@ const MAX_SERVER_UPDATING_RETRIES = 30;
 // How long the "Room Closed" modal stays up before going home on its own.
 const ROOM_CLOSED_REDIRECT_MS = 5000;
 
+// Titles and messages are kept untranslated (see Message in i18n/core.ts), so
+// a dialog already on screen follows a language switch.
 type DialogState = {
   kind: "notice" | "confirm";
-  title: string;
-  message: string;
+  title: Message;
+  message: Message;
   onConfirm?: () => void;
 };
 
 export default function GameDashboard() {
+  const { t, msg, rich } = useI18n();
   const isConnectedToSocket = useNetworkStatus();
   const layout = useLayout();
   const [room, setRoom] = useState<Room | null>(null);
@@ -63,7 +68,7 @@ export default function GameDashboard() {
   const [name, setName] = useState("");
   const [playerId, setPlayerId] = useState<string | null>(() => loadSession().playerId || null);
   const [wasKicked, setWasKicked] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Message | null>(null);
   const [newConnection, setNetConnection] = useState<"ok" | "down">("down");
   const [isRevealed, setIsRevealed] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState<"code" | "link" | null>(null);
@@ -76,8 +81,8 @@ export default function GameDashboard() {
   const [generalReveal, setGeneralReveal] = useState<{ name: string, active: boolean, flipping: boolean } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | null>(null);
-  const [intelPopup, setIntelPopup] = useState<{ message: string; type: 'private' | 'public' } | null>(null);
-  const [errorToast, setErrorToast] = useState<string | null>(null);
+  const [intelPopup, setIntelPopup] = useState<IntelPopupState | null>(null);
+  const [errorToast, setErrorToast] = useState<Message | null>(null);
   const [selectedActiveIds, setSelectedActiveIds] = useState<string[]>([]);
   const [characterList, setCharacterList] = useState<CharacterType[]>([]);
   const [isResultOverlayDismissed, setIsResultOverlayDismissed] = useState(false);
@@ -187,8 +192,8 @@ export default function GameDashboard() {
         setIsReconnecting(false);
         setDialogState({
           kind: "notice",
-          title: "Server Still Updating",
-          message: "Your seat is saved. Refresh the page in a minute to rejoin your game.",
+          title: { key: "dialog.serverStillUpdating.title" },
+          message: { key: "dialog.serverStillUpdating.body" },
         });
         return;
       }
@@ -211,7 +216,7 @@ export default function GameDashboard() {
       setPlayerId(data.playerId);
       setIsReconnecting(false);
       setWasKicked(false);
-      setError("");
+      setError(null);
       setLoadingAction(null);
 
       saveSession(data.roomCode, data.playerId, data.reconnectToken);
@@ -222,31 +227,34 @@ export default function GameDashboard() {
       const amIInList = updatedRoom.players.some(p => p.id === myId);
 
       if (myId && !amIInList) {
-        handleForceExit("You have been removed from the room.");
+        handleForceExit({ key: "exit.removed" });
         setRoom(null);
         return;
       }
       setRoom(updatedRoom);
     });
 
-    socketService.onError((msg) => {
+    socketService.onError((text, detail) => {
+      // Shown in the player's language when the server says which message
+      // this is; an older server's English text is shown as it is.
+      const message = serverMessage("server", detail?.code, detail?.params, text);
       stopWaitingForServer();
-      setError(msg);
-      setErrorToast(msg);
+      setError(message);
+      setErrorToast(message);
       setIsReconnecting(false);
       setLoadingAction(null);
-      if (msg.toLowerCase().includes("not found")) {
+      if (isServerError(message, ["ROOM_NOT_FOUND", "PLAYER_NOT_FOUND"], "not found")) {
         clearSession();
         setDialogState({
           kind: "notice",
-          title: "Room Not Found",
-          message: msg || "An error occurred.",
+          title: { key: "dialog.roomNotFound.title" },
+          message: text ? message : { key: "error.generic" },
         });
       }
     });
 
     socketService.socket.on("kicked", () => {
-      handleForceExit("You have been kicked by the Game Master.");
+      handleForceExit({ key: "exit.kicked" });
       clearSession();
     });
 
@@ -363,10 +371,8 @@ export default function GameDashboard() {
       setPlayerId(null);
       setDialogState({
         kind: "notice",
-        title: "Room Closed",
-        message: reason === "closed_by_host"
-          ? "The Game Master has closed this room. Returning you to the home screen..."
-          : "This room is no longer available. Returning you to the home screen...",
+        title: { key: "dialog.roomClosed.title" },
+        message: { key: reason === "closed_by_host" ? "dialog.roomClosed.byHost" : "dialog.roomClosed.gone" },
         onConfirm: goHome,
       });
 
@@ -382,12 +388,14 @@ export default function GameDashboard() {
 
   useEffect(() => {
     socketService.onGuptochorResult((data) => {
-      const allianceLabel = data.alliance.includes("Nawabs")
-        ? "নবাবের অনুগত (Nawab Loyalist) 🟢"
-        : "কোম্পানির চর (EIC Traitor) 🔴";
-
       setIntelPopup({
-        message: `📜 গোপন প্রতিবেদন (Secret Report):\nTarget: ${data.targetName}\nIdentity: ${allianceLabel}`,
+        message: {
+          key: "intel.report",
+          vars: {
+            name: data.targetName,
+            side: { key: data.alliance.includes("Nawabs") ? "intel.loyal" : "intel.traitor" },
+          },
+        },
         type: 'private'
       });
 
@@ -397,16 +405,18 @@ export default function GameDashboard() {
     socketService.onNotification((data) => {
       if (data.requesterId === playerId) return;
 
-      let displayMessage = data.message;
+      const aboutMe = data.targetId === playerId;
+      let displayMessage = serverMessage("notify", data.code, data.params, data.message);
 
-      if (data.targetId === playerId) {
-        const requesterName = room?.players.find(p => p.id === data.requesterId)?.name || "Someone";
-        displayMessage = `⚠️ সতর্কবার্তা (Warning): ${requesterName} has deployed a Guptochor to investigate YOU!`;
+      if (aboutMe) {
+        const requesterName = room?.players.find(p => p.id === data.requesterId)?.name;
+        displayMessage = { key: "intel.targetedYou", vars: { name: requesterName || { key: "intel.someone" } } };
       }
 
       setIntelPopup({
         message: displayMessage,
-        type: 'public'
+        type: 'public',
+        aboutMe,
       });
 
       // setTimeout(() => setIntelPopup(null), 5000);
@@ -472,7 +482,7 @@ export default function GameDashboard() {
   const isGameMaster = me?.isGameMaster === true;
   const isCurrentGeneralTurnComplete = !!me?.isGeneral && awaitingNewGeneral && completedGeneralId === me?.id;
 
-  const handleForceExit = (reason: string) => {
+  const handleForceExit = (reason: Message) => {
     setRoom(null);
     setRoomCode("");
     setPlayerId(null);
@@ -490,7 +500,7 @@ export default function GameDashboard() {
 
   const cleanNameOrWarn = () => {
     const cleanName = normalizeName(name);
-    if (!cleanName) setErrorToast("Please enter a name.");
+    if (!cleanName) setErrorToast({ key: "toast.nameRequired" });
     return cleanName;
   };
 
@@ -517,7 +527,7 @@ export default function GameDashboard() {
     if (!room || !playerId) return;
 
     if (selectedActiveIds.length < 5 || selectedActiveIds.length > 10) {
-      setErrorToast("The battalion must consist of 5 to 10 active players.");
+      setErrorToast({ key: "toast.battalionSize" });
       return;
     }
     setIsRevealed(false); 
@@ -541,8 +551,8 @@ export default function GameDashboard() {
     if (!room || !playerId) return;
     setDialogState({
       kind: "confirm",
-      title: "Reset Campaign",
-      message: "Reset the game for all players?",
+      title: { key: "dialog.reset.title" },
+      message: { key: "dialog.reset.body" },
       onConfirm: () => {
         runOnce("reset", () => socketService.resetGame(roomCode, playerId));
         setIsRevealed(false);
@@ -564,7 +574,7 @@ export default function GameDashboard() {
     const currentRoomCode = roomCode || saved.roomCode;
     const myId = playerId || saved.playerId;
     if (currentRoomCode && myId) socketService.leaveRoom(currentRoomCode, myId);
-    setRoom(null); setRoomCode(""); setPlayerId(null); setWasKicked(false); setError("");
+    setRoom(null); setRoomCode(""); setPlayerId(null); setWasKicked(false); setError(null);
     clearSession();
   };
 
@@ -611,15 +621,15 @@ export default function GameDashboard() {
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("Fallback copy failed", err);
-      setErrorToast(`Could not auto-copy. Please copy manually: ${textToCopy}`);
+      setErrorToast({ key: "toast.copyFailed", vars: { text: textToCopy } });
     }
   };
 
   const handleDissolve = () => {
     setDialogState({
       kind: "confirm",
-      title: "Close HQ",
-      message: "Terminate this session for all players?",
+      title: { key: "dialog.close.title" },
+      message: { key: "dialog.close.body" },
       onConfirm: () => {
         handleCloseRoom();
         clearSession();
@@ -674,8 +684,8 @@ export default function GameDashboard() {
     const target = room.players.find(p => p.id === targetId);
     setDialogState({
       kind: "confirm",
-      title: "Deploy Informant",
-      message: `Deploy your informant to investigate ${target?.name}?`,
+      title: { key: "dialog.investigate.title" },
+      message: { key: "dialog.investigate.body", vars: { name: target?.name ?? "" } },
       onConfirm: () => runOnce("investigate", () => socketService.investigate(roomCode, targetId, playerId), 1500),
     });
   };
@@ -741,13 +751,13 @@ export default function GameDashboard() {
 
   if (isServerUpdating) {
     return (
-      <GameLoader message={"The server is updating. Reconnecting you to your game..."} />
+      <GameLoader message={t("loader.serverUpdating")} />
     );
   }
 
   if (isReconnecting) {
     return (
-      <GameLoader message={"Re-establishing Intelligence Links..."} />
+      <GameLoader message={t("loader.reconnecting")} />
     );
   }
 
@@ -888,7 +898,7 @@ export default function GameDashboard() {
         primaryBtn={primaryBtn}
         onClose={() => {
           setWasKicked(false);
-          setError("");
+          setError(null);
         }}
       />
     </>
@@ -937,7 +947,7 @@ export default function GameDashboard() {
           role="alert"
           aria-live="assertive"
         >
-          {errorToast}
+          {msg(errorToast)}
         </div>
       )}
 
@@ -955,7 +965,7 @@ export default function GameDashboard() {
           }}
           role="dialog"
           aria-modal="true"
-          aria-label={dialogState.title}
+          aria-label={msg(dialogState.title)}
         >
           <div
             style={{
@@ -977,10 +987,10 @@ export default function GameDashboard() {
                 letterSpacing: "0.6px",
               }}
             >
-              {dialogState.title}
+              {msg(dialogState.title)}
             </h3>
             <p style={{ margin: "0", color: "#bfbfbf", fontSize: "14px", lineHeight: 1.5 }}>
-              {dialogState.message}
+              {msg(dialogState.message)}
             </p>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
@@ -989,7 +999,7 @@ export default function GameDashboard() {
                   onClick={() => setDialogState(null)}
                   style={uiButtonGhost}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               )}
               <button
@@ -1000,7 +1010,7 @@ export default function GameDashboard() {
                 }}
                 style={uiButtonGold}
               >
-                {dialogState.kind === "confirm" ? "Confirm" : "OK"}
+                {dialogState.kind === "confirm" ? t("common.confirm") : t("common.ok")}
               </button>
             </div>
           </div>
@@ -1032,31 +1042,29 @@ export default function GameDashboard() {
     } else if (isObserver) {
       body = (
         <div style={grid(`minmax(0, 1fr) ${sideWidth}`)}>
-          <Panel label="Spymaster's view">
+          <Panel label={t("panel.spymaster")}>
             <ObserverScreen room={room} embedded />
           </Panel>
-          <Panel title="Roster">{renderRoster(true)}</Panel>
+          <Panel title={t("panel.roster")}>{renderRoster(true)}</Panel>
         </div>
       );
     } else if (!room.gameStarted) {
       body = (
         <div style={grid(`minmax(0, 1fr) ${isWide ? "380px" : sideWidth}`)}>
           <div style={columnStyle}>
-            <Panel title="War Council">
+            <Panel title={t("lobby.title")}>
               <p style={{ ...mutedTextStyle, marginBottom: "18px" }}>
-                {isGameMaster
-                  ? "Everyone who joins is drafted into the battalion. Click a name in the roster to stand them down or draft them again. A campaign needs 5 to 10 players."
-                  : "You are enlisted. The host will begin the campaign once everyone has arrived. Share the HQ code above to bring in more allies."}
+                {isGameMaster ? t("lobby.hostHelp") : t("lobby.playerHelp")}
               </p>
               {isGameMaster ? renderLauncher(true) : (
                 <div style={{ color: "#bbb", fontSize: "14px" }}>
-                  Secret Intel: {room.disableSecretIntelligence ? "Disabled" : "Enabled"}
+                  {room.disableSecretIntelligence ? t("lobby.intelDisabled") : t("lobby.intelEnabled")}
                 </div>
               )}
             </Panel>
             {renderConsole(true)}
           </div>
-          <Panel title="Roster">{renderRoster(true)}</Panel>
+          <Panel title={t("panel.roster")}>{renderRoster(true)}</Panel>
         </div>
       );
     } else {
@@ -1078,10 +1086,10 @@ export default function GameDashboard() {
               verdict sits above those screens until dismissed, as on phones. */}
           {renderVoting(room.gameStatus === "ACTIVE")}
           {renderBattalion(true)}
-          {isGameMaster && <Panel title="Command">{renderLauncher(true)}</Panel>}
+          {isGameMaster && <Panel title={t("panel.command")}>{renderLauncher(true)}</Panel>}
         </div>
       );
-      const roster = <Panel title="Roster">{renderRoster(true)}</Panel>;
+      const roster = <Panel title={t("panel.roster")}>{renderRoster(true)}</Panel>;
 
       body = isWide ? (
         <div style={grid(`320px minmax(0, 1fr) ${sideWidth}`)}>
@@ -1206,7 +1214,7 @@ export default function GameDashboard() {
                 letterSpacing: "0.4px"
               }}
             >
-              Current General: <strong>{currentGeneral.name}</strong>
+              {rich("general.current", { name: currentGeneral.name })}
             </div>
           )}
 
@@ -1225,7 +1233,7 @@ export default function GameDashboard() {
                 fontSize: "13px",
               }}
             >
-              {isCurrentGeneralTurnComplete ? "Your turn is done, waiting for new general" : "Waiting for new general"}
+              {isCurrentGeneralTurnComplete ? t("phase.turnDone") : t("phase.waitingNewGeneral")}
             </div>
           )}
 
@@ -1242,7 +1250,7 @@ export default function GameDashboard() {
                 textAlign: "center",
               }}
             >
-              Secret Intel: {room.disableSecretIntelligence ? "Disabled" : "Enabled"}
+              {room.disableSecretIntelligence ? t("lobby.intelDisabled") : t("lobby.intelEnabled")}
             </div>
           )}
 

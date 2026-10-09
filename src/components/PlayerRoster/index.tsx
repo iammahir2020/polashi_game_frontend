@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Player } from '../../types/game';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PlayerRosterProps {
   players: Player[];
@@ -30,6 +31,7 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
   onToggleActive,
   alwaysOpen = false
 }) => {
+  const { t, characterName } = useI18n();
   const [isOpenState, setIsOpen] = useState(false);
   const isOpen = alwaysOpen || isOpenState;
 
@@ -47,8 +49,8 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
       fontFamily: "'Cinzel', serif",
       margin: 0
     }}>
-      {amIObserver ? "Spymaster View: " : "Marshalled: "}
-      <span style={{ color: "white", fontWeight: "bold" }}>{selectedActiveIds.length} Active</span>
+      {amIObserver ? t('roster.spymasterView') : t('roster.marshalled')}
+      <span style={{ color: "white", fontWeight: "bold" }}>{t('roster.active', { count: selectedActiveIds.length })}</span>
     </div>
   );
 
@@ -126,7 +128,7 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                     fontSize: "15px", 
                     fontFamily: "'EB Garamond', serif" 
                   }}>
-                    {p.name} {p.isGameMaster && <span title="Game Master">👑</span>}
+                    {p.name} {p.isGameMaster && <span title={t('roster.gameMaster')}>👑</span>}
                   </span>
 
                   {p.isGeneral && (
@@ -139,7 +141,7 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                       fontWeight: 'bold',
                       letterSpacing: '0.5px'
                     }}>
-                      GENERAL
+                      {t('roster.general')}
                     </span>
                   )}
 
@@ -155,19 +157,19 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                       backgroundColor: 'rgba(0,0,0,0.3)',
                       letterSpacing: '0.5px'
                     }}>
-                      {p.character?.name?.toUpperCase()}
+                      {characterName(p.character).toUpperCase()}
                     </span>
                   )}
 
                   {/* Status Badges */}
                   {isActive && !gameStarted && (
                     <span style={{ fontSize: '11px', color: '#c5a059', border: '1px solid #c5a059', padding: '2px 7px', borderRadius: '4px' }}>
-                      BATTALION
+                      {t('roster.battalion')}
                     </span>
                   )}
                   {!isActive && gameStarted && (
                     <span style={{ fontSize: '11px', color: '#777', border: '1px solid #333', padding: '2px 7px', borderRadius: '4px' }}>
-                      OBSERVER
+                      {t('roster.observer')}
                     </span>
                   )}
                 </div>
@@ -175,7 +177,7 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   {showGuptochorAction && (
                     <button onClick={(e) => { e.stopPropagation(); onInvestigate?.(p.id); }} className="spy-btn" style={{ border: "1px solid #c5a059", background: "rgba(197, 160, 89, 0.1)", color: "#c5a059", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "14px" }}>
-                      🕵️‍♂️ <span style={{fontSize: '11px'}}>SPY</span>
+                      🕵️‍♂️ <span style={{fontSize: '11px'}}>{t('roster.spy')}</span>
                     </button>
                   )}
 
@@ -184,7 +186,7 @@ const PlayerRoster: React.FC<PlayerRosterProps> = ({
                       onClick={(e) => { e.stopPropagation(); kickPlayer(p.id); }} 
                       style={{ border: "none", background: "none", color: "#ff7675", cursor: "pointer", fontSize: "12px", fontWeight: 'bold', padding: "6px 4px" }}
                     >
-                      Dismiss
+                      {t('roster.dismiss')}
                     </button>
                   )}
                 </div>

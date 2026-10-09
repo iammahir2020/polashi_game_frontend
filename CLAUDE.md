@@ -17,6 +17,10 @@ Key files:
   the per-device `playerKey` sent with `createRoom`/`joinRoom` for the backend's Postgres game logs
 - `src/constants.ts` — mission configs and team distributions (the game rules)
 - `src/types/game.ts` — the `Room` / `Player` / `VotingState` shapes
+- `src/i18n/` — the English/Bangla toggle. `en.ts` is the source of every UI string, `bn.ts` the
+  Bangla (typed against it, glossary at its top), `core.ts` the runtime (`useI18n()` from
+  `useI18n.ts`), `characters.ts` how the server's Bangla character names and English team labels are
+  shown in each language
 
 ## ⚠️ A testing course is in progress
 
@@ -54,3 +58,7 @@ stub-and-hint pattern without him asking again.
 - Prefer the `tests/factories.ts` builders over inline `Room` fixtures
 - Query the DOM by accessible role/text, never by CSS class
 - Styling in this repo is inline style objects — there are no CSS classes to query anyway
+- No user-facing text in components: add a key to `src/i18n/en.ts` and `bn.ts` and use `t()`/`rich()`.
+  Text kept in state is a `Message` (a key), translated when rendered. Server errors and notifications
+  carry a `code` (the backend's `game/messages.js`); act on the code, never on English wording
+- Tests render without `LanguageProvider` and get English; wrap in it (with `initialLang="bn"`) to test Bangla

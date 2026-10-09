@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Room } from '../../types/game';
 import { cleanNameInput, cleanRoomCode, NAME_MAX, ROOM_CODE_MAX } from '../../lib/names';
+import { useI18n } from '../../i18n/useI18n';
 
 interface EnlistmentFormProps {
   room: Room | null;
@@ -21,6 +22,7 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
   room, wasKicked, name, setName, roomCode, setRoomCode,
   loadingAction, createRoom, joinRoom, cardStyle, inputStyle, primaryBtn
 }) => {
+  const { t } = useI18n();
   if (room || wasKicked) return null;
 
   return (
@@ -38,16 +40,16 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
         backgroundColor: '#0f0f0f', padding: '0 15px', color: '#c5a059',
         fontSize: '12px', letterSpacing: '3px', fontWeight: 'bold', zIndex: 10
       }}>
-        ENLISTMENT
+        {t('enlist.label')}
       </div>
 
       {/* STEP 1: IDENTITY */}
       <div style={{ marginBottom: '35px', textAlign: 'center' }}>
         <h3 style={{ marginTop: 0, color: "#fff", fontSize: '22px', marginBottom: '15px', fontFamily: "'Cinzel', serif" }}>
-          Step 1: Identify Yourself
+          {t('enlist.step1')}
         </h3>
         <input
-          placeholder="Enter Alias..."
+          placeholder={t('enlist.alias')}
           style={{
             ...inputStyle,
             width: '100%',
@@ -73,7 +75,7 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
       {/* STEP 2: CHOOSE PATH */}
       <div style={{ opacity: name ? 1 : 0.5, transition: 'opacity 0.5s ease' }}>
         <h3 style={{ color: "#fff", textAlign: 'center', fontSize: '18px', marginBottom: '20px', fontFamily: "'Cinzel', serif" }}>
-          Step 2: Choose Mission
+          {t('enlist.step2')}
         </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
@@ -94,20 +96,21 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
               onClick={createRoom}
               disabled={!name || !!loadingAction || !!roomCode}
             >
-              Establish New HQ
+              {t('enlist.create')}
               {loadingAction === "create" && <div className="btn-spinner" />}
             </button>
           </div>
 
           <div style={{ position: 'relative', textAlign: 'center' }}>
-            <span style={{ backgroundColor: '#0f0f0f', padding: '0 10px', color: 'white', fontSize: '16px', position: 'relative', zIndex: 1 }}>OR JOIN</span>
+            <span style={{ backgroundColor: '#0f0f0f', padding: '0 10px', color: 'white', fontSize: '16px', position: 'relative', zIndex: 1 }}>{t('enlist.or')}</span>
             <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'white', zIndex: 0 }} />
           </div>
 
           {/* PATH B: JOIN */}
           <div>
             <input
-              placeholder="Enter HQ Code"
+              placeholder={t('enlist.code')}
+              data-latin
               disabled={!!loadingAction}
               style={{
                 ...inputStyle,
@@ -141,7 +144,7 @@ const EnlistmentForm: React.FC<EnlistmentFormProps> = ({
               onClick={joinRoom}
               disabled={!name || !roomCode || !!loadingAction}
             >
-              Infiltrate Existing HQ
+              {t('enlist.join')}
               {loadingAction === "join" && <div className="btn-spinner" />}
             </button>
           </div>

@@ -102,10 +102,11 @@ test('five players create a room, start a game, and reach a final result', async
   // 2 more Nawab clicks and 1 more EIC click complete the selection. These
   // specific names are the actual roster content (verified by inspecting the
   // real modal), not a guess — any other non-mandatory names from each
-  // column would do exactly as well.
-  await gm.getByRole('button', { name: 'রায় দুর্লভ' }).click(); // EIC
-  await gm.getByRole('button', { name: 'নবাব সিরাজউদ্দৌলা' }).click(); // Nawab
-  await gm.getByRole('button', { name: 'লুৎফুন্নিসা বেগম' }).click(); // Nawab
+  // column would do exactly as well. The server sends them in Bangla; in
+  // English the picker shows their English names (src/i18n/characters.ts).
+  await gm.getByRole('button', { name: 'Rai Durlabh' }).click(); // EIC
+  await gm.getByRole('button', { name: 'Nawab Siraj-ud-Daulah' }).click(); // Nawab
+  await gm.getByRole('button', { name: 'Lutfunnisa Begum' }).click(); // Nawab
   await gm.getByRole('button', { name: 'START GAME' }).click();
   await gm.getByRole('button', { name: 'Appoint General' }).waitFor({ timeout: 10_000 });
 

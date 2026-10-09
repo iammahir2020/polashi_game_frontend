@@ -1,10 +1,12 @@
 import React from 'react';
 import type { Room } from '../../types/game';
+import type { Message } from '../../i18n/core';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AccessRevokedProps {
   wasKicked: boolean;
   room: Room | null;
-  error: string | null;
+  error: Message | null;
   cardStyle: React.CSSProperties;
   primaryBtn: React.CSSProperties;
   onClose: () => void;
@@ -18,6 +20,7 @@ const AccessRevoked: React.FC<AccessRevokedProps> = ({
   primaryBtn, 
   onClose 
 }) => {
+  const { t, msg } = useI18n();
   // Logic check moved inside the component
   if (!wasKicked || room) return null;
 
@@ -35,7 +38,7 @@ const AccessRevoked: React.FC<AccessRevokedProps> = ({
         letterSpacing: '2px',
         fontFamily: "'Cinzel', serif" 
       }}>
-        Access Revoked
+        {t('revoked.title')}
       </h2>
       <p style={{ 
         color: "#ccc", 
@@ -43,7 +46,7 @@ const AccessRevoked: React.FC<AccessRevokedProps> = ({
         marginBottom: '25px',
         fontFamily: "'EB Garamond', serif" 
       }}>
-        "{error || "You have been disconnected from the command center."}"
+        "{(error && msg(error)) || t('revoked.default')}"
       </p>
       <button
         style={{ 
@@ -54,7 +57,7 @@ const AccessRevoked: React.FC<AccessRevokedProps> = ({
         }}
         onClick={onClose}
       >
-        Return to Shadows
+        {t('revoked.button')}
       </button>
     </div>
   );
