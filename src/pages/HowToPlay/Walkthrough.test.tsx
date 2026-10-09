@@ -18,7 +18,8 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Walkthrough from './Walkthrough';
-import { WALKTHROUGH, shotUrl } from './walkthroughSteps';
+import { WALKTHROUGH, WALKTHROUGH_BN, shotUrl } from './walkthroughSteps';
+import LanguageProvider from '../../i18n/LanguageProvider';
 
 const TOTAL = WALKTHROUGH.length;
 
@@ -152,8 +153,34 @@ describe('walkthrough data', () => {
   });
 
   it('closes every **bold** marker it opens', () => {
-    for (const step of WALKTHROUGH) {
+    for (const step of [...WALKTHROUGH, ...WALKTHROUGH_BN]) {
       expect(step.text.split('**').length % 2, step.id).toBe(1);
     }
+  });
+
+  it('has the same steps in Bangla, each with its own Bangla screenshots on disk', () => {
+    expect(WALKTHROUGH_BN.map((s) => s.id)).toEqual(WALKTHROUGH.map((s) => s.id));
+
+    const publicDir = path.join(process.cwd(), 'public');
+    const missing = WALKTHROUGH_BN.flatMap(({ id }) =>
+      (['phone', 'desktop'] as const)
+        .map((size) => shotUrl(id, size, 'bn'))
+        .filter((url) => !fs.existsSync(path.join(publicDir, url))),
+    );
+    // If this fails, run `npm run walkthrough:shots -- bn`.
+    expect(missing).toEqual([]);
+  });
+});
+
+describe('the walkthrough in Bangla', () => {
+  it('shows the Bangla steps, labels and screenshots', () => {
+    render(
+      <LanguageProvider initialLang="bn">
+        <Walkthrough interactive />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(`ধাপ ১। ${WALKTHROUGH_BN[0].title}`);
+    expect(screen.getByRole('button', { name: /পরের/ })).toBeEnabled();
+    expect(screen.getByRole('img')).toHaveAttribute('src', shotUrl(WALKTHROUGH_BN[0].id, 'desktop', 'bn'));
   });
 });
