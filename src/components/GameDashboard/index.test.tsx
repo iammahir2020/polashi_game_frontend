@@ -126,6 +126,30 @@ describe('GameDashboard', () => {
 
       expect(screen.getByText('The server is temporarily unavailable.')).toBeInTheDocument();
     });
+
+    it("acts on the error's code, not its wording", () => {
+      // A newer server says WHICH error this is ({ code }), so the dashboard
+      // can show it in the player's language. The "Room Not Found" handling
+      // must follow the code: here the text has no "not found" in it at all
+      // (imagine it reworded), and the dialog still appears, in the dashboard's
+      // own words for that code.
+      render(<GameDashboard />);
+      act(() => {
+        latestCallbackGivenTo(socketService.onError)('That room is gone, sorry', { code: 'ROOM_NOT_FOUND' });
+      });
+
+      expect(screen.getByRole('dialog', { name: 'Room Not Found' })).toBeInTheDocument();
+      // The toast and the dialog both say it, translated from the code.
+      expect(screen.getAllByText('Room not found')).toHaveLength(2);
+    });
+
+    it("shows an unknown code's English text as the server sent it", () => {
+      render(<GameDashboard />);
+      act(() => {
+        latestCallbackGivenTo(socketService.onError)('A brand new kind of error.', { code: 'NOT_YET_INVENTED' });
+      });
+      expect(screen.getByText('A brand new kind of error.')).toBeInTheDocument();
+    });
   });
 
   describe('the loadingAction race — exposes Steps.md #7', () => {

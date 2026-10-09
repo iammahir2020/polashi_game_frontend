@@ -24,6 +24,7 @@ import {
   sanitizePlayer,
   sanitizeRoom,
   sanitizeRoomJoined,
+  sanitizeServerTextDetail,
 } from './payloads';
 import { makeCharacter, makePlayer, makeRoom, makeVotingState } from '../../tests/factories';
 
@@ -132,6 +133,37 @@ describe('sanitizeRoom: hostile and broken input', () => {
     });
     expect(clean!.voting!.votes).toEqual({ a: 'yes', b: true });
     expect(sanitizeRoom({ players: [], voting: { type: 'coup', votes: {} } })!.voting).toBeNull();
+  });
+});
+
+describe('which message the server sent (code and values)', () => {
+  // Newer servers send { code, params } with an error, and code/params on a
+  // notification, so the client can show them in Bangla. Like everything from
+  // the server, it is cleaned first: params are player names that another
+  // player chose.
+  it('keeps a well-formed code and its string values', () => {
+    expect(sanitizeServerTextDetail({ code: 'ROOM_FULL' })).toEqual({ code: 'ROOM_FULL' });
+    expect(sanitizeServerTextDetail({ code: 'GUPTOCHOR_DEPLOYED', params: { requester: 'Asha', target: 'Bilal' } }))
+      .toEqual({ code: 'GUPTOCHOR_DEPLOYED', params: { requester: 'Asha', target: 'Bilal' } });
+  });
+
+  it('is empty for an older server, or for junk', () => {
+    expect(sanitizeServerTextDetail(undefined)).toEqual({});
+    expect(sanitizeServerTextDetail('ROOM_FULL')).toEqual({});
+    expect(sanitizeServerTextDetail({ code: 'not a code!' })).toEqual({});
+  });
+
+  it('drops values that are not text, strips invisible characters and clips long names', () => {
+    const detail = sanitizeServerTextDetail({
+      code: 'MIR_JAFOR_TURN',
+      params: { name: 'Cl‮ive' + 'x'.repeat(100), weird: { nested: true }, 'bad key!': 'x' },
+    });
+    expect(detail.params).toEqual({ name: ('Clive' + 'x'.repeat(100)).slice(0, 40) });
+  });
+
+  it('reaches a notification too, next to its English message', () => {
+    const note = sanitizeNotification({ message: 'Alert!', code: 'MIR_JAFOR_TURN', params: { name: 'Clive' } });
+    expect(note).toMatchObject({ message: 'Alert!', code: 'MIR_JAFOR_TURN', params: { name: 'Clive' } });
   });
 });
 
