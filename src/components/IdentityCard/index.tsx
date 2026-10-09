@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterType } from '../../types/game';
+import { useI18n } from '../../i18n/useI18n';
 
 interface IdentityCardProps {
   isRevealed: boolean;
@@ -14,6 +15,8 @@ interface IdentityCardProps {
 }
 
 const IdentityCard: React.FC<IdentityCardProps> = ({ isRevealed, setIsRevealed, character, secretIntel, disableSecretIntelligence, gameStarted, isFinal, embedded }) => {
+
+const { t, characterName, characterDescription, team, intel } = useI18n();
 
 if (!gameStarted) return null;
 
@@ -33,7 +36,7 @@ return (
     role="button"
     tabIndex={0}
     aria-pressed={isRevealed}
-    aria-label={isObserver ? "Toggle observer card" : "Toggle identity card"}
+    aria-label={isObserver ? t('identity.toggleObserver') : t('identity.toggle')}
     style={{
       perspective: "1000px",
       margin: embedded ? 0 : "25px 0",
@@ -60,10 +63,10 @@ return (
         </div>
 
         <div style={{ marginTop: "20px", textAlign: "center", zIndex: 2 }}>
-          <h2 style={classifiedTextStyle}>{isObserver ? "Observer" : "Classified"}</h2>
+          <h2 style={classifiedTextStyle}>{isObserver ? t('identity.observer') : t('identity.classified')}</h2>
           <div style={dividerStyle} />
           <p style={{ color: "#888", fontSize: "12px", fontStyle: "italic", fontFamily: "'EB Garamond', serif" }}>
-            {isObserver ? "Witness the conspiracy unfold" : "Tap to reveal your destiny"}
+            {isObserver ? t('identity.observerHint') : t('identity.hint')}
           </p>
         </div>
       </div>
@@ -80,41 +83,41 @@ return (
         <div style={teamIconWrapperStyle}>
           <img
             src={isObserver ? "/Observer.png" : (isNawab ? "/Nawab.png" : "/EIC.png")}
-            alt="Badge"
+            alt={t('identity.badgeAlt')}
             style={{ width: "90px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
           />
         </div>
 
         <h1 style={{...characterNameStyle, color: isObserver ? "#c5a059" : "black"}}>
-          {isObserver ? "Shadow Witness" : character?.name}
+          {isObserver ? t('identity.shadowWitness') : characterName(character)}
         </h1>
 
         <div style={{...teamBadgeStyle, background: isObserver ? "#c5a059" : "rgba(0,0,0,0.8)", color: isObserver ? "black" : "#c5a059"}}>
-          {isObserver ? "SPECTATOR" : character?.team?.toUpperCase()}
+          {isObserver ? t('identity.spectator') : team(character?.team).toUpperCase()}
         </div>
 
         <p style={{...descriptionStyle, color: isObserver ? "#aaa" : "rgba(0,0,0,0.8)"}}>
           {isObserver 
-            ? "\"You stand outside the line of fire, watching the history of Bengal take shape from the shadows.\""
-            : `"${character?.description}"`
+            ? t('identity.observerQuote')
+            : `"${characterDescription(character)}"`
           }
         </p>
 
         {/* SECRET INTELLIGENCE / SPECTATOR NOTE */}
         <div style={intelBoxStyle}>
           <p style={{...intelHeaderStyle, color: isObserver ? "#c5a059" : "black"}}>
-            {isObserver ? "Field Report" : "Secret Intelligence"}
+            {isObserver ? t('identity.fieldReport') : t('identity.secretIntel')}
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
             {isObserver ? (
               <div style={{...intelItemStyle, color: "#eee"}}>
-                You can see all identities. Observe the whispers and find the traitors.
+                {t('identity.observerIntel')}
               </div>
             ) : disableSecretIntelligence ? (
-              <div style={intelItemStyle}>Secret Intel is disabled for this match.</div>
+              <div style={intelItemStyle}>{t('identity.intelDisabled')}</div>
             ) : (
-              secretIntel?.map((intel, idx) => (
-                <div key={idx} style={intelItemStyle}>{intel}</div>
+              secretIntel?.map((line, idx) => (
+                <div key={idx} style={intelItemStyle}>{intel(line)}</div>
               ))
             )}
           </div>

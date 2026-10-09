@@ -1,3 +1,48 @@
+/* Bangla text. Cinzel and EB Garamond have no Bengali letters, so each is
+   given an extra face that covers only the Bengali block, served from our own
+   copy of Noto Serif Bengali. Every inline "'Cinzel', serif" or
+   "'EB Garamond', serif" stack then draws Bangla in Noto Serif Bengali and
+   Latin in its own font, with no per-element font changes. The browser only
+   downloads the file once a Bengali letter is on screen.
+   The file is a subset of scripts/fonts/NotoSerifBengali.ttf (weights 400-700,
+   normal width, Bengali block only), made with fonttools:
+     python -m fontTools.varLib.instancer scripts/fonts/NotoSerifBengali.ttf wdth=100 wght=400:700 -o nsb.ttf
+     python -m fontTools.subset nsb.ttf --unicodes="U+0964-0965,U+0980-09FE,U+200C-200D,U+25CC" --layout-features='*' --flavor=woff --output-file=public/fonts/noto-serif-bengali.woff */
+@font-face {
+  font-family: 'Noto Serif Bengali';
+  src: url('/fonts/noto-serif-bengali.woff') format('woff');
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/noto-serif-bengali.woff') format('woff');
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('/fonts/noto-serif-bengali.woff') format('woff');
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+25CC;
+}
+
+/* Letter spacing pulls Bengali conjuncts and vowel signs apart, and Bengali has
+   no italics (the browser would fake a slant), so both are switched off while
+   the page is in Bangla. `!important` because they are set in inline styles.
+   Room codes keep their spacing: mark them `data-latin`. */
+html[lang="bn"] *:not([data-latin]) {
+  letter-spacing: normal !important;
+  font-style: normal !important;
+}
+/* A room-code input keeps its spacing for the code, but not for its Bangla placeholder. */
+html[lang="bn"] [data-latin]::placeholder {
+  letter-spacing: normal;
+}
+
 :root {
   --bg-color: rgb(15, 15, 15);
   --accent-gold: #c5a059;

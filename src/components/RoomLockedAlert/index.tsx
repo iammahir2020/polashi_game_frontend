@@ -1,13 +1,16 @@
 import React from 'react';
+import { isServerError, type Message } from '../../i18n/core';
+import { useI18n } from '../../i18n/useI18n';
 
 interface RoomLockedAlertProps {
-  error: string | null;
+  error: Message | null;
   wasKicked: boolean;
   cardStyle: React.CSSProperties;
 }
 
 const RoomLockedAlert: React.FC<RoomLockedAlertProps> = ({ error, wasKicked, cardStyle }) => {
-  if (!error || wasKicked || !error.includes("locked")) {
+  const { t } = useI18n();
+  if (!error || wasKicked || !isServerError(error, 'ROOM_LOCKED', 'locked')) {
     return null;
   }
 
@@ -24,7 +27,7 @@ const RoomLockedAlert: React.FC<RoomLockedAlertProps> = ({ error, wasKicked, car
         fontFamily: "'Cinzel', serif", 
         marginTop: 0 
       }}>
-        🏰 Fortress Fortified
+        {t('locked.title')}
       </h3>
       <p style={{ 
         color: "#aaa", 
@@ -32,7 +35,7 @@ const RoomLockedAlert: React.FC<RoomLockedAlertProps> = ({ error, wasKicked, car
         fontSize: "1.1rem",
         lineHeight: "1.4"
       }}>
-        This campaign has already begun or the gates have been barred by the Master.
+        {t('locked.body')}
       </p>
 
       {/* Adding a global style block for the shake animation if not already present */}

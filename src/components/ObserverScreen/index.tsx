@@ -1,9 +1,11 @@
 import React from 'react';
 import type { Room } from '../../types/game';
 import RoundTracker from '../RoundTracker';
+import { useI18n } from '../../i18n/useI18n';
 
 // `embedded`: inside the war room, where the page already supplies width and padding.
 const ObserverScreen: React.FC<{ room: Room; embedded?: boolean }> = ({ room, embedded }) => {
+  const { t, characterName } = useI18n();
   // Separate players into teams for easier observer reading
   const activePlayers = room.players.filter(p => (room.activePlayerIds ?? []).includes(p.id));
   const nawabs = activePlayers.filter(p => p.character?.team.includes("Nawabs"));
@@ -14,10 +16,10 @@ const ObserverScreen: React.FC<{ room: Room; embedded?: boolean }> = ({ room, em
       {/* HEADER SECTION */}
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <h1 style={{ fontFamily: "'Cinzel', serif", color: '#c5a059', letterSpacing: '4px' }}>
-          Spymaster's Sanctum
+          {t('observer.title')}
         </h1>
         <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', letterSpacing: '2px' }}>
-          Watching from the Shadows • All Identities Revealed
+          {t('observer.subtitle')}
         </div>
       </div>
 
@@ -30,22 +32,22 @@ const ObserverScreen: React.FC<{ room: Room; embedded?: boolean }> = ({ room, em
         
         {/* NAWAB LOYALISTS COLUMN */}
         <div style={teamColumnStyle("#1b4332")}>
-          <h3 style={teamHeaderStyle("#00b894")}>Nawab Loyalists</h3>
+          <h3 style={teamHeaderStyle("#00b894")}>{t('observer.nawabs')}</h3>
           {nawabs.map(p => (
             <div key={p.id} style={playerRowStyle}>
               <span style={{fontWeight: 'bold'}}>{p.name}</span>
-              <span style={roleBadgeStyle}>{p.character?.name}</span>
+              <span style={roleBadgeStyle}>{characterName(p.character)}</span>
             </div>
           ))}
         </div>
 
         {/* EIC TRAITORS COLUMN */}
         <div style={teamColumnStyle("#4d0d0d")}>
-          <h3 style={teamHeaderStyle("#ff7675")}>British EIC</h3>
+          <h3 style={teamHeaderStyle("#ff7675")}>{t('observer.eic')}</h3>
           {eic.map(p => (
             <div key={p.id} style={playerRowStyle}>
               <span style={{fontWeight: 'bold'}}>{p.name}</span>
-              <span style={roleBadgeStyle}>{p.character?.name}</span>
+              <span style={roleBadgeStyle}>{characterName(p.character)}</span>
             </div>
           ))}
         </div>
@@ -53,11 +55,11 @@ const ObserverScreen: React.FC<{ room: Room; embedded?: boolean }> = ({ room, em
 
       {/* LIVE GAME FEED */}
       <div style={{ marginTop: '30px', padding: '20px', borderTop: '1px solid #333' }}>
-        <h4 style={{ fontFamily: 'Cinzel', color: '#aaa' }}>Current Intelligence </h4>
+        <h4 style={{ fontFamily: 'Cinzel', color: '#aaa' }}>{t('observer.intel')}</h4>
         <div style={{ color: '#666', fontSize: '14px', fontStyle: 'italic' }}>
           {room.voting?.active 
-            ? `The Council is currently voting on a team led by ${room.players.find(p => p.isGeneral)?.name}...` 
-            : "Waiting for the General to propose a battalion..."}
+            ? t('observer.voting', { name: room.players.find(p => p.isGeneral)?.name ?? '' })
+            : t('observer.waiting')}
         </div>
       </div>
     </div>

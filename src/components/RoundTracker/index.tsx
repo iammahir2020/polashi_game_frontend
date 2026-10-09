@@ -1,7 +1,9 @@
 import { MISSION_CONFIGS } from "../../constants";
 import type { Room } from "../../types/game";
+import { useI18n } from "../../i18n/useI18n";
 
 const RoundTracker = ({ room }: { room: Room }) => {
+  const { t, num } = useI18n();
   // Guard clause: ensure room exists and game has started
   if (!room || !room.gameStarted) return null;
 
@@ -34,7 +36,7 @@ const RoundTracker = ({ room }: { room: Room }) => {
               transition: 'all 0.3s ease',
               position: 'relative'
             }}>
-              <span style={{ color: '#fff', fontWeight: 'bold' }}>{roundNum}</span>
+              <span style={{ color: '#fff', fontWeight: 'bold' }}>{num(roundNum)}</span>
               
               {/* Optional: Show how many players are needed for this specific round inside the circle */}
               <div style={{ 
@@ -47,13 +49,13 @@ const RoundTracker = ({ room }: { room: Room }) => {
                 borderRadius: '4px',
                 fontWeight: 'bold'
               }}>
-                {config.players}P
+                {t('tracker.players', { count: config.players })}
               </div>
             </div>
 
             {/* Dynamic "2 FAIL" label: only shows if this specific config for this specific round requires 2 fails */}
             <div style={{ fontSize: '10px', color: '#c5a059', marginTop: '10px', minHeight: '12px' }}>
-              {config.failsRequired > 1 ? `${config.failsRequired} FAILS` : ""}
+              {config.failsRequired > 1 ? t('tracker.fails', { count: config.failsRequired }) : ""}
             </div>
           </div>
         );

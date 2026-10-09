@@ -188,6 +188,28 @@ export function sanitizeErrorMessage(v: unknown): string {
   return text(v, 300) || 'Something went wrong.';
 }
 
+// Which message the server sent, so it can be shown in the player's language:
+// a code naming it (e.g. "ROOM_LOCKED") and the values to fill into it (player
+// names). It comes as the second argument of "errorMessage" and as fields of
+// "notification", next to the English text. Older servers send neither; the
+// English text is then shown as it is.
+export type ServerTextDetail = { code?: string; params?: Record<string, string> };
+
+export function sanitizeServerTextDetail(v: unknown): ServerTextDetail {
+  if (!isObj(v)) return {};
+  const detail: ServerTextDetail = {};
+  if (typeof v.code === 'string' && /^[A-Z_]{1,40}$/.test(v.code)) detail.code = v.code;
+  if (isObj(v.params)) {
+    const params: Record<string, string> = {};
+    for (const [key, value] of Object.entries(v.params).slice(0, 5)) {
+      const clean = text(value, LIMITS.name);
+      if (/^\w{1,20}$/.test(key) && clean !== undefined) params[key] = clean;
+    }
+    if (Object.keys(params).length > 0) detail.params = params;
+  }
+  return detail;
+}
+
 // "roomDissolved": why the room went away. "closed_by_host" when the Game
 // Master closed it; anything else (a rejoin to a room that's already gone, or
 // an older server sending no reason) is "room_gone".
@@ -216,15 +238,21 @@ export function sanitizeGuptochorResult(v: unknown): { targetName: string; allia
   return { targetName, alliance };
 }
 
-export function sanitizeNotification(
-  v: unknown,
-): { message: string; type: string; requesterId?: string; targetId?: string } | null {
+export type CleanNotification = {
+  message: string;
+  type: string;
+  requesterId?: string;
+  targetId?: string;
+} & ServerTextDetail;
+
+export function sanitizeNotification(v: unknown): CleanNotification | null {
   if (!isObj(v)) return null;
   const message = text(v.message);
   if (!message) return null;
-  const note: { message: string; type: string; requesterId?: string; targetId?: string } = {
+  const note: CleanNotification = {
     message,
     type: text(v.type, 20) ?? 'info',
+    ...sanitizeServerTextDetail(v),
   };
   const requesterId = id(v.requesterId);
   const targetId = id(v.targetId);

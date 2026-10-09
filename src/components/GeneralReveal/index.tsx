@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useOverlayA11y } from '../../hooks/useOverlayA11y';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GeneralRevealData {
   active: boolean;
@@ -13,6 +14,7 @@ interface GeneralRevealProps {
 }
 
 const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose }) => {
+  const { t } = useI18n();
   const overlayRef = useRef<HTMLDivElement>(null);
   useOverlayA11y({ isActive: !!generalReveal?.active, onClose, containerRef: overlayRef });
 
@@ -24,7 +26,7 @@ const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose })
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="General assigned"
+      aria-label={t('general.aria')}
       tabIndex={-1}
       style={{
         position: "fixed",
@@ -54,7 +56,7 @@ const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose })
             animation: "pulseText 1.5s infinite",
             textTransform: "uppercase"
           }}>
-            Consulting the Commanders...
+            {t('general.consulting')}
           </p>
         </div>
       ) : (
@@ -72,7 +74,7 @@ const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose })
             fontSize: "14px",
             textTransform: "uppercase"
           }}>
-            General Assigned
+            {t('general.assigned')}
           </h2>
           <h1 style={{
             fontFamily: "'Cinzel', serif", 
@@ -91,10 +93,10 @@ const GeneralReveal: React.FC<GeneralRevealProps> = ({ generalReveal, onClose })
             maxWidth: "300px",
             margin: "0 auto"
           }}>
-            "The fate of Bengal rests upon your blade."
+            {t('general.quote')}
           </p>
           <p style={{ color: "#444", fontSize: "10px", marginTop: "40px", letterSpacing: "1px" }}>
-            CLICK ANYWHERE TO CONTINUE
+            {t('general.continue')}
           </p>
         </div>
       )}

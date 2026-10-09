@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GameLoaderProps {
     message?: string;
@@ -12,7 +13,8 @@ interface GameLoaderProps {
 // only the one it shows.
 const WIDE_SCREEN = '(min-aspect-ratio: 1/1) and (min-height: 500px)';
 
-const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with Command..." , showButton=false, onProceed}) => {
+const GameLoader: React.FC<GameLoaderProps> = ({ message, showButton=false, onProceed}) => {
+  const { t } = useI18n();
   return (
     <div className="loader-root" style={{
       height: "100dvh", width: "100vw",
@@ -65,12 +67,12 @@ const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with C
           src="/Nawab.png"
           width={80}
           height={80}
-          alt="Logo" 
+          alt={t('loader.logoAlt')} 
           decoding="async"
           style={{ width: '80px', marginBottom: '30px', animation: 'pulse 3s infinite ease-in-out' }} 
         />
         <div className="shimmer-effect" style={{ fontSize: "22px", marginBottom: "20px", textAlign: 'center' }}>
-          {message}
+          {message ?? t('loader.default')}
         </div>
         {/* --- DYNAMIC TRANSITION --- */}
         {!showButton ? (
@@ -80,7 +82,7 @@ const GameLoader: React.FC<GameLoaderProps> = ({ message = "Communicating with C
             onClick={onProceed}
             className="proceed-button"
           >
-            ENTER POLASHI
+            {t('loader.enter')}
           </button>
         )}
       </div>

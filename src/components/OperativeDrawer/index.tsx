@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Room } from '../../types/game';
+import { useI18n } from '../../i18n/useI18n';
 
 interface OperativeDrawerProps {
   room: Room;
@@ -22,7 +23,8 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
   copiedStatus,
   leaveRoom
 }) => {
-  const currentPlayerName = room.players.find(p => p.id === playerId)?.name || "Unknown";
+  const { t } = useI18n();
+  const currentPlayerName = room.players.find(p => p.id === playerId)?.name || t('player.unknown');
 
   return (
     <div style={{
@@ -46,7 +48,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
         role="button"
         tabIndex={0}
         aria-expanded={isDrawerOpen}
-        aria-label="Toggle operative drawer"
+        aria-label={t('drawer.toggle')}
         style={{
           padding: '12px 20px',
           display: 'flex',
@@ -65,7 +67,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
             boxShadow: '0 0 10px #40c057',
           }} />
           <div>
-            <span style={{ fontSize: '11px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>OPERATIVE</span>
+            <span style={{ fontSize: '11px', color: '#c5a059', display: 'block', letterSpacing: '2px' }}>{t('drawer.operative')}</span>
             <span style={{ fontSize: '16px', color: '#fff', letterSpacing: '1px', textTransform: 'uppercase' }}>
               {currentPlayerName}
             </span>
@@ -74,7 +76,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '11px', color: room.locked ? '#ff922b' : '#00b894' }}>
-            {room.locked ? "🔒 LOCKED" : "🔓 OPEN"}
+            {room.locked ? `🔒 ${t('room.locked')}` : `🔓 ${t('room.open')}`}
           </span>
           <span style={{
             color: '#c5a059',
@@ -101,15 +103,15 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
           {/* ACCESS MODULE */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#888', letterSpacing: '1px' }}>SESSION CIPHER</p>
+              <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#888', letterSpacing: '1px' }}>{t('drawer.cipher')}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#c5a059', fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px' }}>
+                <span data-latin style={{ color: '#c5a059', fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px' }}>
                   {roomCode}
                 </span>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCopy("code"); }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#fff' }}
-                  title="Copy Cipher"
+                  title={t('drawer.copyCipher')}
                 >
                   {copiedStatus === "code" ? "✅" : "📋"}
                 </button>
@@ -130,7 +132,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
                 transition: 'all 0.2s'
               }}
             >
-              {copiedStatus === "link" ? "LINK COPIED" : "INVITE ALLIES"}
+              {copiedStatus === "link" ? t('invite.copied') : t('invite.button')}
             </button>
           </div>
 
@@ -164,7 +166,7 @@ const OperativeDrawer: React.FC<OperativeDrawerProps> = ({
                 e.currentTarget.style.borderColor = '#444'; 
               }}
             >
-              Abandon Post
+              {t('header.abandon')}
             </button>
           </div>
         </div>

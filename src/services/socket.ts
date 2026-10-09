@@ -10,9 +10,12 @@ import {
   sanitizeRoom,
   sanitizeRoomJoined,
   sanitizeRoomDissolved,
+  sanitizeServerTextDetail,
   sanitizeServerUpdating,
+  type CleanNotification,
   type CleanRoomJoined,
   type RoomDissolvedReason,
+  type ServerTextDetail,
 } from "./payloads";
 
 // `||` on purpose, not `??`: an EMPTY string (e.g. `VITE_SOCKET_URL=` left
@@ -246,13 +249,14 @@ class SocketService {
     this.socket.on("triggerGeneralAnimation", guarded("triggerGeneralAnimation", sanitizeGeneralAnimation, cb));
   }
 
-  onError(cb: (msg: string) => void) {
-    this.socket.on("errorMessage", (raw: unknown) => cb(sanitizeErrorMessage(raw)));
+  // The English text, and (from newer servers) which message it is, so the
+  // UI can show it in the player's language.
+  onError(cb: (msg: string, detail?: ServerTextDetail) => void) {
+    this.socket.on("errorMessage", (raw: unknown, detail?: unknown) =>
+      cb(sanitizeErrorMessage(raw), sanitizeServerTextDetail(detail)));
   }
 
-  onNotification(
-    callback: (data: { message: string; type: string; requesterId?: string; targetId?: string }) => void,
-  ) {
+  onNotification(callback: (data: CleanNotification) => void) {
     this.socket.on("notification", guarded("notification", sanitizeNotification, callback));
   }
 

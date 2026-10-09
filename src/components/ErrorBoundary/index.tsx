@@ -1,4 +1,5 @@
 import React from 'react';
+import { I18nContext } from '../../i18n/core';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -14,6 +15,10 @@ interface ErrorBoundaryState {
 // unmounting the whole app to a blank page. React only supports this as a
 // class component.
 export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // The language provider sits above this boundary, so the fallback can be translated.
+  static contextType = I18nContext;
+  declare context: React.ContextType<typeof I18nContext>;
+
   state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
@@ -31,20 +36,20 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   render() {
     if (!this.state.hasError) return this.props.children;
     if (this.props.fallback) return this.props.fallback(this.retry);
+    const { t } = this.context;
 
     return (
       <div role="alert" style={wrapStyle}>
-        <h1 style={titleStyle}>Something went wrong</h1>
+        <h1 style={titleStyle}>{t('errorPage.title')}</h1>
         <p style={textStyle}>
-          The game hit an unexpected problem. Your seat is kept, so reloading usually puts you
-          straight back in the room.
+          {t('errorPage.body')}
         </p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button type="button" style={primaryStyle} onClick={() => window.location.reload()}>
-            Reload
+            {t('errorPage.reload')}
           </button>
           <button type="button" style={secondaryStyle} onClick={this.retry}>
-            Try again
+            {t('errorPage.retry')}
           </button>
         </div>
       </div>

@@ -1,12 +1,15 @@
 import React from "react";
 import { GOLD, GOLD_SOFT } from "./styles";
+import { useI18n } from "../../i18n/useI18n";
 
 // The left half of the desktop entry screen: what the game is, next to the
 // enlistment form. Phones go straight to the form.
-const LandingHero: React.FC = () => (
+const LandingHero: React.FC = () => {
+  const { t } = useI18n();
+  return (
   <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "22px", padding: "12px 8px" }}>
     <div style={{ color: GOLD, fontFamily: "'Cinzel', serif", fontSize: "13px", letterSpacing: "5px" }}>
-      BENGAL · 23 JUNE 1757
+      {t("title.landingKicker")}
     </div>
     <p
       style={{
@@ -15,15 +18,13 @@ const LandingHero: React.FC = () => (
         textShadow: "0 4px 30px rgba(0,0,0,0.6)",
       }}
     >
-      Trust no one in the Nawab's camp.
+      {t("hero.tagline")}
     </p>
     <p style={{ margin: 0, maxWidth: "520px", color: "#c9c2b3", fontFamily: "'EB Garamond', serif", fontSize: "20px", lineHeight: 1.5 }}>
-      A social deduction game for 5 to 10 players. Loyal Nawabs must win three missions; the East
-      India Company's agents hide among them and sabotage from within. Everyone plays on their own
-      device.
+      {t("hero.body")}
     </p>
     <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-      {["5–10 players", "Hidden roles", "One device each"].map((item) => (
+      {[t("hero.players"), t("hero.roles"), t("hero.devices")].map((item) => (
         <li
           key={item}
           style={{
@@ -37,9 +38,10 @@ const LandingHero: React.FC = () => (
       ))}
     </ul>
     <a href="/how-to-play" style={{ color: GOLD, fontSize: "16px", textUnderlineOffset: "3px", alignSelf: "flex-start" }}>
-      New here? Read how to play →
+      {t("hero.howTo")}
     </a>
   </div>
-);
+  );
+};
 
 export default LandingHero;

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Room } from '../../types/game';
+import { useI18n } from '../../i18n/useI18n';
 
 interface CommandConsoleProps {
   room: Room;
@@ -23,6 +24,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
   handleDissolve,
   embedded
 }) => {
+  const { t } = useI18n();
   // Guard clause: Only the Game Master should ever see this
   if (!isGameMaster) return null;
 
@@ -58,7 +60,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
         alignItems: "center",
         gap: "10px"
       }}>
-        <span style={{ fontSize: "18px" }}>🛡️</span> Command Console
+        <span style={{ fontSize: "18px" }}>🛡️</span> {t('console.title')}
       </h4>
 
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -72,7 +74,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
             border: `1px solid ${statusColor}`,
           }}
         >
-          {room.locked ? "🔓 Unlock Entry" : "🔒 Secure Room"}
+          {room.locked ? t('console.unlock') : t('console.lock')}
         </button>
 
         {/* VOTE BUTTON */}
@@ -86,7 +88,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
               border: "1px solid #c5a059",
             }}
           >
-            {room.voting ? "🔄 New Vote" : "📜 Take Vote"}
+            {room.voting ? t('console.newVote') : t('console.takeVote')}
           </button>
         )}
 
@@ -101,7 +103,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
               border: "1px solid #444",
             }}
           >
-            🔄 Reset Campaign
+            {t('console.reset')}
           </button>
         )}
 
@@ -124,7 +126,7 @@ const CommandConsole: React.FC<CommandConsoleProps> = ({
             e.currentTarget.style.color = "#ff4747";
           }}
         >
-          💥 Close HQ
+          {t('console.close')}
         </button>
       </div>
     </div>

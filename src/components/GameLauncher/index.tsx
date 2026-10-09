@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Room, CharacterType } from '../../types/game';
 import { TEAM_DISTRIBUTIONS } from '../../constants';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GameLauncherProps {
   room: Room | null;
@@ -28,6 +29,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
   characterList,
   embedded
 }) => {
+  const { t, characterName } = useI18n();
   const [isPickingCharacters, setIsPickingCharacters] = useState(false);
   const [selectedCharIds, setSelectedCharIds] = useState<number[]>([1, 8]);
 
@@ -104,10 +106,10 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
     <div style={{ textAlign: "center", marginBottom: embedded ? 0 : "30px" }}>
       <p style={{ color: isInvalid && isPreGame ? "#ff7675" : "#aaa", fontSize: "18px", fontFamily: "'EB Garamond', serif", fontStyle: "italic", marginBottom: "15px" }}>
         {isPreGame
-          ? (isInvalid ? `Draft 5 to 10 operatives.` : `Battalion ready: ${activeCount}`)
+          ? (isInvalid ? t('launcher.draftRange') : t('launcher.ready', { count: activeCount }))
           : isGameOver
-            ? "Campaign ended. Reset to begin a new one."
-            : "Appoint a General."}
+            ? t('launcher.ended')
+            : t('launcher.appointPrompt')}
       </p>
 
       <button
@@ -126,7 +128,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
           color: ((isInvalid && isPreGame) || isGameOver) ? "#666" : "#000"
         }}
       >
-        {isPreGame ? "Begin Campaign" : isGameOver ? "Campaign Ended" : "Appoint General"}
+        {isPreGame ? t('launcher.begin') : isGameOver ? t('launcher.endedButton') : t('launcher.appoint')}
       </button>
 
       <div
@@ -141,7 +143,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "6px" }}>
           <div style={{ color: "#e7d6ad", fontSize: "14px", fontWeight: 700 }}>
-            Disable Secret Intelligence
+            {t('launcher.disableIntel')}
           </div>
           <span
             style={{
@@ -156,7 +158,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
               border: disableSecretIntelligence ? "1px solid rgba(220, 38, 38, 0.35)" : "1px solid rgba(22, 163, 74, 0.35)",
             }}
           >
-            {disableSecretIntelligence ? "Secret Intel Disabled" : "Secret Intel Enabled"}
+            {disableSecretIntelligence ? t('launcher.intelDisabled') : t('launcher.intelEnabled')}
           </span>
         </div>
 
@@ -167,11 +169,11 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
             disabled={!!room?.gameStarted}
             onChange={(e) => onToggleDisableSecretIntelligence(e.target.checked)}
           />
-          Turn off Secret Intel clues for this match
+          {t('launcher.intelCheckbox')}
         </label>
 
         <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#9f9f9f", fontStyle: "italic" }}>
-          If enabled, no Secret Intel clues are shown for this match.
+          {t('launcher.intelHelp')}
         </p>
       </div>
 
@@ -181,8 +183,8 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
             
             {/* Header / Briefing Area */}
             <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#161616' }}>
-              <h2 style={{ fontSize: '24px', color: '#c5a059', fontFamily: 'serif', margin: 0 }}>সৈন্যদল বিন্যাস</h2>
-              <p style={{ fontSize: '10px', color: 'rgba(197, 160, 89, 0.5)', letterSpacing: '3px', margin: '5px 0 15px' }}>BATTALION BALANCE</p>
+              <h2 style={{ fontSize: '24px', color: '#c5a059', fontFamily: "'Cinzel', serif", margin: 0 }}>{t('picker.title')}</h2>
+              <p style={{ fontSize: '10px', color: 'rgba(197, 160, 89, 0.5)', letterSpacing: '3px', margin: '5px 0 15px' }}>{t('picker.subtitle')}</p>
               {showSelectAllForTenPlayers && (
                 <button
                   onClick={handleSelectAllCharacters}
@@ -199,7 +201,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
                     cursor: 'pointer'
                   }}
                 >
-                  SELECT ALL CHARACTERS
+                  {t('picker.selectAll')}
                 </button>
               )}
             </div>
@@ -209,7 +211,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
               
               {/* Left Column: East India Company */}
               <div style={teamColumn}>
-                <div style={teamHeader('#ef4444')}>Company (Red) {currentEIC}/{config.eic}</div>
+                <div style={teamHeader('#ef4444')}>{t('picker.company', { current: currentEIC, max: config.eic })}</div>
                 {eicChars.map(char => {
                   const isSelected = selectedCharIds.includes(char.id);
                   const isMandatory = char.id === 8;
@@ -217,7 +219,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
                   return (
                     <button key={char.id} onClick={() => toggleChar(char.id)} disabled={isDisabled} style={charCard(isSelected, isDisabled)}>
                       <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid #ef4444', backgroundColor: isSelected ? '#ef4444' : 'transparent' }} />
-                      <span style={{ fontSize: '14px', color: isSelected ? '#fff' : '#888' }}>{char.name} {isMandatory && '⭐'}</span>
+                      <span style={{ fontSize: '14px', color: isSelected ? '#fff' : '#888' }}>{characterName(char)} {isMandatory && '⭐'}</span>
                     </button>
                   );
                 })}
@@ -225,7 +227,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
 
               {/* Right Column: Nawabs */}
               <div style={{ ...teamColumn, borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={teamHeader('#22c55e')}>Nawabs (Green) {currentNawabs}/{config.nawabs}</div>
+                <div style={teamHeader('#22c55e')}>{t('picker.nawabs', { current: currentNawabs, max: config.nawabs })}</div>
                 {nwbChars.map(char => {
                   const isSelected = selectedCharIds.includes(char.id);
                   const isMandatory = char.id === 1;
@@ -233,7 +235,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
                   return (
                     <button key={char.id} onClick={() => toggleChar(char.id)} disabled={isDisabled} style={charCard(isSelected, isDisabled)}>
                       <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid #22c55e', backgroundColor: isSelected ? '#22c55e' : 'transparent' }} />
-                      <span style={{ fontSize: '14px', color: isSelected ? '#fff' : '#888' }}>{char.name} {isMandatory && '⭐'}</span>
+                      <span style={{ fontSize: '14px', color: isSelected ? '#fff' : '#888' }}>{characterName(char)} {isMandatory && '⭐'}</span>
                     </button>
                   );
                 })}
@@ -243,7 +245,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
 
             {/* Actions */}
             <div style={{ padding: '20px', backgroundColor: '#161616', display: 'flex', gap: '12px' }}>
-              <button onClick={() => setIsPickingCharacters(false)} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#666', fontWeight: 'bold' }}>CANCEL</button>
+              <button onClick={() => setIsPickingCharacters(false)} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: '1px solid #333', backgroundColor: 'transparent', color: '#666', fontWeight: 'bold' }}>{t('picker.cancel')}</button>
               <button 
                 disabled={!isSelectionReady}
                 onClick={() => { setIsPickingCharacters(false); handleStartGame(selectedCharIds); }}
@@ -253,7 +255,7 @@ const GameLauncher: React.FC<GameLauncherProps> = ({
                   color: isSelectionReady ? '#000' : '#444', fontWeight: 'bold'
                 }}
               >
-                START GAME
+                {t('picker.start')}
               </button>
             </div>
           </div>

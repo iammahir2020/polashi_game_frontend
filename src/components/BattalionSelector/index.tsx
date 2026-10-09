@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Player, Room } from '../../types/game';
 import { MISSION_CONFIGS } from '../../constants';
+import { useI18n } from '../../i18n/useI18n';
 
 interface BattalionSelectorProps {
   room: Room;
@@ -20,6 +21,7 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
   isTurnComplete,
   embedded
 }) => {
+  const { t, rich } = useI18n();
   // Guard Clauses
   const isGeneral = me?.isGeneral;
   const showSelector = isGeneral && room.gameStarted && !room.voting?.active && !isTurnComplete;
@@ -49,9 +51,9 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h3 style={{ color: "#c5a059", marginTop: 0, marginBottom: "5px" }}>Assemble Your Battalion</h3>
+          <h3 style={{ color: "#c5a059", marginTop: 0, marginBottom: "5px" }}>{t('battalion.title')}</h3>
           <p style={{ color: "#aaa", fontSize: "13px", fontFamily: "'EB Garamond', serif", margin: 0 }}>
-            Mission Round {room.currentRound}: Select <strong>{currentReq.players}</strong> operatives.
+            {rich('battalion.instructions', { round: room.currentRound || 1, count: currentReq.players })}
           </p>
         </div>
 
@@ -66,8 +68,8 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
             animation: 'pulse 2s infinite',
             textAlign: 'center'
           }}>
-            HEAVY RESISTANCE<br/>
-            <span style={{ fontSize: '8px' }}>({currentReq.failsRequired} FAILS REQ)</span>
+            {t('battalion.heavy')}<br/>
+            <span style={{ fontSize: '8px' }}>{t('battalion.failsRequired', { count: currentReq.failsRequired })}</span>
           </div>
         )}
       </div>
@@ -115,7 +117,7 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
             color: isSelectionComplete ? "#c5a059" : "#666",
             letterSpacing: '1px'
         }}>
-          {selectedCount} / {currentReq.players} Operatives Selected
+          {t('battalion.selected', { selected: selectedCount, total: currentReq.players })}
         </div>
       </div>
 
@@ -138,7 +140,7 @@ const BattalionSelector: React.FC<BattalionSelectorProps> = ({
             animation: 'slideUp 0.3s ease-out'
           }}
         >
-          📜 Initiate Council Vote
+          {t('battalion.startVote')}
         </button>
       )}
 

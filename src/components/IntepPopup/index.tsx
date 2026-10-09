@@ -1,12 +1,20 @@
+import type { Message } from '../../i18n/core';
+import { useI18n } from '../../i18n/useI18n';
+
+// `aboutMe`: someone is investigating the player who sees this, so it is
+// shown in red.
+export type IntelPopupState = { message: Message; type: 'private' | 'public'; aboutMe?: boolean };
+
 interface IntelPopupProps {
-    intelPopup: { message: string; type: 'private' | 'public' } | null
+    intelPopup: IntelPopupState | null
     onClose: () => void;
 }
 
 const IntelPopup = ({ intelPopup, onClose }: IntelPopupProps) => {
+    const { t, msg } = useI18n();
     if (!intelPopup) return null;
 
-    const { type, message } = intelPopup;
+    const { type, message, aboutMe } = intelPopup;
 
     return (
         <div style={{
@@ -18,7 +26,7 @@ const IntelPopup = ({ intelPopup, onClose }: IntelPopupProps) => {
             maxWidth: "400px",
             backgroundColor: type === 'private'
                 ? "#2c1e12"
-                : message.includes("YOU!")
+                : aboutMe
                     ? "#2d1b1b"
                     : "#1a1a1a",
             border: `2px solid ${type === 'private' ? "#c5a059" : "#444"}`,
@@ -38,7 +46,7 @@ const IntelPopup = ({ intelPopup, onClose }: IntelPopupProps) => {
                 display: "flex",
                 justifyContent: "space-between"
             }}>
-                <span>{type === 'private' ? "CONFIDENTIAL" : "INTELLIGENCE ALERT"}</span>
+                <span>{type === 'private' ? t('intel.confidential') : t('intel.alert')}</span>
                 <span>✕</span>
             </div>
 
@@ -49,7 +57,7 @@ const IntelPopup = ({ intelPopup, onClose }: IntelPopupProps) => {
                 fontSize: "17px",
                 lineHeight: "1.4"
             }}>
-                {message}
+                {msg(message)}
             </div>
 
             <style>{`
